@@ -1,0 +1,101 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  USER
+}
+
+model User {
+  id                 String          @id @default(uuid())
+  email              String          @unique
+  passwordHash       String
+  firstName          String
+  lastName           String
+  role               Role            @default(USER)
+  isActive           Boolean         @default(true)
+  mustChangePassword Boolean         @default(true)
+  avatar             String?
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+  groups             UserGroup[]
+  audioAccesses      AudioAccess[]
+  refreshTokens      RefreshToken[]
+}
+
+model Group {
+  id        String      @id
+  name      String
+  users     UserGroup[]
+  audios    GroupAccess[]
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+}
+
+model UserGroup {
+  userId String
+  groupId String
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  group Group @relation(fields: [groupId], references: [id], onDelete: Cascade)
+
+  @@id([userId, groupId])
+}
+
+model AudioTrack {
+  id           String        @id @default(uuid())
+  title        String
+  description  String?
+  duration     Int           @default(0)
+  storageKey   String        @unique
+  mimeType     String?
+  size         Int?
+  categoryId   String?
+  published    Boolean       @default(false)
+  coverUrl     String?
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  allowedUsers AudioAccess[]
+  allowedGroups GroupAccess[]
+}
+
+model GroupAccess {
+  groupId String
+  audioId String
+
+  group Group      @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  audio AudioTrack @relation(fields: [audioId], references: [id], onDelete: Cascade)
+
+  @@id([groupId, audioId])
+}
+
+model AudioAccess {
+  userId  String
+  audioId String
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  audio AudioTrack @relation(fields: [audioId], references: [id], onDelete: Cascade)
+
+  @@id([userId, audioId])
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  tokenHash String
+  userId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model AppConfig {
+  key   String @id
+  value String
+  updatedAt DateTime @updatedAt
+}
