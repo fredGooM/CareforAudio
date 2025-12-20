@@ -151,7 +151,7 @@ router.post('/:id/send-welcome', authenticateToken, requireAdmin, async (req, re
         const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const provisionalPassword = 'care1234!';
         const client = Brevo.ApiClient.instance;
-        client.authentications['apiKey'].apiKey = apiKey;
+        client.authentications['api-key'].apiKey = apiKey;
 
         const transactionalApi = new Brevo.TransactionalEmailsApi();
 
