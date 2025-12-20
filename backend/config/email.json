@@ -1,9 +1,8 @@
 {
-  "smtpHost": "smtp.gmail.com",
+  "smtpHost": "smtp-relay.brevo.com",
   "smtpPort": 587,
   "smtpSecure": false,
-  "smtpUser": "fwjggu@gmail.com",
-  "smtpPass": "wejq olbt cbas skfj",
+   "smtpUser": "8fc95e002@smtp-brevo.com",
   "fromName": "Careformance Audio",
   "fromEmail": "careformance@gmail.com"
 }

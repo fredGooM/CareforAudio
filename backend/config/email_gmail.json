@@ -1,0 +1,9 @@
+{
+  "smtpHost": "smtp.gmail.com",
+  "smtpPort": 587,
+  "smtpSecure": false,
+  "smtpUser": "fwjggu@gmail.com",
+  "smtpPass": "wejq olbt cbas skfj",
+   "fromName": "Careformance Audio",
+  "fromEmail": "careformance@gmail.com"
+}
