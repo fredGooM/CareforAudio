@@ -9,6 +9,7 @@ export interface EmailConfig {
   smtpPass: string;
   fromName: string;
   fromEmail: string;
+  templateId?: number;
 }
 
 const DEFAULT_EMAIL_CONFIG: EmailConfig = {
@@ -18,7 +19,8 @@ const DEFAULT_EMAIL_CONFIG: EmailConfig = {
   smtpUser: process.env.SMTP_USER || '',
   smtpPass: process.env.SMTP_PASS || '',
   fromName: process.env.SMTP_FROM_NAME || 'Careformance Audio',
-  fromEmail: process.env.SMTP_FROM_EMAIL || ''
+  fromEmail: process.env.SMTP_FROM_EMAIL || '',
+  templateId: process.env.BREVO_TEMPLATE_ID ? parseInt(process.env.BREVO_TEMPLATE_ID, 10) : undefined
 };
 
 const CONFIG_DIR = path.join(process.cwd(), 'config');
@@ -42,7 +44,8 @@ export function loadEmailConfig(): EmailConfig {
       ...DEFAULT_EMAIL_CONFIG,
       ...parsed,
       smtpPort: parsed.smtpPort ? Number(parsed.smtpPort) : DEFAULT_EMAIL_CONFIG.smtpPort,
-      smtpSecure: typeof parsed.smtpSecure === 'boolean' ? parsed.smtpSecure : DEFAULT_EMAIL_CONFIG.smtpSecure
+      smtpSecure: typeof parsed.smtpSecure === 'boolean' ? parsed.smtpSecure : DEFAULT_EMAIL_CONFIG.smtpSecure,
+      templateId: parsed.templateId ? Number(parsed.templateId) : DEFAULT_EMAIL_CONFIG.templateId
     };
   } catch (error) {
     console.error('Unable to load email config, using defaults', error);
@@ -52,10 +55,7 @@ export function loadEmailConfig(): EmailConfig {
 
 export function emailConfigReady(config: EmailConfig): boolean {
   return Boolean(
-    config.smtpHost &&
-    config.smtpPort &&
-    config.smtpUser &&
-    config.smtpPass &&
-    config.fromEmail
+    config.fromEmail &&
+    config.templateId
   );
 }

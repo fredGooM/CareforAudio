@@ -1,6 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
-import nodemailer from 'nodemailer';
+import Brevo from '@getbrevo/brevo';
 // @ts-ignore
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
@@ -138,50 +138,41 @@ router.post('/:id/send-welcome', authenticateToken, requireAdmin, async (req, re
         return;
     }
 
-    try {
-        console.log(`[Email] Creating transporter for ${emailConfig.smtpHost}:${emailConfig.smtpPort}`);
-        const transporter = nodemailer.createTransport({
-            host: emailConfig.smtpHost,
-            port: emailConfig.smtpPort,
-            secure: emailConfig.smtpSecure,
-            auth: {
-                user: emailConfig.smtpUser,
-                pass: emailConfig.smtpPass
-            }
-        });
+    const apiKey = process.env.BREVO_API_KEY;
+    if (!apiKey) {
+        res.status(400).json({ error: 'Brevo API key missing' });
+        console.warn('[Email] Missing BREVO_API_KEY');
+        return;
+    }
 
+    try {
         const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const provisionalPassword = 'care1234!';
+        const transactionalApi = new Brevo.TransactionalEmailsApi();
+        transactionalApi.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, apiKey);
 
-        console.log(`[Email] Sending welcome email to ${user.email}`);
-        await transporter.sendMail({
-            from: emailConfig.fromName
-                ? `${emailConfig.fromName} <${emailConfig.fromEmail}>`
-                : emailConfig.fromEmail,
-            to: user.email,
-            subject: 'Bienvenue sur Careformance Audio',
-            text: `Bonjour ${user.firstName || ''} ${user.lastName || ''},
+        const sendEmail = new Brevo.SendSmtpEmail();
+        sendEmail.templateId = emailConfig.templateId;
+        sendEmail.to = [
+            {
+                email: user.email,
+                name: `${user.firstName || ''} ${user.lastName || ''}`.trim()
+            }
+        ];
+        sendEmail.sender = {
+            email: emailConfig.fromEmail,
+            name: emailConfig.fromName || 'Careformance Audio'
+        };
+        sendEmail.params = {
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email,
+            provisionalPassword,
+            portalUrl
+        };
 
-Votre accès à Careformance Audio est prêt.
-Identifiant : ${user.email}
-Mot de passe provisoire : ${provisionalPassword}
-
-Connectez-vous ici : ${portalUrl}
-
-Lors de votre première connexion, vous devrez définir un nouveau mot de passe.
-
-Bonne écoute !
-L'équipe Careformance`,
-            html: `<p>Bonjour ${user.firstName || ''} ${user.lastName || ''},</p>
-<p>Votre accès à <strong>Careformance Audio</strong> est prêt.</p>
-<ul>
-  <li><strong>Identifiant :</strong> ${user.email}</li>
-  <li><strong>Mot de passe provisoire :</strong> ${provisionalPassword}</li>
-</ul>
-<p><a href="${portalUrl}">Cliquez ici pour vous connecter</a>.</p>
-<p>Lors de votre première connexion, vous devrez définir un nouveau mot de passe.</p>
-<p>Bonne écoute !<br/>L'équipe Careformance</p>`
-        });
+        console.log(`[Email] Sending Brevo transactional email to ${user.email} with template ${emailConfig.templateId}`);
+        await transactionalApi.sendTransacEmail(sendEmail);
 
         res.json({ success: true });
         console.log(`[Email] Welcome email sent to ${user.email}`);

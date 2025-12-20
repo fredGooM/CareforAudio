@@ -16,13 +16,23 @@ const storage = multer.diskStorage({
   }
 });
 
-// Filtre pour n'accepter que l'audio
+const allowedExtensions = ['.mp3', '.wav'];
+const allowedMimeTypes = [
+  'audio/mpeg',
+  'audio/mp3',
+  'audio/wav',
+  'audio/x-wav',
+  'audio/wave'
+];
+
+// Filtre pour n'accepter que MP3/WAV
 const fileFilter = (req: any, file: any, cb: multer.FileFilterCallback) => {
-  if (file.mimetype.startsWith('audio/') || file.mimetype === 'application/octet-stream') {
-    cb(null, true);
-  } else {
-    cb(new Error('Only audio files are allowed!'));
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!allowedExtensions.includes(ext) || !allowedMimeTypes.includes(file.mimetype)) {
+    cb(new Error('Only .mp3 or .wav audio files (max 50MB) are allowed'));
+    return;
   }
+  cb(null, true);
 };
 
 export const uploadMiddleware = multer({ 

@@ -2,7 +2,9 @@
   "smtpHost": "smtp-relay.brevo.com",
   "smtpPort": 587,
   "smtpSecure": false,
-   "smtpUser": "8fc95e002@smtp-brevo.com",
+  "smtpUser": "CHANGE_ME",
+  "smtpPass": "",
   "fromName": "Careformance Audio",
-  "fromEmail": "careformance@gmail.com"
+  "fromEmail": "careformance@gmail.com",
+  "templateId": 0
 }
