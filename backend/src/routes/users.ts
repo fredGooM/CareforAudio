@@ -1,6 +1,6 @@
 import express from 'express';
 import bcrypt from 'bcrypt';
-import { TransactionalEmailsApi, SendSmtpEmail, TransactionalEmailsApiApiKeys } from '@getbrevo/brevo';
+import { TransactionalEmailsApi, SendSmtpEmail, ApiClient } from '@getbrevo/brevo';
 // @ts-ignore
 import { PrismaClient } from '@prisma/client';
 import { authenticateToken, requireAdmin } from '../middleware/auth';
@@ -149,7 +149,7 @@ router.post('/:id/send-welcome', authenticateToken, requireAdmin, async (req, re
         const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const provisionalPassword = 'care1234!';
         const transactionalApi = new TransactionalEmailsApi();
-        transactionalApi.setApiKey(TransactionalEmailsApiApiKeys.apiKey, apiKey);
+        ApiClient.instance.authentications['apiKeyAuth'].apiKey = apiKey;
 
         const sendEmail = new SendSmtpEmail();
         sendEmail.templateId = emailConfig.templateId;
