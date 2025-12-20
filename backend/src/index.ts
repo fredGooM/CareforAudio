@@ -13,7 +13,7 @@ import analyticsRoutes from './routes/analytics';
 dotenv.config();
 
 const app = express();
-app.set('trust proxy', true);
+app.set('trust proxy', process.env.TRUST_PROXY || 'loopback');
 const PORT = process.env.PORT || 3000;
 
 // Ensure uploads directory exists
