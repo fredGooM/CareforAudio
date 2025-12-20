@@ -1,10 +1,14 @@
 import axios from 'axios';
-import { User, AudioTrack, Group } from '../types';
+import { User, AudioTrack, Group, DashboardResponse } from '../types';
 
 // En utilisant une chaîne vide, axios utilisera l'origine actuelle.
 // En dev, le proxy Vite redirigera vers le backend.
 const API_URL = (import.meta as any).env.VITE_API_URL || '';
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+});
 
+export default api;
 const client = axios.create({
   baseURL: API_URL,
 });
@@ -154,17 +158,17 @@ export const dataService = {
   updateUserAudioAccess: async (userId: string, directAudioIds: string[]) => {
       // Backend handles sync usually, but kept for interface compat if needed
   },
-  toggleFavorite: (userId: string, audioId: string) => {
-    // Placeholder for backend call
-  },
-  saveProgress: (userId: string, audioId: string, position: number) => {
-    // Placeholder for backend call
-  },
-  addGroup: (name: string) => {
-      // Placeholder
-  },
   sendWelcomeEmail: async (userId: string) => {
     await client.post(`/users/${userId}/send-welcome`);
+  },
+  sendHeartbeat: async (payload: { audioId: string; position: number; sessionDuration: number }) => {
+    await client.post('/analytics/heartbeat', payload);
+  },
+  getAnalyticsDashboard: async (userId?: string): Promise<DashboardResponse> => {
+    const res = await client.get('/analytics/dashboard', {
+      params: userId ? { userId } : undefined
+    });
+    return res.data;
   }
 };
 

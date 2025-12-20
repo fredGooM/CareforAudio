@@ -1,99 +1,230 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { Users, FileAudio, Clock, Activity, Edit, Trash2, Plus, Upload, X, Save, Search, Check, Play, Music, Lock, Mic, Square, Mail, KeyRound, RefreshCw, Layers } from 'lucide-react';
-import { AudioTrack, User, UserRole, Group } from '../types';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
+import { Users, Clock, Activity, Edit, Trash2, Plus, Upload, X, Save, Search, Check, Play, Music, Lock, Mic, Square, Mail, KeyRound, RefreshCw, Layers } from 'lucide-react';
+import { AudioTrack, User, UserRole, Group, AdminDashboardData } from '../types';
 import { CATEGORIES, GROUPS, dataService, authService } from '../services/apiClient';
 
 // --- Dashboard ---
 
-const statsDataGlobal = [
-  { name: 'Lun', ecoutes: 40 },
-  { name: 'Mar', ecoutes: 30 },
-  { name: 'Mer', ecoutes: 65 },
-  { name: 'Jeu', ecoutes: 45 },
-  { name: 'Ven', ecoutes: 90 },
-  { name: 'Sam', ecoutes: 25 },
-  { name: 'Dim', ecoutes: 35 },
-];
-
 export const AdminDashboard: React.FC = () => {
-  const [users, setUsers] = useState<User[]>([]);
-  const [audios, setAudios] = useState<AudioTrack[]>([]);
+  const [dashboard, setDashboard] = useState<AdminDashboardData | null>(null);
   const [selectedUser, setSelectedUser] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const loadDashboard = useCallback(async (userId?: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const response = await dataService.getAnalyticsDashboard(userId);
+      if (response.role === 'ADMIN') {
+        setDashboard(response);
+      } else {
+        setDashboard(null);
+        setError("Impossible d'afficher les métriques administrateur.");
+      }
+    } catch (err: any) {
+      console.error(err);
+      setError(err?.response?.data?.error || 'Impossible de charger le tableau de bord.');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    dataService.getUsers().then(setUsers).catch(console.error);
-    dataService.getAllAudios().then(setAudios).catch(console.error);
-  }, []);
+    loadDashboard(selectedUser || undefined);
+  }, [selectedUser, loadDashboard]);
+
+  const handleRefresh = () => loadDashboard(selectedUser || undefined);
+
+  const KpiCard = ({ icon, label, value, helper }: { icon: React.ReactNode; label: string; value: string; helper: string }) => (
+    <div className="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <p className="text-sm text-slate-500">{label}</p>
+          <p className="text-3xl font-bold text-slate-900 mt-1">{value}</p>
+          <p className="text-xs text-slate-400 mt-2">{helper}</p>
+        </div>
+        <div className="p-3 rounded-xl bg-primary-50 text-primary-600">
+          {icon}
+        </div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-         <h2 className="text-2xl font-bold text-slate-900">Tableau de bord</h2>
-         
-         <div className="flex items-center gap-2">
-            <span className="text-sm font-medium text-slate-500">Vue par athlète:</span>
-            <select 
-              className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 min-w-[200px]"
-              value={selectedUser}
-              onChange={(e) => setSelectedUser(e.target.value)}
-            >
-              <option value="">Tous les utilisateurs</option>
-              {users.filter(u => u.role === UserRole.USER).map(u => (
-                <option key={u.id} value={u.id}>{u.firstName} {u.lastName}</option>
-              ))}
-            </select>
-         </div>
-      </div>
-      
-      {/* KPI Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">Utilisateurs</p>
-              <p className="text-2xl font-bold text-slate-900">{users.length}</p>
-            </div>
-            <div className="p-3 bg-blue-50 text-blue-600 rounded-lg">
-              <Users size={24} />
-            </div>
-          </div>
+        <div>
+          <h2 className="text-2xl font-bold text-slate-900">Pilotage de la performance</h2>
+          <p className="text-slate-500">Mesurez l'engagement mental des athlètes en temps réel.</p>
         </div>
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-slate-500">Podcasts</p>
-              <p className="text-2xl font-bold text-slate-900">{audios.length}</p>
-            </div>
-            <div className="p-3 bg-indigo-50 text-indigo-600 rounded-lg">
-              <FileAudio size={24} />
-            </div>
-          </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
+          <select
+            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100 min-w-[200px]"
+            value={selectedUser}
+            onChange={(e) => setSelectedUser(e.target.value)}
+            disabled={!dashboard}
+          >
+            <option value="">Tous les athlètes</option>
+            {dashboard?.athletes.map((athlete) => (
+              <option key={athlete.id} value={athlete.id}>{athlete.name}</option>
+            ))}
+          </select>
+          <button
+            onClick={handleRefresh}
+            className="inline-flex items-center justify-center px-4 py-2 rounded-lg border border-slate-200 text-slate-600 hover:text-primary-600 hover:border-primary-200 transition disabled:opacity-50"
+            disabled={loading}
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            <span className="ml-2 text-sm font-medium">Actualiser</span>
+          </button>
         </div>
       </div>
 
-      {/* Lists */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-          <h3 className="text-lg font-semibold mb-4 text-slate-800">
-            Derniers podcasts
-          </h3>
-          <div className="space-y-4">
-             {audios.slice(0, 5).map((audio, i) => (
-               <div key={audio.id} className="flex items-center gap-4 p-3 hover:bg-slate-50 rounded-lg transition-colors">
-                 <div className="w-10 h-10 rounded bg-slate-100 flex items-center justify-center text-slate-500">
-                    <Music size={20} />
-                 </div>
-                 <div className="flex-1">
-                   <p className="font-medium text-slate-900 text-sm">{audio.title}</p>
-                   <p className="text-xs text-slate-500">{Math.floor(audio.duration / 60)} min</p>
-                 </div>
-               </div>
-             ))}
-             {audios.length === 0 && <p className="text-sm text-slate-400">Aucun audio</p>}
-          </div>
+      {error && (
+        <div className="p-4 rounded-xl border border-red-100 bg-red-50 text-sm text-red-700">
+          {error}
         </div>
-      </div>
+      )}
+
+      {loading && (
+        <div className="bg-white p-6 rounded-2xl border border-slate-100 text-slate-500">
+          Chargement des indicateurs...
+        </div>
+      )}
+
+      {!loading && dashboard && (
+        <>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <KpiCard
+              icon={<Clock size={22} />}
+              label="Heures totales d'écoute"
+              value={`${dashboard.totalListeningHours.toLocaleString('fr-FR', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} h`}
+              helper={selectedUser ? 'Temps pour cet athlète' : 'Depuis le lancement'}
+            />
+            <KpiCard
+              icon={<Activity size={22} />}
+              label="Taux de complétion"
+              value={`${dashboard.completionRate}%`}
+              helper="Podcasts écoutés à +90%"
+            />
+            <KpiCard
+              icon={<Users size={22} />}
+              label="Athlètes actifs"
+              value={dashboard.activeAthletes !== null ? String(dashboard.activeAthletes) : '—'}
+              helper={dashboard.activeAthletes !== null ? 'Écoute > 10 min cette semaine' : 'Filtre athlète actif'}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 xl:grid-cols-5 gap-6">
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 xl:col-span-3">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Engagement quotidien</h3>
+                  <p className="text-sm text-slate-500">Volume d'écoute sur les 30 derniers jours</p>
+                </div>
+              </div>
+              {dashboard.engagementTrend.length > 0 ? (
+                <ResponsiveContainer width="100%" height={280}>
+                  <AreaChart data={dashboard.engagementTrend} margin={{ left: -10, right: 10 }}>
+                    <defs>
+                      <linearGradient id="volumeGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="#2563eb" stopOpacity={0.35}/>
+                        <stop offset="95%" stopColor="#2563eb" stopOpacity={0.05}/>
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                    <XAxis dataKey="date" tick={{ fill: '#475569', fontSize: 12 }} axisLine={false} tickLine={false} />
+                    <Tooltip contentStyle={{ borderRadius: 12, borderColor: '#e2e8f0' }} formatter={(value) => [`${value} min`, 'Volume']} />
+                    <Area type="monotone" dataKey="minutes" stroke="#2563eb" strokeWidth={3} fill="url(#volumeGradient)" />
+                  </AreaChart>
+                </ResponsiveContainer>
+              ) : (
+                <p className="text-slate-400 text-sm">Pas de données suffisantes pour le graphique.</p>
+              )}
+            </div>
+
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 xl:col-span-2">
+              <div className="flex items-center justify-between mb-4">
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">Alerte décrochage</h3>
+                  <p className="text-sm text-slate-500">Athlètes inactifs depuis 7+ jours</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {dashboard.dropoffs.length === 0 && (
+                  <p className="text-sm text-slate-500">Tous les athlètes sont actifs 🎯</p>
+                )}
+                {dashboard.dropoffs.map((athlete) => (
+                  <div key={athlete.userId} className="flex items-center justify-between p-4 border border-slate-100 rounded-xl">
+                    <div>
+                      <p className="font-semibold text-slate-900">{athlete.name}</p>
+                      <p className="text-xs text-slate-500">Dernière écoute: {athlete.daysSince} jours</p>
+                    </div>
+                    <span className="px-3 py-1 text-xs font-semibold rounded-full bg-red-50 text-red-600">
+                      À relancer
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-900">Tableau de complétion</h3>
+                <p className="text-sm text-slate-500">Les podcasts les plus populaires</p>
+              </div>
+            </div>
+            {dashboard.popularAudios.length === 0 ? (
+              <p className="text-sm text-slate-500">Pas encore de sessions enregistrées.</p>
+            ) : (
+              <>
+                <div className="hidden md:block">
+                  <div className="grid grid-cols-4 text-xs uppercase text-slate-400 tracking-wide">
+                    <div>Podcast</div>
+                    <div>Minutes</div>
+                    <div className="col-span-2">Taux de complétion</div>
+                  </div>
+                  <div className="mt-2 divide-y divide-slate-100">
+                    {dashboard.popularAudios.map((audio) => (
+                      <div key={audio.audioId} className="grid grid-cols-4 items-center py-3">
+                        <div className="font-semibold text-slate-900">{audio.title}</div>
+                        <div className="text-slate-600">{audio.minutes} min</div>
+                        <div className="col-span-2">
+                          <div className="flex items-center gap-3">
+                            <div className="w-full h-2 rounded-full bg-slate-100 overflow-hidden">
+                              <div className="h-full bg-primary-500" style={{ width: `${audio.completionRate}%` }}></div>
+                            </div>
+                            <span className="text-sm font-semibold text-slate-700">{audio.completionRate}%</span>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="space-y-4 md:hidden">
+                  {dashboard.popularAudios.map((audio) => (
+                    <div key={audio.audioId} className="p-4 border border-slate-100 rounded-2xl">
+                      <p className="font-semibold text-slate-900">{audio.title}</p>
+                      <p className="text-xs text-slate-500">{audio.minutes} min écoutées</p>
+                      <div className="mt-3">
+                        <div className="h-2 rounded-full bg-slate-100 overflow-hidden">
+                          <div className="h-full bg-primary-500" style={{ width: `${audio.completionRate}%` }}></div>
+                        </div>
+                        <p className="text-xs text-slate-500 mt-1">{audio.completionRate}% complété</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        </>
+      )}
     </div>
   );
 };

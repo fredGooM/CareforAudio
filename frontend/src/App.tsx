@@ -4,6 +4,7 @@ import { User, ViewState, AudioTrack, UserRole } from './types';
 import { authService, dataService } from './services/apiClient';
 import { AudioPlayer } from './components/AudioPlayer';
 import { AdminDashboard, AdminLibrary, AdminUsers } from './components/AdminViews';
+import UserDashboard from './components/UserDashboard';
 import { UserCatalog } from './components/UserViews';
 
 // --- Login Component ---
@@ -249,7 +250,7 @@ const App: React.FC = () => {
               try {
                  const audios = await dataService.getAudiosForUser(currentUser);
                  setUserAudios(audios);
-                 setCurrentView('CATALOG');
+                 setCurrentView('USER_DASHBOARD');
               } catch(e) { console.error(e); }
           }
         };
@@ -286,6 +287,7 @@ const App: React.FC = () => {
 
   const renderContent = () => {
     switch (currentView) {
+      case 'USER_DASHBOARD': return <UserDashboard />;
       case 'ADMIN_DASHBOARD': return <AdminDashboard />;
       case 'ADMIN_AUDIOS': return <AdminLibrary onPlay={setCurrentTrack} />;
       case 'ADMIN_USERS': return <AdminUsers />;
@@ -356,6 +358,7 @@ const App: React.FC = () => {
           ) : (
             <>
               <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-4">Menu</p>
+              <NavItem view="USER_DASHBOARD" icon={LayoutDashboard} label="Tableau de bord" />
               <NavItem view="CATALOG" icon={Home} label="Catalogue" />
               <NavItem view="FAVORITES" icon={Heart} label="Favoris" />
             </>
@@ -396,18 +399,19 @@ const App: React.FC = () => {
         <div className="fixed inset-0 bg-slate-900/50 z-20 md:hidden" onClick={() => setMobileMenuOpen(false)}>
            <div className="absolute right-0 top-0 h-full w-64 bg-white shadow-2xl p-4 pt-20" onClick={e => e.stopPropagation()}>
               <nav className="space-y-2">
-                 {currentUser.role === UserRole.ADMIN ? (
-                    <>
-                      <NavItem view="ADMIN_DASHBOARD" icon={LayoutDashboard} label="Dashboard" />
-                      <NavItem view="ADMIN_AUDIOS" icon={Library} label="Bibliothèque" />
-                      <NavItem view="ADMIN_USERS" icon={UsersIcon} label="Utilisateurs" />
-                    </>
-                  ) : (
-                    <>
+                {currentUser.role === UserRole.ADMIN ? (
+                   <>
+                     <NavItem view="ADMIN_DASHBOARD" icon={LayoutDashboard} label="Dashboard" />
+                     <NavItem view="ADMIN_AUDIOS" icon={Library} label="Bibliothèque" />
+                     <NavItem view="ADMIN_USERS" icon={UsersIcon} label="Utilisateurs" />
+                   </>
+                 ) : (
+                   <>
+                      <NavItem view="USER_DASHBOARD" icon={LayoutDashboard} label="Dashboard" />
                       <NavItem view="CATALOG" icon={Home} label="Catalogue" />
                       <NavItem view="FAVORITES" icon={Heart} label="Favoris" />
-                    </>
-                  )}
+                   </>
+                 )}
                   <div className="border-t border-slate-100 my-4 pt-4">
                      <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 text-red-500 w-full text-left">
                        <LogOut size={20} />

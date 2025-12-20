@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import { Play, Pause, SkipBack, SkipForward, X, ChevronUp, ChevronDown, Music } from 'lucide-react';
 import { AudioTrack } from '../types';
 import { dataService } from '../services/apiClient';
@@ -16,6 +16,8 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false); // Mobile expand
+  const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
+  const lastHeartbeatRef = useRef<number | null>(null);
 
   useEffect(() => {
     if (track && audioRef.current) {
@@ -29,9 +31,6 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
     if (audioRef.current) {
       const current = audioRef.current.currentTime;
       setCurrentTime(current);
-      if (Math.floor(current) % 5 === 0 && track) {
-        dataService.saveProgress(userId, track.id, current);
-      }
     }
   };
 
@@ -82,6 +81,41 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
+  const sendHeartbeat = useCallback(() => {
+    if (!track || !audioRef.current) return;
+    const now = Date.now();
+    const lastSent = lastHeartbeatRef.current;
+    const sessionDuration = lastSent ? Math.round((now - lastSent) / 1000) : 10;
+    lastHeartbeatRef.current = now;
+    dataService.sendHeartbeat({
+      audioId: track.id,
+      position: audioRef.current.currentTime,
+      sessionDuration
+    }).catch(() => {});
+  }, [track]);
+
+  useEffect(() => {
+    if (isPlaying && track) {
+      lastHeartbeatRef.current = Date.now();
+      heartbeatTimer.current = setInterval(() => {
+        sendHeartbeat();
+      }, 10000);
+    } else {
+      if (heartbeatTimer.current) {
+        clearInterval(heartbeatTimer.current);
+        heartbeatTimer.current = null;
+      }
+      lastHeartbeatRef.current = null;
+    }
+
+    return () => {
+      if (heartbeatTimer.current) {
+        clearInterval(heartbeatTimer.current);
+        heartbeatTimer.current = null;
+      }
+    };
+  }, [isPlaying, track, sendHeartbeat]);
+
   if (!track) return null;
 
   return (
@@ -90,7 +124,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
-        onEnded={() => setIsPlaying(false)}
+        onEnded={() => {
+          sendHeartbeat();
+          setIsPlaying(false);
+        }}
       />
 
       <div className={`max-w-7xl mx-auto px-4 h-full flex ${isExpanded ? 'flex-col gap-8' : 'flex-row items-center justify-between'}`}>

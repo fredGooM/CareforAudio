@@ -55,9 +55,34 @@ export interface UserProgress {
 export type ViewState =
   | 'LOGIN'
   | 'CHANGE_PASSWORD'
+  | 'USER_DASHBOARD'
   | 'CATALOG'
   | 'FAVORITES'
   | 'AUDIO_DETAIL'
   | 'ADMIN_DASHBOARD'
   | 'ADMIN_AUDIOS'
   | 'ADMIN_USERS';
+
+export interface UserDashboardData {
+  totalMinutes: number;
+  completionPercent: number;
+  streakDays: number;
+  completedCount: number;
+  categoryProgress: Array<{ categoryId: string; percent: number }>;
+  continueListening: Array<{ audioId: string; title: string; progressPercent: number }>;
+}
+
+export interface AdminDashboardData {
+  totalListeningHours: number;
+  completionRate: number;
+  activeAthletes: number | null;
+  engagementTrend: Array<{ date: string; minutes: number }>;
+  popularAudios: Array<{ audioId: string; title: string; minutes: number; completionRate: number }>;
+  dropoffs: Array<{ userId: string; name: string; daysSince: number }>;
+  athletes: Array<{ id: string; name: string }>;
+  filterUserId: string | null;
+}
+
+export type DashboardResponse =
+  | ({ role: 'USER' } & UserDashboardData)
+  | ({ role: 'ADMIN' } & AdminDashboardData);

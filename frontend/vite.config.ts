@@ -11,6 +11,7 @@ export default defineConfig({
       '/audios': 'http://localhost:3000',
       '/users': 'http://localhost:3000',
       '/health': 'http://localhost:3000',
+      '/analytics': 'http://localhost:3000',
       // Proxy pour les fichiers uploadés servis statiquement
       '/uploads': 'http://localhost:3000'
     }
