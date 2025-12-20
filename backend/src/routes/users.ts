@@ -122,20 +122,24 @@ router.post('/:id/reset-password', authenticateToken, requireAdmin, async (req, 
 
 router.post('/:id/send-welcome', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
+    console.log(`[Email] Welcome email requested for user ${id}`);
     const user = await prisma.user.findUnique({ where: { id } });
 
     if (!user) {
         res.status(404).json({ error: 'User not found' });
+        console.warn(`[Email] User ${id} not found`);
         return;
     }
 
     const emailConfig = loadEmailConfig();
     if (!emailConfigReady(emailConfig)) {
         res.status(400).json({ error: 'Email configuration is incomplete' });
+        console.warn('[Email] Configuration incomplete');
         return;
     }
 
     try {
+        console.log(`[Email] Creating transporter for ${emailConfig.smtpHost}:${emailConfig.smtpPort}`);
         const transporter = nodemailer.createTransport({
             host: emailConfig.smtpHost,
             port: emailConfig.smtpPort,
@@ -149,6 +153,7 @@ router.post('/:id/send-welcome', authenticateToken, requireAdmin, async (req, re
         const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const provisionalPassword = 'care1234!';
 
+        console.log(`[Email] Sending welcome email to ${user.email}`);
         await transporter.sendMail({
             from: emailConfig.fromName
                 ? `${emailConfig.fromName} <${emailConfig.fromEmail}>`
@@ -179,6 +184,7 @@ L'équipe Careformance`,
         });
 
         res.json({ success: true });
+        console.log(`[Email] Welcome email sent to ${user.email}`);
     } catch (error) {
         console.error('Email sending failed', error);
         res.status(500).json({ error: 'Failed to send email' });

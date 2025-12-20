@@ -223,19 +223,6 @@ const App: React.FC = () => {
   const [favorites, setFavorites] = useState<string[]>([]);
 
   useEffect(() => {
-    // Initial check for stored session
-    const storedUser = localStorage.getItem('user');
-    const token = localStorage.getItem('accessToken');
-    if (storedUser && token) {
-      try {
-        setCurrentUser(JSON.parse(storedUser));
-      } catch (e) {
-        localStorage.clear();
-      }
-    }
-  }, []);
-
-  useEffect(() => {
     if (currentUser) {
       if (currentUser.mustChangePassword) {
         setCurrentView('CHANGE_PASSWORD');
