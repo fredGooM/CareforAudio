@@ -16,7 +16,7 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
   const [duration, setDuration] = useState(0);
   const [speed, setSpeed] = useState(1);
   const [isExpanded, setIsExpanded] = useState(false); // Mobile expand
-  const heartbeatTimer = useRef<NodeJS.Timeout | null>(null);
+  const heartbeatTimer = useRef<ReturnType<typeof setInterval> | null>(null);
   const lastHeartbeatRef = useRef<number | null>(null);
 
   useEffect(() => {

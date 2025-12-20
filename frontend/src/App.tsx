@@ -12,7 +12,6 @@ const LoginView: React.FC<{ onLogin: (user: User) => void }> = ({ onLogin }) => 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -108,6 +107,7 @@ const ChangePasswordView: React.FC<{ user: User, onComplete: () => void }> = ({ 
   const [newPass, setNewPass] = useState('');
   const [confirmPass, setConfirmPass] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -279,7 +279,6 @@ const App: React.FC = () => {
 
   const toggleFavorite = (audioId: string) => {
     if (!currentUser) return;
-    dataService.toggleFavorite(currentUser.id, audioId);
     setFavorites(prev => 
       prev.includes(audioId) ? prev.filter(id => id !== audioId) : [...prev, audioId]
     );
