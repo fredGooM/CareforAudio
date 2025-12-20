@@ -8,6 +8,7 @@ import fs from 'fs';
 import authRoutes from './routes/auth';
 import audioRoutes from './routes/audios';
 import userRoutes from './routes/users';
+import analyticsRoutes from './routes/analytics';
 
 dotenv.config();
 
@@ -40,6 +41,7 @@ app.get('/health', (req, res) => {
 app.use('/auth', authRoutes);
 app.use('/audios', audioRoutes);
 app.use('/users', userRoutes);
+app.use('/analytics', analyticsRoutes);
 
 // Start Server
 app.listen(PORT, () => {
