@@ -150,7 +150,7 @@ router.post('/:id/send-welcome', authenticateToken, requireAdmin, async (req, re
         const provisionalPassword = 'care1234!';
         const client = ApiClient.instance;
         if (!client.authentications.apiKey) {
-            client.authentications.apiKey = { type: 'apiKey', in: 'header', name: 'api-key' } as any;
+            client.authentications.apiKey = { type: 'apiKey' } as any;
         }
         client.authentications.apiKey.apiKey = apiKey;
 
