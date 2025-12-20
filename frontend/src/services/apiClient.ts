@@ -158,7 +158,7 @@ export const dataService = {
     await client.put(`/users/${updatedUser.id}`, updatedUser);
   },
   updateUserAudioAccess: async (userId: string, directAudioIds: string[]) => {
-      // Backend handles sync usually, but kept for interface compat if needed
+    await client.put(`/users/${userId}/audio-access`, { audioIds: directAudioIds });
   },
   sendWelcomeEmail: async (userId: string) => {
     await client.post(`/users/${userId}/send-welcome`);

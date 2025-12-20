@@ -938,11 +938,7 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, onClose, onSave }) 
   const handleSave = async () => {
     try {
         await dataService.updateUser(formData);
-        // We would ideally call updateAudioAccess endpoint here, but our MVP updateUserAudioAccess mock 
-        // implies logic that might be backend side. 
-        // For this fix, let's assume we just update the user for now, 
-        // OR we iterate and update audios (which is heavy).
-        // Let's stick to updating user profile as priority.
+        await dataService.updateUserAudioAccess(user.id, directAudioIds);
         onSave();
     } catch(e) {
         console.error(e);

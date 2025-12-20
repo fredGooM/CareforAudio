@@ -83,6 +83,30 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
     }
 });
 
+router.put('/:id/audio-access', authenticateToken, requireAdmin, async (req, res) => {
+    const { id } = req.params;
+    const { audioIds } = req.body;
+
+    if (!Array.isArray(audioIds)) {
+        res.status(400).json({ error: 'audioIds must be an array' });
+        return;
+    }
+
+    try {
+        await prisma.audioAccess.deleteMany({ where: { userId: id } });
+        if (audioIds.length > 0) {
+            await prisma.audioAccess.createMany({
+                data: audioIds.map((audioId: string) => ({ userId: id, audioId })),
+                skipDuplicates: true
+            });
+        }
+        res.json({ success: true });
+    } catch (error) {
+        console.error('Failed to update audio access', error);
+        res.status(500).json({ error: 'Failed to update audio access' });
+    }
+});
+
 // Reset Password
 router.post('/:id/reset-password', authenticateToken, requireAdmin, async (req, res) => {
     const { id } = req.params;
