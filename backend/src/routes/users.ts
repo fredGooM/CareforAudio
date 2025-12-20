@@ -148,8 +148,13 @@ router.post('/:id/send-welcome', authenticateToken, requireAdmin, async (req, re
     try {
         const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const provisionalPassword = 'care1234!';
+        const client = ApiClient.instance;
+        if (!client.authentications.apiKey) {
+            client.authentications.apiKey = { type: 'apiKey', in: 'header', name: 'api-key' } as any;
+        }
+        client.authentications.apiKey.apiKey = apiKey;
+
         const transactionalApi = new TransactionalEmailsApi();
-        ApiClient.instance.authentications['apiKeyAuth'].apiKey = apiKey;
 
         const sendEmail = new SendSmtpEmail();
         sendEmail.templateId = emailConfig.templateId;
