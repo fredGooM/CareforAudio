@@ -143,16 +143,20 @@ router.post('/:id/send-welcome', authenticateToken, requireAdmin, async (req, re
         res.status(400).json({ error: 'Brevo API key missing' });
         console.warn('[Email] Missing BREVO_API_KEY');
         return;
+    } else {
+        console.log('[Email] BREVO_API_KEY detected (length):', apiKey.length);
     }
 
     try {
         const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
         const provisionalPassword = 'care1234!';
         const client = ApiClient.instance;
-        if (!client.authentications.apiKey) {
-            client.authentications.apiKey = { type: 'apiKey' } as any;
+        const auth = client.authentications['apiKey'];
+        if (!auth || typeof auth === 'string') {
+            client.authentications['apiKey'] = { type: 'apiKey', in: 'header', name: 'api-key', apiKey: apiKey } as any;
+        } else {
+            auth.apiKey = apiKey;
         }
-        client.authentications.apiKey.apiKey = apiKey;
 
         const transactionalApi = new TransactionalEmailsApi();
 
