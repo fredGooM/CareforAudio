@@ -1,17 +1,19 @@
-import axios from 'axios';
-import { User, AudioTrack, Group, DashboardResponse } from '../types';
+import axios from "axios";
+import { User, AudioTrack, Group, DashboardResponse } from "../types";
 
-// En utilisant une chaîne vide, axios utilisera l'origine actuelle.
-// En dev, le proxy Vite redirigera vers le backend.
-const API_URL = (import.meta as any).env.VITE_API_URL || '';
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-});
+// En DEV: si VITE_API_URL est vide/absent => baseURL = '' => on utilise le proxy Vite (vite.config.ts)
+// En PROD: VITE_API_URL = "https://ton-backend.onrender.com" => appels directs au backend
+const API_URL = (import.meta as any).env?.VITE_API_URL?.replace(/\/$/, "") || "";
 
-export default api;
 const client = axios.create({
   baseURL: API_URL,
 });
+
+export default client;
+
+//const client = axios.create({
+//  baseURL: API_URL,
+//});
 
 // --- FIX CRITIQUE POUR MOBILE ---
 // Cette fonction remplace 'localhost' ou '127.0.0.1' par l'adresse IP réelle
