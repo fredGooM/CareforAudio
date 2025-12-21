@@ -34,8 +34,10 @@ Ouvrez un terminal dans le dossier `backend` :
     JWT_REFRESH_SECRET="superrefreshkey"
     PORT=3000
     API_URL="http://localhost:3000"
+    GCS_BUCKET_NAME="votre-bucket"
+    GOOGLE_APPLICATION_CREDENTIALS_JSON='{"type":"service_account", ...}'
     ```
-    *(Remplacez `postgres:password` par votre utilisateur/mot de passe Postgres local)*
+    *(Remplacez `postgres:password` par votre utilisateur/mot de passe Postgres local. Vous pouvez laisser `GCS_BUCKET_NAME` et `GOOGLE_APPLICATION_CREDENTIALS_JSON` vides en local : l'app basculera alors sur un stockage disque dans `backend/uploads/`.)*
 
 3.  Initialisez la base de données et les données de test :
     ```bash
@@ -47,7 +49,7 @@ Ouvrez un terminal dans le dossier `backend` :
     ```bash
     npm run dev
     ```
-    Le serveur tourne sur `http://localhost:3000`. Les fichiers uploadés iront dans `backend/uploads`.
+    Le serveur tourne sur `http://localhost:3000`. Les fichiers audio sont envoyés sur Google Cloud Storage (ou localement si les variables GCS sont absentes).
 
 ### 3. Frontend (Application Web)
 
@@ -74,6 +76,6 @@ Ouvrez un **nouveau** terminal dans le dossier `frontend` :
 - **Auth** : Login, Refresh Token, Hashage mot de passe.
 - **Rôles** : Admin (Gestion) vs User (Écoute).
 - **Audio** : 
-    - L'Admin peut uploader des fichiers `.mp3`, `.wav`.
-    - Les fichiers sont stockés localement dans `backend/uploads/`.
+    - L'Admin peut uploader des fichiers `.mp3`, `.wav` ou `.aiff`.
+    - Les fichiers sont stockés sur Google Cloud Storage (avec URLs signées) ou localement en mode fallback.
     - L'utilisateur ne voit que les audios autorisés (par groupe ou accès direct).

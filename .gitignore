@@ -28,3 +28,4 @@ frontend/.env.local
 *.sln
 *.sw?
 backend/config/email.json
+backend/config/gcs-service-account.json

@@ -1,11 +1,14 @@
 import express from 'express';
 import path from 'path';
+import os from 'os';
 import fs from 'fs';
 // @ts-ignore
 import { PrismaClient } from '@prisma/client';
-import { parseFile } from 'music-metadata';
+import { parseBuffer } from 'music-metadata';
+import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
-import { uploadMiddleware, getPublicUrl } from '../services/storage';
+import { uploadMiddleware } from '../services/upload';
+import { uploadToGCS, getSignedUrlForObject, deleteFromGCS } from '../services/uploadToGCS';
 // @ts-ignore
 import ffmpeg from 'fluent-ffmpeg';
 // @ts-ignore
@@ -13,7 +16,6 @@ import ffmpegStatic from 'ffmpeg-static';
 
 const router = express.Router();
 const prisma = new PrismaClient();
-const uploadsDir = path.join(process.cwd(), 'uploads');
 const ffmpegBinary = (ffmpegStatic as string) || '';
 if (ffmpegBinary) {
     ffmpeg.setFfmpegPath(ffmpegBinary);
@@ -22,61 +24,51 @@ if (ffmpegBinary) {
 const AIFF_MIME_TYPES = new Set(['audio/aiff', 'audio/x-aiff']);
 const AIFF_EXTENSIONS = new Set(['.aiff', '.aif']);
 
-async function computeDuration(storageKey?: string | null) {
-    if (!storageKey) return null;
-    try {
-        const filePath = path.join(uploadsDir, storageKey);
-        const metadata = await parseFile(filePath);
-        if (metadata.format.duration) {
-            return Math.round(metadata.format.duration);
-        }
-    } catch (error) {
-        console.warn(`Unable to compute duration for ${storageKey}`, error);
-    }
-    return null;
-}
-
-async function ensurePlayableFormat(file: Express.Multer.File) {
+async function convertIfNeeded(file: Express.Multer.File) {
     const ext = path.extname(file.originalname).toLowerCase();
     const needsConversion = AIFF_MIME_TYPES.has(file.mimetype) || AIFF_EXTENSIONS.has(ext);
 
     if (!needsConversion) {
         return {
-            storageKey: file.filename,
-            mimeType: file.mimetype,
-            size: file.size
+            buffer: file.buffer,
+            mimeType: file.mimetype
         };
     }
 
-    const sourcePath = path.join(uploadsDir, file.filename);
-    const targetFilename = `${path.parse(file.filename).name}.wav`;
-    const targetPath = path.join(uploadsDir, targetFilename);
+    const tempInput = path.join(os.tmpdir(), `aiff-src-${uuidv4()}${ext}`);
+    const tempOutput = path.join(os.tmpdir(), `aiff-dst-${uuidv4()}.wav`);
+    await fs.promises.writeFile(tempInput, file.buffer);
 
     try {
         await new Promise<void>((resolve, reject) => {
-            ffmpeg(sourcePath)
+            ffmpeg(tempInput)
                 .toFormat('wav')
                 .on('end', resolve)
                 .on('error', reject)
-                .save(targetPath);
+                .save(tempOutput);
         });
 
-        await fs.promises.unlink(sourcePath).catch(() => {});
-        const stats = await fs.promises.stat(targetPath);
-
+        const convertedBuffer = await fs.promises.readFile(tempOutput);
         return {
-            storageKey: targetFilename,
-            mimeType: 'audio/wav',
-            size: stats.size
+            buffer: convertedBuffer,
+            mimeType: 'audio/wav'
         };
-    } catch (error) {
-        console.error('AIFF conversion failed; keeping original file', error);
-        return {
-            storageKey: file.filename,
-            mimeType: file.mimetype,
-            size: file.size
-        };
+    } finally {
+        fs.promises.unlink(tempInput).catch(() => {});
+        fs.promises.unlink(tempOutput).catch(() => {});
     }
+}
+
+async function detectDuration(buffer: Buffer, mimeType: string) {
+    try {
+        const metadata = await parseBuffer(buffer, mimeType);
+        if (metadata.format.duration) {
+            return Math.round(metadata.format.duration);
+        }
+    } catch (error) {
+        console.warn('Unable to detect duration', error);
+    }
+    return null;
 }
 
 // Get Catalog (Filtered by Access)
@@ -93,17 +85,6 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
                 orderBy: { createdAt: 'desc' },
                 include: { allowedGroups: true, allowedUsers: true }
             });
-            const toCompute = audios.filter(a => !a.duration || a.duration === 0);
-            await Promise.all(toCompute.map(async (audio) => {
-                const duration = await computeDuration(audio.storageKey);
-                if (duration) {
-                    await prisma.audioTrack.update({
-                        where: { id: audio.id },
-                        data: { duration }
-                    });
-                    audio.duration = duration;
-                }
-            }));
         } else {
             // Find user groups
             const userGroups = await prisma.userGroup.findMany({
@@ -125,19 +106,17 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
         }
 
         // Map to frontend DTO
-        const mappedAudios = audios.map((a: any) => {
+        const mappedAudios = await Promise.all(audios.map(async (a: any) => {
             const allowedGroupIds = (a as any).allowedGroups?.map((g: any) => g.groupId) || [];
             const allowedUserIds = (a as any).allowedUsers?.map((u: any) => u.userId) || [];
-
-            // Les fichiers locaux sont stockés par nom unique (storageKey).
-            const publicUrl = getPublicUrl(path.basename(a.storageKey));
+            const signedUrl = a.storageKey ? await getSignedUrlForObject(a.storageKey, 3600) : '';
 
             return {
                 id: a.id,
                 title: a.title,
                 description: a.description,
                 duration: a.duration,
-                url: publicUrl, 
+                url: signedUrl || '',
                 coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
                 categoryId: a.categoryId || 'c1',
                 mimeType: a.mimeType || 'audio/mpeg',
@@ -148,7 +127,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
                 allowedUserIds,
                 listenCount: 0 
             };
-        });
+        }));
 
         res.json(mappedAudios);
 
@@ -159,32 +138,38 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
 });
 
 // Upload Audio (Admin)
-// Utilise uploadMiddleware.single('file') qui sauvegarde sur disque
 router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'), async (req: any, res: any) => {
     try {
         const { title, description, categoryId, duration, published } = req.body;
-        const file = (req as any).file;
+        const file = (req as any).file as Express.Multer.File | undefined;
 
-        if (!file) {
-             res.status(400).json({ error: 'No file uploaded' });
-             return;
+        if (!file || !file.buffer) {
+            res.status(400).json({ error: 'No file uploaded' });
+            return;
         }
 
-        const processedFile = await ensurePlayableFormat(file);
-        const storageKey = processedFile.storageKey;
-        
+        const processed = await convertIfNeeded(file);
+        const uploadResult = await uploadToGCS({
+            buffer: processed.buffer,
+            mimeType: processed.mimeType,
+            originalName: file.originalname
+        });
+
+        const detectedDuration = await detectDuration(processed.buffer, processed.mimeType);
+        const finalDuration = detectedDuration ?? (parseInt(duration) || 0);
+
         // Save to DB
         const newAudio = await prisma.audioTrack.create({
             data: {
                 title,
                 description,
-                duration: parseInt(duration) || 0,
+                duration: finalDuration,
                 categoryId: categoryId || 'c1',
                 published: published === 'true',
-                storageKey,
-                mimeType: processedFile.mimeType,
-                size: processedFile.size,
-                coverUrl: `https://picsum.photos/400/400?random=${Date.now()}` 
+                storageKey: uploadResult.objectName,
+                mimeType: processed.mimeType,
+                size: uploadResult.size,
+                coverUrl: `https://picsum.photos/400/400?random=${Date.now()}`
             }
         });
 
@@ -197,30 +182,26 @@ router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'
                         data: groupIds.map((gid: string) => ({ groupId: gid, audioId: newAudio.id }))
                     });
                 }
-            } catch (e) { console.error("Error parsing groupIds", e); }
+            } catch (e) { console.error('Error parsing groupIds', e); }
         }
-        
+
         if (req.body.allowedUserIds) {
-             try {
+            try {
                 const userIds = JSON.parse(req.body.allowedUserIds);
                 if (Array.isArray(userIds)) {
                     await prisma.audioAccess.createMany({
-                    data: userIds.map((uid: string) => ({ userId: uid, audioId: newAudio.id }))
+                        data: userIds.map((uid: string) => ({ userId: uid, audioId: newAudio.id }))
                     });
                 }
-             } catch (e) { console.error("Error parsing userIds", e); }
+            } catch (e) { console.error('Error parsing userIds', e); }
         }
 
-        let responseAudio = newAudio;
-        const detectedDuration = await computeDuration(storageKey);
-        if (detectedDuration) {
-            responseAudio = await prisma.audioTrack.update({
-                where: { id: newAudio.id },
-                data: { duration: detectedDuration }
-            });
-        }
+        const signedUrl = await getSignedUrlForObject(uploadResult.objectName, 3600);
 
-        res.json(responseAudio);
+        res.json({
+            ...newAudio,
+            url: signedUrl
+        });
 
     } catch (e) {
         console.error(e);
@@ -278,10 +259,10 @@ router.delete('/:id', authenticateToken, requireAdmin, async (req: any, res: any
         }
 
         await prisma.audioTrack.delete({ where: { id } });
-
         if (audio.storageKey) {
-            const filePath = path.join(uploadsDir, audio.storageKey);
-            fs.promises.unlink(filePath).catch(() => {});
+            await deleteFromGCS(audio.storageKey).catch((err) => {
+                console.warn('Failed to delete GCS object', err);
+            });
         }
 
         res.json({ success: true });
