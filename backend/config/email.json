@@ -4,7 +4,5 @@
   "smtpSecure": false,
   "smtpUser": "CHANGE_ME",
   "smtpPass": "",
-  "fromName": "Careformance Audio",
-  "fromEmail": "careformance@gmail.com",
   "templateId": 0
 }
