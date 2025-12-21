@@ -40,13 +40,18 @@ export function loadEmailConfig(): EmailConfig {
     ensureConfigFile();
     const content = fs.readFileSync(CONFIG_PATH, 'utf-8');
     const parsed = JSON.parse(content);
-    return {
-      ...DEFAULT_EMAIL_CONFIG,
-      ...parsed,
-      smtpPort: parsed.smtpPort ? Number(parsed.smtpPort) : DEFAULT_EMAIL_CONFIG.smtpPort,
-      smtpSecure: typeof parsed.smtpSecure === 'boolean' ? parsed.smtpSecure : DEFAULT_EMAIL_CONFIG.smtpSecure,
-      templateId: parsed.templateId ? Number(parsed.templateId) : DEFAULT_EMAIL_CONFIG.templateId
-    };
+    const merged: EmailConfig = { ...DEFAULT_EMAIL_CONFIG };
+
+    if (parsed.smtpHost) merged.smtpHost = parsed.smtpHost;
+    if (parsed.smtpPort) merged.smtpPort = Number(parsed.smtpPort);
+    if (typeof parsed.smtpSecure === 'boolean') merged.smtpSecure = parsed.smtpSecure;
+    if (parsed.smtpUser) merged.smtpUser = parsed.smtpUser;
+    if (parsed.smtpPass) merged.smtpPass = parsed.smtpPass;
+    if (parsed.fromName) merged.fromName = parsed.fromName;
+    if (parsed.fromEmail) merged.fromEmail = parsed.fromEmail;
+    if (parsed.templateId) merged.templateId = Number(parsed.templateId);
+
+    return merged;
   } catch (error) {
     console.error('Unable to load email config, using defaults', error);
     return DEFAULT_EMAIL_CONFIG;

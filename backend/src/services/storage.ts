@@ -16,20 +16,22 @@ const storage = multer.diskStorage({
   }
 });
 
-const allowedExtensions = ['.mp3', '.wav'];
+const allowedExtensions = ['.mp3', '.wav', '.aiff'];
 const allowedMimeTypes = [
   'audio/mpeg',
   'audio/mp3',
   'audio/wav',
   'audio/x-wav',
-  'audio/wave'
+  'audio/wave',
+  'audio/aiff',
+  'audio/x-aiff'
 ];
 
 // Filtre pour n'accepter que MP3/WAV
 const fileFilter = (req: any, file: any, cb: multer.FileFilterCallback) => {
   const ext = path.extname(file.originalname).toLowerCase();
   if (!allowedExtensions.includes(ext) || !allowedMimeTypes.includes(file.mimetype)) {
-    cb(new Error('Only .mp3 or .wav audio files (max 50MB) are allowed'));
+    cb(new Error('Only .mp3, .wav or .aiff audio files (max 50MB) are allowed'));
     return;
   }
   cb(null, true);

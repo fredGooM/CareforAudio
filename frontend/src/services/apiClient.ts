@@ -175,14 +175,55 @@ export const dataService = {
 };
 
 export const CATEGORIES = [
-  { id: 'c1', name: 'Pré-compétition', color: 'bg-blue-100 text-blue-800' },
-  { id: 'c2', name: 'Récupération', color: 'bg-green-100 text-green-800' },
-  { id: 'c3', name: 'Sommeil', color: 'bg-indigo-100 text-indigo-800' },
-  { id: 'c4', name: 'Concentration', color: 'bg-purple-100 text-purple-800' },
+  { 
+    id: 'c1', 
+    name: 'Pré-compétition', 
+    color: 'bg-blue-100 text-blue-800',
+    image: '/images/pre_competition.png'
+  },
+  { 
+    id: 'c2', 
+    name: 'Récupération', 
+    color: 'bg-green-100 text-green-800',
+    image: '/images/recuperation.png'
+  },
+  { 
+    id: 'c3', 
+    name: 'Sommeil', 
+    color: 'bg-indigo-100 text-indigo-800',
+    image: '/images/sommeil.png'
+  },
+  { 
+    id: 'c4', 
+    name: 'Concentration', 
+    color: 'bg-purple-100 text-purple-800',
+    image: '/images/concentration.png'
+  },
 ];
 
 export const GROUPS = [
-  { id: 'g1', name: 'Équipe A - Olympique' },
-  { id: 'g2', name: 'Athlètes Endurance' },
-  { id: 'g3', name: 'Réhabilitation' },
+  { 
+    id: 'g1', 
+    name: 'Pré-compétition',
+    description: 'Équipe A - Olympique',
+    image: '/images/pre_competition.png'
+  },
+  { 
+    id: 'g2', 
+    name: 'Récupération',
+    description: 'Athlètes Endurance',
+    image: '/images/recuperation.png'
+  },
+  { 
+    id: 'g3', 
+    name: 'Sommeil',
+    description: 'Réhabilitation',
+    image: '/images/sommeil.png'
+  },
+  { 
+    id: 'g4', 
+    name: 'Concentration',
+    description: 'Focus & contrôle',
+    image: '/images/concentration.png'
+  },
 ];

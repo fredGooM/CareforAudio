@@ -1,5 +1,5 @@
-import React, { useMemo, useState } from 'react';
-import { Play, Clock, Heart, Search, Music } from 'lucide-react';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Play, Clock, Heart, Search } from 'lucide-react';
 import { AudioTrack } from '../types';
 import { CATEGORIES } from '../services/apiClient';
 
@@ -8,28 +8,75 @@ interface UserCatalogProps {
   onPlay: (audio: AudioTrack) => void;
   favorites: string[];
   onToggleFavorite: (id: string) => void;
+  title?: string;
+  subtitle?: string;
+  showGroupFilters?: boolean;
+  showGroupName?: boolean;
 }
 
-export const UserCatalog: React.FC<UserCatalogProps> = ({ audios, onPlay, favorites, onToggleFavorite }) => {
-  const [filterCategory, setFilterCategory] = useState<string>('all');
+const FALLBACK_IMAGE = 'https://images.unsplash.com/photo-1506126197922-bcaa2d3d31bb?auto=format&fit=crop&w=800&q=60';
+
+export const UserCatalog: React.FC<UserCatalogProps> = ({
+  audios,
+  onPlay,
+  favorites,
+  onToggleFavorite,
+  title = 'Mes programmes',
+  subtitle = 'Sélectionnez votre programme et suivez-le pas à pas.',
+  showGroupFilters = true,
+  showGroupName = true
+}) => {
+  const initialCategory = CATEGORIES[0]?.id || '';
+  const [filterCategory, setFilterCategory] = useState<string>(
+    showGroupFilters ? initialCategory : ''
+  );
   const [searchQuery, setSearchQuery] = useState('');
 
-  const filteredAudios = useMemo(() => {
-    return audios.filter(audio => {
-      const matchesCategory = filterCategory === 'all' || audio.categoryId === filterCategory;
-      const matchesSearch = audio.title.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            audio.description.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
+  useEffect(() => {
+    setFilterCategory(showGroupFilters ? initialCategory : '');
+  }, [showGroupFilters, initialCategory]);
+
+  const orderMap = useMemo(() => {
+    const map = new Map<string, number>();
+    CATEGORIES.forEach(category => {
+      const list = audios
+        .filter(audio => audio.categoryId === category.id)
+        .sort(
+          (a, b) =>
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+      list.forEach((audio, index) =>
+        map.set(`${category.id}-${audio.id}`, index + 1)
+      );
     });
-  }, [audios, filterCategory, searchQuery]);
+    return map;
+  }, [audios]);
+
+  const filteredAudios = useMemo(() => {
+    return audios
+      .filter(audio => {
+        if (filterCategory && audio.categoryId !== filterCategory) return false;
+        const matchesSearch =
+          audio.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          audio.description.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+      })
+      .sort((a, b) => {
+        const keyA = `${filterCategory}-${a.id}`;
+        const keyB = `${filterCategory}-${b.id}`;
+        const orderA = orderMap.get(keyA) ?? Number.MAX_SAFE_INTEGER;
+        const orderB = orderMap.get(keyB) ?? Number.MAX_SAFE_INTEGER;
+        return orderA - orderB;
+      });
+  }, [audios, filterCategory, searchQuery, orderMap]);
 
   return (
     <div className="space-y-8 animate-fade-in pb-24">
       {/* Header & Filters */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900">Mon Catalogue</h1>
-          <p className="text-slate-500 mt-1">Préparez votre mental pour la performance.</p>
+          <h1 className="text-3xl font-bold text-slate-900">{title}</h1>
+          <p className="text-slate-500 mt-1">{subtitle}</p>
         </div>
         
         <div className="flex items-center gap-2 bg-white p-1 rounded-lg border border-slate-200 shadow-sm">
@@ -46,82 +93,81 @@ export const UserCatalog: React.FC<UserCatalogProps> = ({ audios, onPlay, favori
         </div>
       </div>
 
-      {/* Category Pills */}
-      <div className="flex flex-wrap gap-2">
-        <button 
-          onClick={() => setFilterCategory('all')}
-          className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filterCategory === 'all' ? 'bg-slate-900 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
-        >
-          Tout
-        </button>
-        {CATEGORIES.map(cat => (
-          <button
-            key={cat.id}
-            onClick={() => setFilterCategory(cat.id)}
-            className={`px-4 py-2 rounded-full text-sm font-medium transition-all ${filterCategory === cat.id ? 'ring-2 ring-offset-1 ring-slate-900 ' + cat.color : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}`}
-          >
-            {cat.name}
-          </button>
-        ))}
-      </div>
+      {showGroupFilters && (
+        <div className="flex flex-wrap gap-3 pb-2">
+          {CATEGORIES.map(category => (
+            <button
+              key={category.id}
+              onClick={() => setFilterCategory(category.id)}
+              className={`px-5 py-2 rounded-full text-sm font-semibold transition ${
+                filterCategory === category.id
+                  ? 'bg-primary-600 text-white shadow-lg shadow-primary-500/30'
+                  : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'
+              }`}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       {/* Grid */}
       {filteredAudios.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredAudios.map(audio => {
             const category = CATEGORIES.find(c => c.id === audio.categoryId);
+            const orderNumber = filterCategory
+              ? orderMap.get(`${filterCategory}-${audio.id}`)
+              : undefined;
+
             return (
-              <div key={audio.id} className="group bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col">
-                {/* Visual Placeholder instead of Image */}
-                <div className={`relative w-full h-48 md:h-40 overflow-hidden flex items-center justify-center ${category ? category.color.replace('text', 'bg').replace('800', '100') : 'bg-slate-100'}`}>
-                  <Music size={40} className="text-slate-400 opacity-60" />
-                  
-                  <div className="absolute inset-0 bg-black/5 group-hover:bg-black/15 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
-                    <button 
+              <div key={audio.id} className="bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-all p-4 flex flex-col">
+                <div className="flex items-start justify-between gap-3 mb-2">
+                  <div>
+                    {showGroupName && (
+                      <p className="text-xs uppercase font-semibold text-slate-500 tracking-wide">
+                        {category?.name || 'Programme'}
+                      </p>
+                    )}
+                    <h3
+                      className="text-base text-slate-900 mt-1 leading-tight cursor-pointer hover:text-primary-600 font-medium"
                       onClick={() => onPlay(audio)}
-                      className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center text-primary-600 shadow-lg transform scale-90 group-hover:scale-100 transition-all hover:bg-white"
                     >
-                      <Play size={22} fill="currentColor" className="ml-0.5" />
-                    </button>
+                      {audio.title}
+                    </h3>
                   </div>
-                  <div className="absolute top-3 right-3">
-                     <button 
-                      onClick={(e) => { e.stopPropagation(); onToggleFavorite(audio.id); }}
-                      className={`p-1.5 rounded-full backdrop-blur-md transition-colors ${favorites.includes(audio.id) ? 'bg-pink-500/90 text-white' : 'bg-black/10 text-white hover:bg-black/30'}`}
-                     >
-                       <Heart size={14} fill={favorites.includes(audio.id) ? "currentColor" : "none"} stroke={favorites.includes(audio.id) ? "none" : "currentColor"} />
-                     </button>
+                  <div className="flex flex-col items-end gap-2">
+                    {orderNumber && (
+                      <span className="px-2 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600">
+                        #{orderNumber.toString().padStart(2, '0')}
+                      </span>
+                    )}
+                    <button
+                      onClick={() => onToggleFavorite(audio.id)}
+                      className={`p-1.5 rounded-full border text-slate-400 hover:text-pink-500 transition ${
+                        favorites.includes(audio.id) ? 'text-pink-500 border-pink-200' : 'border-slate-200'
+                      }`}
+                    >
+                      <Heart
+                        size={14}
+                        fill={favorites.includes(audio.id) ? 'currentColor' : 'none'}
+                        stroke={favorites.includes(audio.id) ? 'none' : 'currentColor'}
+                      />
+                    </button>
                   </div>
                 </div>
 
-                {/* Content */}
-                <div className="p-5 flex-1 flex flex-col">
-                  <div className="flex items-center gap-2 mb-2">
-                     {audio.tags.slice(0, 2).map(tag => (
-                       <span key={tag} className="text-[10px] uppercase font-bold tracking-wider text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
-                         {tag}
-                       </span>
-                     ))}
+                <div className="mt-auto pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+                  <div className="flex items-center gap-1.5">
+                    <Clock size={12} />
+                    {Math.floor(audio.duration / 60)} min
                   </div>
-                  <h3 className="font-bold text-lg text-slate-900 mb-1 leading-tight group-hover:text-primary-600 transition-colors cursor-pointer" onClick={() => onPlay(audio)}>
-                    {audio.title}
-                  </h3>
-                  <p className="text-sm text-slate-500 line-clamp-2 mb-4 flex-1">
-                    {audio.description}
-                  </p>
-                  
-                  <div className="flex items-center justify-between pt-4 border-t border-slate-50 mt-auto">
-                     <div className="flex items-center text-slate-400 text-xs font-medium">
-                       <Clock size={14} className="mr-1" />
-                       {Math.floor(audio.duration / 60)} min
-                     </div>
-                     <button 
-                      onClick={() => onPlay(audio)}
-                      className="text-xs font-bold text-primary-600 hover:text-primary-800 uppercase tracking-wide"
-                     >
-                       Écouter
-                     </button>
-                  </div>
+                  <button
+                    onClick={() => onPlay(audio)}
+                    className="inline-flex items-center gap-1 text-primary-600 font-semibold text-sm hover:text-primary-800"
+                  >
+                    <Play size={12} /> Écouter
+                  </button>
                 </div>
               </div>
             );

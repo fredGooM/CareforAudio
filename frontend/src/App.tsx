@@ -282,7 +282,10 @@ const App: React.FC = () => {
           audios={userAudios} 
           onPlay={setCurrentTrack} 
           favorites={favorites} 
-          onToggleFavorite={toggleFavorite} 
+          onToggleFavorite={toggleFavorite}
+          title="Mes programmes"
+          showGroupFilters
+          showGroupName={false}
         />
       );
       case 'FAVORITES': return (
@@ -290,7 +293,11 @@ const App: React.FC = () => {
           audios={userAudios.filter(a => favorites.includes(a.id))} 
           onPlay={setCurrentTrack} 
           favorites={favorites} 
-          onToggleFavorite={toggleFavorite} 
+          onToggleFavorite={toggleFavorite}
+          title="Mon training personnalisé"
+          subtitle="Adaptez votre training comme bon vous semble !"
+          showGroupFilters={false}
+          showGroupName
         />
       );
       default: return null;
@@ -345,8 +352,8 @@ const App: React.FC = () => {
             <>
               <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-4">Menu</p>
               <NavItem view="USER_DASHBOARD" icon={LayoutDashboard} label="Tableau de bord" />
-              <NavItem view="CATALOG" icon={Home} label="Catalogue" />
-              <NavItem view="FAVORITES" icon={Heart} label="Favoris" />
+              <NavItem view="CATALOG" icon={Home} label="Programme" />
+              <NavItem view="FAVORITES" icon={Heart} label="Training" />
             </>
           )}
         </nav>
@@ -394,8 +401,8 @@ const App: React.FC = () => {
                  ) : (
                    <>
                       <NavItem view="USER_DASHBOARD" icon={LayoutDashboard} label="Dashboard" />
-                      <NavItem view="CATALOG" icon={Home} label="Catalogue" />
-                      <NavItem view="FAVORITES" icon={Heart} label="Favoris" />
+                      <NavItem view="CATALOG" icon={Home} label="Programme" />
+                      <NavItem view="FAVORITES" icon={Heart} label="Mon training" />
                    </>
                  )}
                   <div className="border-t border-slate-100 my-4 pt-4">

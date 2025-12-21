@@ -11,6 +11,7 @@ interface AudioPlayerProps {
 
 export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const sourceRef = useRef<HTMLSourceElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
   const [duration, setDuration] = useState(0);
@@ -20,10 +21,17 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
   const lastHeartbeatRef = useRef<number | null>(null);
 
   useEffect(() => {
-    if (track && audioRef.current) {
-      audioRef.current.src = track.url;
-      audioRef.current.play().then(() => setIsPlaying(true)).catch(e => console.error(e));
-      setCurrentTime(0); 
+    if (track && audioRef.current && sourceRef.current) {
+      setIsPlaying(false);
+      audioRef.current.pause();
+      sourceRef.current.src = track.url;
+      sourceRef.current.type = track.mimeType || 'audio/mpeg';
+      audioRef.current.load();
+      audioRef.current
+        .play()
+        .then(() => setIsPlaying(true))
+        .catch((e) => console.error('Audio playback error', e));
+      setCurrentTime(0);
     }
   }, [track]);
 
@@ -128,7 +136,10 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
           sendHeartbeat();
           setIsPlaying(false);
         }}
-      />
+      >
+        <source ref={sourceRef} />
+        Votre navigateur ne supporte pas la lecture audio.
+      </audio>
 
       <div className={`max-w-7xl mx-auto px-4 h-full flex ${isExpanded ? 'flex-col gap-8' : 'flex-row items-center justify-between'}`}>
         

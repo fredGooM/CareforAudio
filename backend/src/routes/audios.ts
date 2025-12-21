@@ -6,10 +6,21 @@ import { PrismaClient } from '@prisma/client';
 import { parseFile } from 'music-metadata';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
 import { uploadMiddleware, getPublicUrl } from '../services/storage';
+// @ts-ignore
+import ffmpeg from 'fluent-ffmpeg';
+// @ts-ignore
+import ffmpegStatic from 'ffmpeg-static';
 
 const router = express.Router();
 const prisma = new PrismaClient();
 const uploadsDir = path.join(process.cwd(), 'uploads');
+const ffmpegBinary = (ffmpegStatic as string) || '';
+if (ffmpegBinary) {
+    ffmpeg.setFfmpegPath(ffmpegBinary);
+}
+
+const AIFF_MIME_TYPES = new Set(['audio/aiff', 'audio/x-aiff']);
+const AIFF_EXTENSIONS = new Set(['.aiff', '.aif']);
 
 async function computeDuration(storageKey?: string | null) {
     if (!storageKey) return null;
@@ -23,6 +34,49 @@ async function computeDuration(storageKey?: string | null) {
         console.warn(`Unable to compute duration for ${storageKey}`, error);
     }
     return null;
+}
+
+async function ensurePlayableFormat(file: Express.Multer.File) {
+    const ext = path.extname(file.originalname).toLowerCase();
+    const needsConversion = AIFF_MIME_TYPES.has(file.mimetype) || AIFF_EXTENSIONS.has(ext);
+
+    if (!needsConversion) {
+        return {
+            storageKey: file.filename,
+            mimeType: file.mimetype,
+            size: file.size
+        };
+    }
+
+    const sourcePath = path.join(uploadsDir, file.filename);
+    const targetFilename = `${path.parse(file.filename).name}.wav`;
+    const targetPath = path.join(uploadsDir, targetFilename);
+
+    try {
+        await new Promise<void>((resolve, reject) => {
+            ffmpeg(sourcePath)
+                .toFormat('wav')
+                .on('end', resolve)
+                .on('error', reject)
+                .save(targetPath);
+        });
+
+        await fs.promises.unlink(sourcePath).catch(() => {});
+        const stats = await fs.promises.stat(targetPath);
+
+        return {
+            storageKey: targetFilename,
+            mimeType: 'audio/wav',
+            size: stats.size
+        };
+    } catch (error) {
+        console.error('AIFF conversion failed; keeping original file', error);
+        return {
+            storageKey: file.filename,
+            mimeType: file.mimetype,
+            size: file.size
+        };
+    }
 }
 
 // Get Catalog (Filtered by Access)
@@ -86,6 +140,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
                 url: publicUrl, 
                 coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
                 categoryId: a.categoryId || 'c1',
+                mimeType: a.mimeType || 'audio/mpeg',
                 tags: [],
                 createdAt: a.createdAt,
                 published: a.published,
@@ -115,8 +170,8 @@ router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'
              return;
         }
 
-        // 'file.filename' est le nom généré sur le disque par Multer
-        const storageKey = file.filename;
+        const processedFile = await ensurePlayableFormat(file);
+        const storageKey = processedFile.storageKey;
         
         // Save to DB
         const newAudio = await prisma.audioTrack.create({
@@ -127,8 +182,8 @@ router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'
                 categoryId: categoryId || 'c1',
                 published: published === 'true',
                 storageKey,
-                mimeType: file.mimetype,
-                size: file.size,
+                mimeType: processedFile.mimeType,
+                size: processedFile.size,
                 coverUrl: `https://picsum.photos/400/400?random=${Date.now()}` 
             }
         });

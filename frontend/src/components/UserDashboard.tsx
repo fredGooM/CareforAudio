@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { dataService, CATEGORIES } from '../services/apiClient';
-import { UserDashboardData } from '../types';
+import { UserDashboardData, User } from '../types';
 import { Clock, Flame, Trophy, RefreshCw } from 'lucide-react';
 
 const CategoryCircle: React.FC<{ label: string; percent: number }> = ({ label, percent }) => {
@@ -35,15 +35,66 @@ const CategoryCircle: React.FC<{ label: string; percent: number }> = ({ label, p
 const UserDashboard: React.FC = () => {
   const [data, setData] = useState<UserDashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const buildFallbackData = async (): Promise<UserDashboardData> => {
+    try {
+      const stored = localStorage.getItem('user');
+      if (stored) {
+        const parsedUser = JSON.parse(stored) as User;
+        // Try to fetch accessible audios so that at least the catalogue loads
+        await dataService.getAudiosForUser(parsedUser);
+      }
+    } catch (err) {
+      console.warn('Fallback catalogue fetch failed', err);
+    }
+
+    return {
+      totalMinutes: 0,
+      completionPercent: 0,
+      streakDays: 0,
+      completedCount: 0,
+      categoryProgress: CATEGORIES.map((category) => ({
+        categoryId: category.id,
+        percent: 0
+      })),
+      continueListening: []
+    };
+  };
 
   useEffect(() => {
-    dataService.getAnalyticsDashboard()
-      .then((response) => {
-        if (response.role === 'USER') {
+    let cancelled = false;
+
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const response = await dataService.getAnalyticsDashboard();
+        if (!cancelled && response.role === 'USER') {
           setData(response);
+        } else if (!cancelled) {
+          throw new Error('Réponse inattendue');
         }
-      })
-      .finally(() => setLoading(false));
+      } catch (err) {
+        console.error('User dashboard unavailable', err);
+        if (cancelled) return;
+        setError("Impossible de récupérer les métriques temps réel. Affichage d'une vue simplifiée.");
+        const fallback = await buildFallbackData();
+        if (!cancelled) {
+          setData(fallback);
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    load();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (loading) {
@@ -65,6 +116,12 @@ const UserDashboard: React.FC = () => {
         <h2 className="text-2xl font-bold text-slate-900">Pilotage Personnel</h2>
         <p className="text-slate-500">Surveille ta charge mentale et ton assiduité.</p>
       </div>
+
+      {error && (
+        <div className="p-4 rounded-xl border border-amber-200 bg-amber-50 text-sm text-amber-700">
+          {error}
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">

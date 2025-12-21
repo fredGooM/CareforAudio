@@ -26,6 +26,7 @@ export interface Category {
   id: string;
   name: string;
   color: string;
+  image: string;
 }
 
 export interface AudioTrack {
@@ -34,6 +35,7 @@ export interface AudioTrack {
   description: string;
   duration: number;
   url: string;
+  mimeType?: string;
   coverUrl: string;
   categoryId: string;
   tags: string[];
