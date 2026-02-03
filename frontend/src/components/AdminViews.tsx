@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import type { AxiosError } from 'axios';
 import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Clock, Activity, Edit, Trash2, Plus, Upload, X, Save, Search, Check, Play, Music, Lock, Mic, Square, Mail, KeyRound, RefreshCw, Layers } from 'lucide-react';
 import { AudioTrack, User, UserRole, Group, AdminDashboardData } from '../types';
@@ -261,6 +262,16 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
   const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const monitorRef = useRef<{
+    audioCtx: AudioContext | null;
+    analyser: AnalyserNode | null;
+    source: MediaStreamAudioSourceNode | null;
+    rafId: number | null;
+  }>({ audioCtx: null, analyser: null, source: null, rafId: null });
+  const previewStreamRef = useRef<MediaStream | null>(null);
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>('default');
+  const [audioLevel, setAudioLevel] = useState(0);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<number>(initialData?.duration || 0);
   
@@ -293,15 +304,99 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (monitorRef.current.rafId) cancelAnimationFrame(monitorRef.current.rafId);
+      monitorRef.current.source?.disconnect();
+      monitorRef.current.analyser?.disconnect();
+      monitorRef.current.audioCtx?.close().catch(() => undefined);
+      previewStreamRef.current?.getTracks().forEach(track => track.stop());
     };
   }, []);
 
+  const refreshAudioInputs = useCallback(async () => {
+    if (!navigator.mediaDevices?.enumerateDevices) return;
+    try {
+      const devices = await navigator.mediaDevices.enumerateDevices();
+      const inputs = devices.filter(device => device.kind === 'audioinput');
+      setAudioInputs(inputs);
+      if (inputs.length > 0 && !inputs.find(device => device.deviceId === selectedDeviceId)) {
+        setSelectedDeviceId(inputs[0].deviceId);
+      }
+    } catch (err) {
+      console.warn('Failed to enumerate audio devices', err);
+    }
+  }, [selectedDeviceId]);
+
+  useEffect(() => {
+    refreshAudioInputs();
+  }, [refreshAudioInputs]);
+
+  const stopLevelMonitor = (stopStream = true) => {
+    if (monitorRef.current.rafId) cancelAnimationFrame(monitorRef.current.rafId);
+    monitorRef.current.source?.disconnect();
+    monitorRef.current.analyser?.disconnect();
+    monitorRef.current.audioCtx?.close().catch(() => undefined);
+    monitorRef.current = { audioCtx: null, analyser: null, source: null, rafId: null };
+    if (stopStream) {
+      previewStreamRef.current?.getTracks().forEach(track => track.stop());
+      previewStreamRef.current = null;
+    }
+    setAudioLevel(0);
+  };
+
+  const startLevelMonitor = (stream: MediaStream) => {
+    stopLevelMonitor(false);
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const audioCtx = new AudioCtx();
+    const analyser = audioCtx.createAnalyser();
+    analyser.fftSize = 2048;
+    const source = audioCtx.createMediaStreamSource(stream);
+    source.connect(analyser);
+    const data = new Float32Array(analyser.fftSize);
+
+    const tick = () => {
+      analyser.getFloatTimeDomainData(data);
+      let sum = 0;
+      for (let i = 0; i < data.length; i += 1) {
+        const x = data[i];
+        sum += x * x;
+      }
+      const rms = Math.sqrt(sum / data.length);
+      setAudioLevel(Math.min(1, rms * 3));
+      monitorRef.current.rafId = requestAnimationFrame(tick);
+    };
+
+    monitorRef.current = { audioCtx, analyser, source, rafId: requestAnimationFrame(tick) };
+  };
+
+  const startPreviewMonitor = async () => {
+    try {
+      stopLevelMonitor(true);
+      const constraints = selectedDeviceId && selectedDeviceId !== 'default'
+        ? { audio: { deviceId: { exact: selectedDeviceId } } }
+        : { audio: true };
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      previewStreamRef.current = stream;
+      startLevelMonitor(stream);
+      refreshAudioInputs();
+    } catch (err) {
+      console.warn('Failed to start microphone preview', err);
+    }
+  };
+
   const startRecording = async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const constraints = selectedDeviceId && selectedDeviceId !== 'default'
+        ? { audio: { deviceId: { exact: selectedDeviceId } } }
+        : { audio: true };
+      const stream = previewStreamRef.current ?? await navigator.mediaDevices.getUserMedia(constraints);
+      previewStreamRef.current = stream;
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       const chunks: BlobPart[] = [];
+
+      startLevelMonitor(stream);
+      refreshAudioInputs();
 
       mediaRecorder.ondataavailable = (e) => {
         if (e.data.size > 0) chunks.push(e.data);
@@ -336,8 +431,31 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
       setIsRecording(false);
       if (timerRef.current) clearInterval(timerRef.current);
       mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+      stopLevelMonitor(true);
     }
   };
+
+  useEffect(() => {
+    if (mode !== 'RECORD') {
+      if (isRecording) {
+        stopRecording();
+      } else {
+        stopLevelMonitor(true);
+      }
+    }
+  }, [mode, isRecording]);
+
+  useEffect(() => {
+    if (mode === 'RECORD' && !isRecording && !recordedBlob) {
+      startPreviewMonitor();
+      return;
+    }
+    if (mode === 'RECORD' && (isRecording || recordedBlob)) {
+      stopLevelMonitor(false);
+      return;
+    }
+    stopLevelMonitor(true);
+  }, [mode, selectedDeviceId, isRecording, recordedBlob]);
 
   const formatTime = (totalSeconds: number) => {
     const mins = Math.floor(totalSeconds / 60);
@@ -378,7 +496,9 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
         onSave();
     } catch (e) {
         console.error(e);
-        alert("Erreur lors de l'enregistrement.");
+        const err = e as AxiosError<{ error?: string }>;
+        const detail = err?.response?.data?.error || err?.message;
+        alert(detail ? `Erreur lors de l'enregistrement. (${detail})` : "Erreur lors de l'enregistrement.");
     } finally {
         setSaving(false);
     }
@@ -469,6 +589,44 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
                           </div>
                         ) : (
                           <>
+                            <div className="w-full max-w-md space-y-3 mb-4">
+                              <div className="flex items-center justify-between gap-3">
+                                <label className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+                                  Microphone
+                                </label>
+                                <button
+                                  type="button"
+                                  onClick={refreshAudioInputs}
+                                  className="text-xs text-slate-500 hover:text-slate-700"
+                                >
+                                  Rafraichir
+                                </button>
+                              </div>
+                              <select
+                                className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100"
+                                value={selectedDeviceId}
+                                onChange={(e) => setSelectedDeviceId(e.target.value)}
+                                disabled={isRecording}
+                              >
+                                <option value="default">Micro par defaut</option>
+                                {audioInputs.map((device, index) => (
+                                  <option key={device.deviceId} value={device.deviceId}>
+                                    {device.label || `Micro ${index + 1}`}
+                                  </option>
+                                ))}
+                              </select>
+                              <div className="w-full">
+                                <div className="h-2 w-full bg-slate-200 rounded-full overflow-hidden">
+                                  <div
+                                    className="h-full bg-green-500 transition-[width] duration-100"
+                                    style={{ width: `${Math.round(audioLevel * 100)}%` }}
+                                  />
+                                </div>
+                                <p className="text-[11px] text-slate-500 mt-1">
+                                  {isRecording ? 'Signal micro en cours...' : "Signal micro"}
+                                </p>
+                              </div>
+                            </div>
                             <div className="text-4xl font-mono font-bold text-slate-700 mb-6">
                                {formatTime(recordingTime)}
                             </div>

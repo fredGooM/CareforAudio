@@ -227,23 +227,28 @@ router.put('/:id', authenticateToken, requireAdmin, async (req: any, res: any) =
         });
 
         // Sync Groups
-        if (allowedGroupIds) {
+        if (Array.isArray(allowedGroupIds)) {
             await prisma.groupAccess.deleteMany({ where: { audioId: id } });
-            await prisma.groupAccess.createMany({
-                data: allowedGroupIds.map((gid: string) => ({ groupId: gid, audioId: id }))
-            });
+            if (allowedGroupIds.length > 0) {
+                await prisma.groupAccess.createMany({
+                    data: allowedGroupIds.map((gid: string) => ({ groupId: gid, audioId: id }))
+                });
+            }
         }
 
         // Sync Users
-        if (allowedUserIds) {
-             await prisma.audioAccess.deleteMany({ where: { audioId: id } });
-             await prisma.audioAccess.createMany({
-                data: allowedUserIds.map((uid: string) => ({ userId: uid, audioId: id }))
-            });
+        if (Array.isArray(allowedUserIds)) {
+            await prisma.audioAccess.deleteMany({ where: { audioId: id } });
+            if (allowedUserIds.length > 0) {
+                await prisma.audioAccess.createMany({
+                    data: allowedUserIds.map((uid: string) => ({ userId: uid, audioId: id }))
+                });
+            }
         }
 
         res.json({ success: true });
     } catch(e) {
+        console.error('Failed to update audio', e);
         res.status(500).json({ error: 'Update failed' });
     }
 });
