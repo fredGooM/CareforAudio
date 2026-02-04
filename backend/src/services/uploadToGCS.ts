@@ -7,6 +7,7 @@ interface UploadParams {
   buffer: Buffer;
   mimeType: string;
   originalName: string;
+  folder?: string;
 }
 
 export interface UploadResult {
@@ -23,21 +24,28 @@ const getLocalPublicUrl = (objectName: string) => {
 
 export const uploadToGCS = async ({ buffer, mimeType, originalName }: UploadParams): Promise<UploadResult> => {
   const ext = path.extname(originalName) || '';
-  const objectName = `audios/${uuidv4()}${ext}`;
+  const folder = 'audios';
+  const objectName = `${folder}/${uuidv4()}${ext}`;
+  return uploadToGCSInFolder({ buffer, mimeType, originalName, folder, objectName });
+};
+
+export const uploadToGCSInFolder = async ({ buffer, mimeType, originalName, folder, objectName }: UploadParams & { folder: string; objectName?: string }): Promise<UploadResult> => {
+  const ext = path.extname(originalName) || '';
+  const finalObjectName = objectName || `${folder}/${uuidv4()}${ext}`;
 
   if (isLocalStorage || !bucket) {
-    const localPath = path.join(localUploadDir, objectName);
+    const localPath = path.join(localUploadDir, finalObjectName);
     await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
     await fs.promises.writeFile(localPath, buffer);
     return {
-      objectName,
+      objectName: finalObjectName,
       gcsUri: localPath,
       mimeType,
       size: buffer.length
     };
   }
 
-  const file = bucket.file(objectName);
+  const file = bucket.file(finalObjectName);
 
   await file.save(buffer, {
     contentType: mimeType,
@@ -48,8 +56,8 @@ export const uploadToGCS = async ({ buffer, mimeType, originalName }: UploadPara
   });
 
   return {
-    objectName,
-    gcsUri: `gs://${bucket.name}/${objectName}`,
+    objectName: finalObjectName,
+    gcsUri: `gs://${bucket.name}/${finalObjectName}`,
     mimeType,
     size: buffer.length
   };

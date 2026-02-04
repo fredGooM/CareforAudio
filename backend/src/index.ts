@@ -6,6 +6,8 @@ import authRoutes from './routes/auth';
 import audioRoutes from './routes/audios';
 import userRoutes from './routes/users';
 import analyticsRoutes from './routes/analytics';
+import categoryRoutes from './routes/categories';
+import groupRoutes from './routes/groups';
 import { isLocalStorage, localUploadDir } from './services/gcs';
 
 dotenv.config();
@@ -36,6 +38,8 @@ app.use('/auth', authRoutes);
 app.use('/audios', audioRoutes);
 app.use('/users', userRoutes);
 app.use('/analytics', analyticsRoutes);
+app.use('/categories', categoryRoutes);
+app.use('/groups', groupRoutes);
 
 // Start Server
 app.listen(PORT, () => {

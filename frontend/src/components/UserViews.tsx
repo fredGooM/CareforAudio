@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Play, Clock, Heart, Search } from 'lucide-react';
-import { AudioTrack } from '../types';
-import { CATEGORIES } from '../services/apiClient';
+import { AudioTrack, Category } from '../types';
+import { CATEGORIES, dataService } from '../services/apiClient';
 
 interface UserCatalogProps {
   audios: AudioTrack[];
@@ -26,7 +26,8 @@ export const UserCatalog: React.FC<UserCatalogProps> = ({
   showGroupFilters = true,
   showGroupName = true
 }) => {
-  const initialCategory = CATEGORIES[0]?.id || '';
+  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
+  const initialCategory = categories[0]?.id || '';
   const [filterCategory, setFilterCategory] = useState<string>(
     showGroupFilters ? initialCategory : ''
   );
@@ -36,9 +37,13 @@ export const UserCatalog: React.FC<UserCatalogProps> = ({
     setFilterCategory(showGroupFilters ? initialCategory : '');
   }, [showGroupFilters, initialCategory]);
 
+  useEffect(() => {
+    dataService.getCategories().then(setCategories).catch(() => undefined);
+  }, []);
+
   const orderMap = useMemo(() => {
     const map = new Map<string, number>();
-    CATEGORIES.forEach(category => {
+    categories.forEach(category => {
       const list = audios
         .filter(audio => audio.categoryId === category.id)
         .sort(
@@ -50,7 +55,7 @@ export const UserCatalog: React.FC<UserCatalogProps> = ({
       );
     });
     return map;
-  }, [audios]);
+  }, [audios, categories]);
 
   const filteredAudios = useMemo(() => {
     return audios
@@ -95,7 +100,7 @@ export const UserCatalog: React.FC<UserCatalogProps> = ({
 
       {showGroupFilters && (
         <div className="flex flex-wrap gap-3 pb-2">
-          {CATEGORIES.map(category => (
+          {categories.map(category => (
             <button
               key={category.id}
               onClick={() => setFilterCategory(category.id)}
@@ -115,7 +120,7 @@ export const UserCatalog: React.FC<UserCatalogProps> = ({
       {filteredAudios.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filteredAudios.map(audio => {
-            const category = CATEGORIES.find(c => c.id === audio.categoryId);
+            const category = categories.find(c => c.id === audio.categoryId);
             const orderNumber = filterCategory
               ? orderMap.get(`${filterCategory}-${audio.id}`)
               : undefined;

@@ -59,6 +59,7 @@ model AudioTrack {
   mimeType     String?
   size         Int?
   categoryId   String?
+  category     Category?     @relation(fields: [categoryId], references: [id])
   published    Boolean       @default(false)
   coverUrl     String?
   createdAt    DateTime      @default(now())
@@ -67,6 +68,16 @@ model AudioTrack {
   allowedGroups GroupAccess[]
   progressRecords UserProgress[]
   audioLogs     AudioLog[]
+}
+
+model Category {
+  id        String      @id @default(uuid())
+  name      String
+  color     String?
+  image     String?
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  audios    AudioTrack[]
 }
 
 model GroupAccess {

@@ -9,9 +9,36 @@ const client_1 = require("@prisma/client");
 const bcrypt_1 = __importDefault(require("bcrypt"));
 const prisma = new client_1.PrismaClient();
 const groupSeeds = [
-    { id: 'g1', name: 'Équipe A - Olympique' },
-    { id: 'g2', name: 'Athlètes Endurance' },
-    { id: 'g3', name: 'Réhabilitation' }
+    { id: 'g1', name: 'Voiture (GT, kart, F2)' },
+    { id: 'g2', name: 'Tennis & padel' },
+    { id: 'g3', name: 'Aviron' },
+    { id: 'g4', name: 'Rugby' }
+];
+const categorySeeds = [
+    {
+        id: 'c1',
+        name: 'Pré-compétition',
+        color: 'bg-blue-100 text-blue-800',
+        image: '/images/pre_competition.png'
+    },
+    {
+        id: 'c2',
+        name: 'Récupération',
+        color: 'bg-green-100 text-green-800',
+        image: '/images/recuperation.png'
+    },
+    {
+        id: 'c3',
+        name: 'Sommeil',
+        color: 'bg-indigo-100 text-indigo-800',
+        image: '/images/sommeil.png'
+    },
+    {
+        id: 'c4',
+        name: 'Concentration',
+        color: 'bg-purple-100 text-purple-800',
+        image: '/images/concentration.png'
+    }
 ];
 const athleteSeeds = [
     {
@@ -76,12 +103,23 @@ const audioSeeds = [
 ];
 const randomBetween = (min, max) => Math.floor(Math.random() * (max - min + 1)) + min;
 async function ensureBaseData() {
-    console.log('➡️  Ensuring base data (groups, users, audios)...');
+    console.log('➡️  Ensuring base data (groups, categories, users, audios)...');
     for (const group of groupSeeds) {
         await prisma.group.upsert({
             where: { id: group.id },
             update: { name: group.name },
             create: group
+        });
+    }
+    for (const category of categorySeeds) {
+        await prisma.category.upsert({
+            where: { id: category.id },
+            update: {
+                name: category.name,
+                color: category.color,
+                image: category.image
+            },
+            create: category
         });
     }
     const adminPass = await bcrypt_1.default.hash('admin', 10);

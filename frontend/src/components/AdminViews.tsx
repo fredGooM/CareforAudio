@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { AxiosError } from 'axios';
 import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Clock, Activity, Edit, Trash2, Plus, Upload, X, Save, Search, Check, Play, Music, Lock, Mic, Square, Mail, KeyRound, RefreshCw, Layers } from 'lucide-react';
-import { AudioTrack, User, UserRole, Group, AdminDashboardData } from '../types';
+import { AudioTrack, User, UserRole, Group, AdminDashboardData, Category } from '../types';
 import { CATEGORIES, GROUPS, dataService, authService } from '../services/apiClient';
 
 // --- Dashboard ---
@@ -235,6 +235,9 @@ export const AdminDashboard: React.FC = () => {
 interface AudioModalProps {
   initialData?: AudioTrack; 
   initialMode?: 'UPLOAD' | 'RECORD'; 
+  categories: Category[];
+  users: User[];
+  groups: Group[];
   onClose: () => void;
   onSave: () => void;
 }
@@ -242,7 +245,7 @@ interface AudioModalProps {
 const createEmptyAudioForm = (): Partial<AudioTrack> => ({
   title: '',
   description: '',
-  categoryId: 'c1',
+  categoryId: '',
   published: true,
   tags: [],
   allowedGroupIds: [],
@@ -250,7 +253,7 @@ const createEmptyAudioForm = (): Partial<AudioTrack> => ({
   url: ''
 });
 
-const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPLOAD', onClose, onSave }) => {
+const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPLOAD', categories, users, groups, onClose, onSave }) => {
   const isEditMode = !!initialData;
   const [step, setStep] = useState<1 | 2>(1); 
   const [mode, setMode] = useState<'UPLOAD' | 'RECORD'>(initialMode);
@@ -275,16 +278,9 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [durationSeconds, setDurationSeconds] = useState<number>(initialData?.duration || 0);
   
-  // Data for permissions
-  const [availableUsers, setAvailableUsers] = useState<User[]>([]);
-
   // Form State
   const [formData, setFormData] = useState<Partial<AudioTrack>>(initialData || createEmptyAudioForm());
   const [searchUser, setSearchUser] = useState('');
-
-  useEffect(() => {
-    dataService.getUsers().then(setAvailableUsers).catch(console.error);
-  }, []);
 
   useEffect(() => {
     if (initialData) {
@@ -300,6 +296,15 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
     setRecordedBlob(null);
     setIsRecording(false);
   }, [initialData, initialMode]);
+
+  useEffect(() => {
+    if (isEditMode) return;
+    if (!categories.length) return;
+    setFormData(prev => ({
+      ...prev,
+      categoryId: prev.categoryId || categories[0].id
+    }));
+  }, [categories, isEditMode]);
 
   useEffect(() => {
     return () => {
@@ -524,7 +529,7 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
     });
   };
 
-  const filteredUsers = availableUsers.filter(u => 
+  const filteredUsers = users.filter(u => 
     u.role === UserRole.USER && 
     (u.email.toLowerCase().includes(searchUser.toLowerCase()) || 
      u.lastName.toLowerCase().includes(searchUser.toLowerCase()))
@@ -677,40 +682,43 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
                   value={formData.description}
                   onChange={e => setFormData({...formData, description: e.target.value})}
                 />
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">Catégorie</label>
-                    <select 
-                      className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white"
-                      value={formData.categoryId}
-                      onChange={e => setFormData({...formData, categoryId: e.target.value})}
-                    >
-                      {CATEGORIES.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                  </div>
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-500 mb-1">Statut</label>
-                    <select 
-                      className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white"
-                      value={formData.published ? 'true' : 'false'}
-                      onChange={e => setFormData({...formData, published: e.target.value === 'true'})}
-                    >
-                      <option value="true">Publié</option>
-                      <option value="false">Brouillon</option>
-                    </select>
-                  </div>
-                </div>
               </div>
             </div>
           ) : (
             <div className="space-y-6">
-              
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Statut</label>
+                <select 
+                  className="w-full px-4 py-2 border border-slate-200 rounded-lg bg-white"
+                  value={formData.published ? 'true' : 'false'}
+                  onChange={e => setFormData({...formData, published: e.target.value === 'true'})}
+                >
+                  <option value="true">Publié</option>
+                  <option value="false">Brouillon</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-500 mb-1">Catégorie</label>
+                <select
+                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  value={formData.categoryId || ''}
+                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                >
+                  {categories.map(category => (
+                    <option key={category.id} value={category.id}>
+                      {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
               <div>
                 <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  <Users size={16} /> Par Groupes
+                  <Users size={16} /> Par groupes d'utilisateur
                 </h4>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  {GROUPS.map(group => (
+                  {groups.map(group => (
                     <label key={group.id} className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${formData.allowedGroupIds?.includes(group.id) ? 'bg-primary-50 border-primary-200' : 'bg-white border-slate-200 hover:border-slate-300'}`}>
                       <div className={`w-5 h-5 rounded border flex items-center justify-center transition-colors ${formData.allowedGroupIds?.includes(group.id) ? 'bg-primary-600 border-primary-600 text-white' : 'border-slate-300 bg-white'}`}>
                         {formData.allowedGroupIds?.includes(group.id) && <Check size={12} strokeWidth={3} />}
@@ -727,21 +735,40 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
                 </div>
               </div>
 
-              <div className="border-t border-slate-100 my-4"></div>
-
               <div className="flex flex-col h-64">
                 <h4 className="text-sm font-bold text-slate-900 mb-3 flex items-center gap-2">
-                  <Lock size={16} /> Par Utilisateur (Exceptions)
+                  <Lock size={16} /> Par Utilisateur
                 </h4>
-                <div className="relative mb-3">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
-                  <input 
-                    type="text" 
-                    placeholder="Chercher un athlète..." 
-                    className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm"
-                    value={searchUser}
-                    onChange={e => setSearchUser(e.target.value)}
-                  />
+                <div className="flex items-center justify-between gap-3 mb-3">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={14} />
+                    <input 
+                      type="text" 
+                      placeholder="Chercher un athlète..." 
+                      className="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-lg text-sm"
+                      value={searchUser}
+                      onChange={e => setSearchUser(e.target.value)}
+                    />
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (!formData.allowedUserIds?.length) {
+                        setFormData({
+                          ...formData,
+                          allowedUserIds: filteredUsers.map(u => u.id)
+                        });
+                      } else {
+                        setFormData({
+                          ...formData,
+                          allowedUserIds: []
+                        });
+                      }
+                    }}
+                    className="px-3 py-2 text-xs font-semibold border rounded-lg text-slate-600 bg-white hover:bg-slate-50"
+                  >
+                    {formData.allowedUserIds?.length ? 'Tout désélectionné' : 'Tout sélectionné'}
+                  </button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto border border-slate-200 rounded-xl bg-slate-50 divide-y divide-slate-100">
@@ -815,6 +842,17 @@ export const AdminLibrary: React.FC<{ onPlay: (audio: AudioTrack) => void }> = (
   const [editAudio, setEditAudio] = useState<AudioTrack | undefined>(undefined);
   const [audios, setAudios] = useState<AudioTrack[]>([]);
   const [loading, setLoading] = useState(true);
+  const [userOptions, setUserOptions] = useState<User[]>([]);
+  const [groupOptions, setGroupOptions] = useState<Group[]>(GROUPS);
+  const [sortKey, setSortKey] = useState<'title' | 'category' | 'duration' | 'status' | 'createdAt' | 'user'>('createdAt');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [categoryModalOpen, setCategoryModalOpen] = useState(false);
+  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
+  const [categoryDraft, setCategoryDraft] = useState<Category[]>(CATEGORIES);
+  const [categoryImageFiles, setCategoryImageFiles] = useState<Record<string, File>>({});
+  const [savingCategories, setSavingCategories] = useState(false);
+  const [categoryError, setCategoryError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
 
   const refresh = async () => {
       setLoading(true);
@@ -829,6 +867,30 @@ export const AdminLibrary: React.FC<{ onPlay: (audio: AudioTrack) => void }> = (
   useEffect(() => {
       refresh();
   }, []);
+
+  useEffect(() => {
+    dataService.getCategories().then(setCategories).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    dataService.getUsers().then(setUserOptions).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    dataService.getGroups().then(setGroupOptions).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    dataService.getUsers().then(setUsers).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (categoryModalOpen) {
+      setCategoryDraft(categories);
+      setCategoryError(null);
+      setCategoryImageFiles({});
+    }
+  }, [categoryModalOpen, categories]);
 
   const handleOpenUpload = () => {
     setModalMode('UPLOAD');
@@ -867,11 +929,116 @@ export const AdminLibrary: React.FC<{ onPlay: (audio: AudioTrack) => void }> = (
     refresh();
   };
 
+  const toggleSort = (key: typeof sortKey) => {
+    if (key === sortKey) {
+      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    setSortDir('asc');
+  };
+
+  const getCategoryName = (audio: AudioTrack) =>
+    categories.find(c => c.id === audio.categoryId)?.name || 'Général';
+
+  const sortIndicator = (key: typeof sortKey) =>
+    sortKey === key ? (sortDir === 'asc' ? ' ^' : ' v') : '';
+
+  const formatDate = (value: string) => {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return '';
+    return date.toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  const getAssignedUserLabel = (audio: AudioTrack) => {
+    const ids = audio.allowedUserIds || [];
+    if (ids.length === 0) return '—';
+    if (ids.length > 1) return 'Multi utilisateurs';
+    const user = users.find(u => u.id === ids[0]);
+    return user ? `${user.firstName} ${user.lastName}` : 'Utilisateur';
+  };
+
+  const sortedAudios = [...audios].sort((a, b) => {
+    if (sortKey === 'createdAt') {
+      const delta = new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      return sortDir === 'asc' ? delta : -delta;
+    }
+    if (sortKey === 'duration') {
+      const delta = a.duration - b.duration;
+      return sortDir === 'asc' ? delta : -delta;
+    }
+
+    const aValue = sortKey === 'title'
+      ? a.title
+      : sortKey === 'category'
+        ? getCategoryName(a)
+        : sortKey === 'user'
+          ? getAssignedUserLabel(a)
+        : a.published ? 'Publié' : 'Brouillon';
+    const bValue = sortKey === 'title'
+      ? b.title
+      : sortKey === 'category'
+        ? getCategoryName(b)
+        : sortKey === 'user'
+          ? getAssignedUserLabel(b)
+        : b.published ? 'Publié' : 'Brouillon';
+
+    const compare = aValue.localeCompare(bValue, 'fr', { sensitivity: 'base', numeric: true });
+    return sortDir === 'asc' ? compare : -compare;
+  });
+
+  const saveCategories = async () => {
+    setSavingCategories(true);
+    setCategoryError(null);
+    try {
+      const existing = categoryDraft.filter(cat => !cat.id.startsWith('new-'));
+      const created = categoryDraft.filter(cat => cat.id.startsWith('new-'));
+
+      await Promise.all(existing.map(cat => {
+        const payload: { name: string; color?: string; image?: string } = { name: cat.name, color: cat.color };
+        if (cat.image === '') {
+          payload.image = '';
+        }
+        return dataService.updateCategory(cat.id, payload);
+      }));
+
+      const createdResults = created.length > 0
+        ? await Promise.all(created.map(cat =>
+            dataService.createCategory({ name: cat.name, color: cat.color })
+          ))
+        : [];
+
+      const createdMap = new Map(created.map((cat, index) => [cat.id, createdResults[index]]));
+
+      const uploads: Array<Promise<Category>> = [];
+      for (const [tempId, file] of Object.entries(categoryImageFiles)) {
+        const target = tempId.startsWith('new-') ? createdMap.get(tempId) : existing.find(cat => cat.id === tempId);
+        if (!target) continue;
+        uploads.push(dataService.uploadCategoryImage(target.id, file));
+      }
+      if (uploads.length > 0) {
+        await Promise.all(uploads);
+      }
+
+      const fresh = await dataService.getCategories();
+      setCategories(fresh);
+      setCategoryModalOpen(false);
+    } catch (e) {
+      console.error('Failed to save categories', e);
+      setCategoryError("Impossible d'enregistrer les catégories.");
+    } finally {
+      setSavingCategories(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-900">Bibliothèque Audio</h2>
         <div className="flex gap-3">
+          <button onClick={() => setCategoryModalOpen(true)} className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm">
+            <Layers size={18} /> <span>Catégorie</span>
+          </button>
           <button onClick={handleOpenRecord} className="flex items-center gap-2 bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition-colors shadow-sm">
             <Mic size={18} /> <span>Enregistrer</span>
           </button>
@@ -887,16 +1054,42 @@ export const AdminLibrary: React.FC<{ onPlay: (audio: AudioTrack) => void }> = (
             <thead className="bg-slate-50 text-slate-900 font-semibold border-b border-slate-200">
               <tr>
                 <th className="px-6 py-4 w-16"></th>
-                <th className="px-6 py-4">Titre</th>
-                <th className="px-6 py-4">Catégorie</th>
-                <th className="px-6 py-4">Durée</th>
-                <th className="px-6 py-4">Statut</th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('title')} className="hover:text-primary-600 transition-colors">
+                    Titre{sortIndicator('title')}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('category')} className="hover:text-primary-600 transition-colors">
+                    Catégorie{sortIndicator('category')}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('duration')} className="hover:text-primary-600 transition-colors">
+                    Durée{sortIndicator('duration')}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('status')} className="hover:text-primary-600 transition-colors">
+                    Statut{sortIndicator('status')}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('user')} className="hover:text-primary-600 transition-colors">
+                    Utilisateur{sortIndicator('user')}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('createdAt')} className="hover:text-primary-600 transition-colors">
+                    Date{sortIndicator('createdAt')}
+                  </button>
+                </th>
                 <th className="px-6 py-4 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {audios.map((audio) => {
-                const category = CATEGORIES.find(c => c.id === audio.categoryId);
+              {sortedAudios.map((audio) => {
+                const category = categories.find(c => c.id === audio.categoryId);
                 return (
                   <tr key={audio.id} className="hover:bg-slate-50 transition-colors group">
                     <td className="px-6 py-4">
@@ -923,6 +1116,8 @@ export const AdminLibrary: React.FC<{ onPlay: (audio: AudioTrack) => void }> = (
                     <td className="px-6 py-4">
                       {audio.published ? <span className="text-green-600">Publié</span> : <span className="text-slate-500">Brouillon</span>}
                     </td>
+                    <td className="px-6 py-4 text-slate-500">{getAssignedUserLabel(audio)}</td>
+                    <td className="px-6 py-4 text-slate-500">{formatDate(audio.createdAt)}</td>
                     <td className="px-6 py-4 text-right">
                       <div className="flex justify-end gap-1.5">
                         <button onClick={() => handleOpenEdit(audio)} className="p-2 text-slate-400 hover:text-primary-600 transition-colors">
@@ -937,7 +1132,7 @@ export const AdminLibrary: React.FC<{ onPlay: (audio: AudioTrack) => void }> = (
                 );
               })}
               {audios.length === 0 && !loading && (
-                  <tr><td colSpan={6} className="text-center py-8 text-slate-500">Aucun audio.</td></tr>
+                  <tr><td colSpan={8} className="text-center py-8 text-slate-500">Aucun audio.</td></tr>
               )}
             </tbody>
           </table>
@@ -948,9 +1143,113 @@ export const AdminLibrary: React.FC<{ onPlay: (audio: AudioTrack) => void }> = (
         <AudioModal 
           initialMode={modalMode}
           initialData={editAudio}
+          categories={categories}
+          users={userOptions}
+          groups={groupOptions}
           onClose={() => setModalOpen(false)}
           onSave={handleSaveSuccess}
         />
+      )}
+
+      {categoryModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Catégories</h3>
+                <p className="text-sm text-slate-500">Modifier les noms ou ajouter une catégorie.</p>
+              </div>
+              <button onClick={() => setCategoryModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              {categoryDraft.map((cat) => (
+                <div key={cat.id} className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden flex items-center justify-center">
+                    {cat.image ? (
+                      <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <span className="text-xs text-slate-400">Image</span>
+                    )}
+                  </div>
+                  <div className="flex-1 space-y-2">
+                    <input
+                      type="text"
+                      value={cat.name}
+                      onChange={(e) =>
+                        setCategoryDraft(prev => prev.map(c => c.id === cat.id ? { ...c, name: e.target.value } : c))
+                      }
+                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    />
+                    <div className="flex items-center gap-2">
+                      <label className="px-3 py-1 text-xs font-semibold border rounded-lg text-slate-600 bg-white hover:bg-slate-50 cursor-pointer">
+                        Uploader image
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            const previewUrl = URL.createObjectURL(file);
+                            setCategoryImageFiles(prev => ({ ...prev, [cat.id]: file }));
+                            setCategoryDraft(prev =>
+                              prev.map(c => c.id === cat.id ? { ...c, image: previewUrl } : c)
+                            );
+                          }}
+                        />
+                      </label>
+                      {cat.image && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            {
+                              setCategoryImageFiles(prev => {
+                                const next = { ...prev };
+                                delete next[cat.id];
+                                return next;
+                              });
+                              setCategoryDraft(prev => prev.map(c => c.id === cat.id ? { ...c, image: '' } : c));
+                            }
+                          }
+                          className="px-3 py-1 text-xs font-semibold border rounded-lg text-slate-500 bg-white hover:bg-slate-50"
+                        >
+                          Retirer
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+              {categoryError && (
+                <p className="text-sm text-red-500">{categoryError}</p>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  setCategoryDraft(prev => [
+                    ...prev,
+                    { id: `new-${Date.now()}`, name: 'Nouvelle catégorie', color: 'bg-slate-200', image: '' }
+                  ])
+                }
+                className="w-full py-2 border border-dashed border-slate-300 text-slate-600 rounded-lg text-sm hover:bg-slate-50"
+              >
+                + Ajouter une catégorie
+              </button>
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={saveCategories}
+                disabled={savingCategories}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm disabled:opacity-60"
+              >
+                {savingCategories ? '...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -961,9 +1260,10 @@ export const AdminLibrary: React.FC<{ onPlay: (audio: AudioTrack) => void }> = (
 interface UserCreateModalProps {
   onClose: () => void;
   onSave: () => void;
+  groups: Group[];
 }
 
-const UserCreateModal: React.FC<UserCreateModalProps> = ({ onClose, onSave }) => {
+const UserCreateModal: React.FC<UserCreateModalProps> = ({ onClose, onSave, groups }) => {
   const [formData, setFormData] = useState<Partial<User>>({
     email: '',
     firstName: '',
@@ -1030,9 +1330,9 @@ const UserCreateModal: React.FC<UserCreateModalProps> = ({ onClose, onSave }) =>
            </div>
            
            <div>
-              <p className="mb-2 font-bold text-sm">Groupes</p>
+              <p className="mb-2 font-bold text-sm">Groupe</p>
               <div className="space-y-2">
-                {GROUPS.map(group => (
+                {groups.map(group => (
                     <label key={group.id} className="flex gap-2 items-center">
                         <input type="checkbox" checked={formData.groupIds?.includes(group.id)} onChange={() => toggleGroup(group.id)} />
                         {group.name}
@@ -1055,9 +1355,10 @@ interface UserEditModalProps {
   user: User;
   onClose: () => void;
   onSave: () => void;
+  groups: Group[];
 }
 
-const UserEditModal: React.FC<UserEditModalProps> = ({ user, onClose, onSave }) => {
+const UserEditModal: React.FC<UserEditModalProps> = ({ user, onClose, onSave, groups }) => {
   const [formData, setFormData] = useState<User>({ ...user });
   const [allAudios, setAllAudios] = useState<AudioTrack[]>([]);
   const [directAudioIds, setDirectAudioIds] = useState<string[]>([]);
@@ -1136,9 +1437,9 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, onClose, onSave }) 
                     <input className="border p-2 rounded" value={formData.lastName} onChange={e => setFormData({...formData, lastName: e.target.value})} />
                  </div>
                  
-                 <h4 className="font-bold text-sm text-slate-500 uppercase">Groupes</h4>
+                 <h4 className="font-bold text-sm text-slate-500 uppercase">Groupe</h4>
                  <div className="space-y-2 border p-2 rounded max-h-40 overflow-auto">
-                    {GROUPS.map(g => (
+                    {groups.map(g => (
                        <label key={g.id} className="flex gap-2">
                           <input type="checkbox" checked={formData.groupIds.includes(g.id)} onChange={() => toggleGroup(g.id)} />
                           {g.name}
@@ -1183,10 +1484,18 @@ const UserEditModal: React.FC<UserEditModalProps> = ({ user, onClose, onSave }) 
 
 export const AdminUsers: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
+  const [groups, setGroups] = useState<Group[]>(GROUPS);
+  const [groupModalOpen, setGroupModalOpen] = useState(false);
+  const [groupDraft, setGroupDraft] = useState<Group[]>(GROUPS);
+  const [savingGroups, setSavingGroups] = useState(false);
+  const [groupError, setGroupError] = useState<string | null>(null);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [sendingId, setSendingId] = useState<string | null>(null);
+  const [togglingId, setTogglingId] = useState<string | null>(null);
+  const [sortKey, setSortKey] = useState<'name' | 'role' | 'groups' | 'status'>('name');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('asc');
 
   const refresh = async () => {
       setLoading(true);
@@ -1204,6 +1513,17 @@ export const AdminUsers: React.FC = () => {
       refresh();
   }, []);
 
+  useEffect(() => {
+    dataService.getGroups().then(setGroups).catch(() => undefined);
+  }, []);
+
+  useEffect(() => {
+    if (groupModalOpen) {
+      setGroupDraft(groups);
+      setGroupError(null);
+    }
+  }, [groupModalOpen, groups]);
+
   const handleSendWelcome = async (userId: string) => {
     setSendingId(userId);
     try {
@@ -1217,17 +1537,74 @@ export const AdminUsers: React.FC = () => {
     }
   };
 
+  const handleToggleActive = async (user: User) => {
+    setTogglingId(user.id);
+    try {
+      await dataService.updateUser({ ...user, isActive: !user.isActive });
+      await refresh();
+    } catch (e) {
+      const err = e as any;
+      console.error(err);
+      const detail = err?.response?.data?.error || err?.message;
+      alert(detail ? `Impossible de mettre à jour le statut. (${detail})` : "Impossible de mettre à jour le statut.");
+    } finally {
+      setTogglingId(null);
+    }
+  };
+
   const handleSave = () => {
     setIsCreateModalOpen(false);
     setEditingUser(null);
     refresh();
   };
 
+  const toggleSort = (key: typeof sortKey) => {
+    if (key === sortKey) {
+      setSortDir(prev => (prev === 'asc' ? 'desc' : 'asc'));
+      return;
+    }
+    setSortKey(key);
+    setSortDir('asc');
+  };
+
+  const sortIndicator = (key: typeof sortKey) =>
+    sortKey === key ? (sortDir === 'asc' ? ' ^' : ' v') : '';
+
+  const getUserName = (user: User) => `${user.firstName} ${user.lastName}`.trim();
+  const getGroupsLabel = (user: User) =>
+    user.groupIds.map(gid => groups.find(g => g.id === gid)?.name || gid).join(', ');
+
+  const sortedUsers = [...users].sort((a, b) => {
+    const aValue = sortKey === 'name'
+      ? getUserName(a)
+      : sortKey === 'role'
+        ? a.role
+        : sortKey === 'groups'
+          ? getGroupsLabel(a)
+          : a.isActive ? 'Actif' : 'Inactif';
+    const bValue = sortKey === 'name'
+      ? getUserName(b)
+      : sortKey === 'role'
+        ? b.role
+        : sortKey === 'groups'
+          ? getGroupsLabel(b)
+          : b.isActive ? 'Actif' : 'Inactif';
+
+    const compare = aValue.localeCompare(bValue, 'fr', { sensitivity: 'base', numeric: true });
+    return sortDir === 'asc' ? compare : -compare;
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <h2 className="text-2xl font-bold text-slate-900">Utilisateurs</h2>
         <div className="flex gap-2">
+          <button onClick={() => {
+            dataService.getGroups().then(setGroups).catch(() => undefined);
+            setGroupModalOpen(true);
+          }} className="flex items-center gap-2 bg-slate-900 text-white px-4 py-2 rounded-lg hover:bg-slate-800 transition-colors shadow-sm">
+            <Layers size={18} /> <span>Groupe</span>
+          </button>
           <button onClick={() => setIsCreateModalOpen(true)} className="flex items-center gap-2 bg-primary-600 text-white px-4 py-2 rounded-lg hover:bg-primary-700 transition-colors shadow-sm">
             <Plus size={18} /> <span>Créer</span>
           </button>
@@ -1239,15 +1616,31 @@ export const AdminUsers: React.FC = () => {
           <table className="w-full text-left text-sm text-slate-600">
             <thead className="bg-slate-50 text-slate-900 font-semibold border-b border-slate-200">
               <tr>
-                <th className="px-6 py-4">Nom</th>
-                <th className="px-6 py-4">Rôle</th>
-                <th className="px-6 py-4">Groupes</th>
-                <th className="px-6 py-4">Statut</th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('name')} className="hover:text-primary-600 transition-colors">
+                    Nom{sortIndicator('name')}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('role')} className="hover:text-primary-600 transition-colors">
+                    Rôle{sortIndicator('role')}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('groups')} className="hover:text-primary-600 transition-colors">
+                    Groupes{sortIndicator('groups')}
+                  </button>
+                </th>
+                <th className="px-6 py-4">
+                  <button type="button" onClick={() => toggleSort('status')} className="hover:text-primary-600 transition-colors">
+                    Statut{sortIndicator('status')}
+                  </button>
+                </th>
                 <th className="px-6 py-4">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {users.map((user) => (
+              {sortedUsers.map((user) => (
                 <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4">
                      <div className="flex items-center gap-2">
@@ -1260,7 +1653,7 @@ export const AdminUsers: React.FC = () => {
                   </td>
                   <td className="px-6 py-4">{user.role}</td>
                   <td className="px-6 py-4">
-                     {user.groupIds.map(gid => GROUPS.find(g => g.id === gid)?.name).join(', ')}
+                     {user.groupIds.map(gid => groups.find(g => g.id === gid)?.name || gid).join(', ')}
                   </td>
                   <td className="px-6 py-4">
                      {user.isActive ? <span className="text-green-600">Actif</span> : <span className="text-red-500">Inactif</span>}
@@ -1273,6 +1666,12 @@ export const AdminUsers: React.FC = () => {
                       >
                         <Mail size={14} /> {sendingId === user.id ? 'Envoi...' : 'Envoyer'}
                       </button>
+                      <button
+                        onClick={() => handleToggleActive(user)}
+                        className={`inline-flex items-center gap-2 px-3 py-1.5 rounded border text-xs font-semibold ${user.isActive ? 'border-red-200 text-red-600 hover:border-red-300' : 'border-green-200 text-green-600 hover:border-green-300'}`}
+                      >
+                        {togglingId === user.id ? '...' : (user.isActive ? 'Désactiver' : 'Réactiver')}
+                      </button>
                       <button onClick={() => setEditingUser(user)} className="text-primary-600 hover:underline">Modifier</button>
                     </div>
                   </td>
@@ -1284,11 +1683,93 @@ export const AdminUsers: React.FC = () => {
       </div>
 
       {isCreateModalOpen && (
-        <UserCreateModal onClose={() => setIsCreateModalOpen(false)} onSave={handleSave} />
+        <UserCreateModal onClose={() => setIsCreateModalOpen(false)} onSave={handleSave} groups={groups} />
       )}
       
       {editingUser && (
-        <UserEditModal user={editingUser} onClose={() => setEditingUser(null)} onSave={handleSave} />
+        <UserEditModal user={editingUser} onClose={() => setEditingUser(null)} onSave={handleSave} groups={groups} />
+      )}
+
+      {groupModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Groupes</h3>
+                <p className="text-sm text-slate-500">Modifier les noms ou ajouter un groupe.</p>
+              </div>
+              <button onClick={() => setGroupModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4 max-h-[60vh] overflow-y-auto">
+              {groupDraft.map((group) => (
+                <div key={group.id} className="flex items-center gap-3">
+                  <input
+                    type="text"
+                    value={group.name}
+                    onChange={(e) =>
+                      setGroupDraft(prev => prev.map(g => g.id === group.id ? { ...g, name: e.target.value } : g))
+                    }
+                    className="flex-1 px-3 py-2 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100"
+                  />
+                </div>
+              ))}
+              {groupError && (
+                <p className="text-sm text-red-500">{groupError}</p>
+              )}
+              <button
+                type="button"
+                onClick={() =>
+                  setGroupDraft(prev => [
+                    ...prev,
+                    { id: `new-${Date.now()}`, name: 'Nouveau groupe' }
+                  ])
+                }
+                className="w-full py-2 border border-dashed border-slate-300 text-slate-600 rounded-lg text-sm hover:bg-slate-50"
+              >
+                + Ajouter un groupe
+              </button>
+            </div>
+            <div className="p-4 border-t border-slate-100 flex justify-end">
+              <button
+                type="button"
+                onClick={async () => {
+                  setSavingGroups(true);
+                  setGroupError(null);
+                  try {
+                    const existing = groupDraft.filter(g => !g.id.startsWith('new-'));
+                    const created = groupDraft.filter(g => g.id.startsWith('new-'));
+
+                    await Promise.all(existing.map(g =>
+                      dataService.updateGroup(g.id, { name: g.name })
+                    ));
+
+                    if (created.length > 0) {
+                      await Promise.all(created.map(g =>
+                        dataService.createGroup({ name: g.name })
+                      ));
+                    }
+
+                    const fresh = await dataService.getGroups();
+                    setGroups(fresh);
+                    await refresh();
+                    setGroupModalOpen(false);
+                  } catch (e) {
+                    console.error('Failed to save groups', e);
+                    setGroupError("Impossible d'enregistrer les groupes.");
+                  } finally {
+                    setSavingGroups(false);
+                  }
+                }}
+                disabled={savingGroups}
+                className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm disabled:opacity-60"
+              >
+                {savingGroups ? '...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

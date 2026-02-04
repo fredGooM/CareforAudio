@@ -25,8 +25,8 @@ export interface Group {
 export interface Category {
   id: string;
   name: string;
-  color: string;
-  image: string;
+  color?: string;
+  image?: string;
 }
 
 export interface AudioTrack {
@@ -67,6 +67,7 @@ export type ViewState =
 
 export interface UserDashboardData {
   totalMinutes: number;
+  last7DaysMinutes: number;
   completionPercent: number;
   streakDays: number;
   completedCount: number;

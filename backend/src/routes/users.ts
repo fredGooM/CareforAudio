@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import Brevo from '@getbrevo/brevo';
 // @ts-ignore
 import { PrismaClient } from '@prisma/client';
-import { authenticateToken, requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
 import { loadEmailConfig, emailConfigReady } from '../services/emailConfig';
 
 const router = express.Router();
@@ -27,6 +27,55 @@ router.get('/', authenticateToken, requireAdmin, async (req, res) => {
     }));
 
     res.json(dtos);
+});
+
+router.get('/me/favorites', authenticateToken, async (req, res) => {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+    try {
+        res.setHeader('Cache-Control', 'no-store');
+        const favorites = await prisma.userProgress.findMany({
+            where: { userId, isFavorite: true },
+            select: { audioId: true }
+        });
+        res.json(favorites.map((f) => f.audioId));
+    } catch (e) {
+        console.error('Failed to load favorites', e);
+        res.status(500).json({ error: 'Failed to load favorites' });
+    }
+});
+
+router.put('/me/favorites', authenticateToken, async (req, res) => {
+    const authReq = req as AuthRequest;
+    const userId = authReq.user?.id;
+    const { audioId, isFavorite } = req.body || {};
+    if (!userId) {
+        res.status(401).json({ error: 'Unauthorized' });
+        return;
+    }
+    if (!audioId) {
+        res.status(400).json({ error: 'audioId is required' });
+        return;
+    }
+    try {
+        await prisma.userProgress.upsert({
+            where: { userId_audioId: { userId, audioId } },
+            update: { isFavorite: Boolean(isFavorite) },
+            create: { userId, audioId, isFavorite: Boolean(isFavorite) }
+        });
+        const favorites = await prisma.userProgress.findMany({
+            where: { userId, isFavorite: true },
+            select: { audioId: true }
+        });
+        res.json(favorites.map((f) => f.audioId));
+    } catch (e) {
+        console.error('Failed to update favorite', e);
+        res.status(500).json({ error: 'Failed to update favorite' });
+    }
 });
 
 router.post('/', authenticateToken, requireAdmin, async (req, res) => {
@@ -70,15 +119,18 @@ router.put('/:id', authenticateToken, requireAdmin, async (req, res) => {
             data: { firstName, lastName, role, isActive }
         });
 
-        if (groupIds) {
+        if (Array.isArray(groupIds)) {
             await prisma.userGroup.deleteMany({ where: { userId: id } });
-            await prisma.userGroup.createMany({
-                data: groupIds.map((gid: string) => ({ userId: id, groupId: gid }))
-            });
+            if (groupIds.length > 0) {
+                await prisma.userGroup.createMany({
+                    data: groupIds.map((gid: string) => ({ userId: id, groupId: gid }))
+                });
+            }
         }
 
         res.json({ success: true });
     } catch(e) {
+        console.error('Failed to update user', e);
         res.status(500).json({ error: 'Update failed' });
     }
 });

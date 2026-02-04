@@ -31,3 +31,23 @@ export const uploadMiddleware = multer({
     fileSize: 50 * 1024 * 1024
   }
 });
+
+const imageMimeTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+const imageExtensions = ['.jpg', '.jpeg', '.png', '.webp', '.gif'];
+
+const imageFileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
+  const ext = path.extname(file.originalname).toLowerCase();
+  if (!imageExtensions.includes(ext) || !imageMimeTypes.includes(file.mimetype)) {
+    cb(new Error('Only image files (.jpg, .png, .webp, .gif) are allowed'));
+    return;
+  }
+  cb(null, true);
+};
+
+export const imageUploadMiddleware = multer({
+  storage,
+  fileFilter: imageFileFilter,
+  limits: {
+    fileSize: 5 * 1024 * 1024
+  }
+});

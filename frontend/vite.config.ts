@@ -11,7 +11,9 @@ export default defineConfig({
       '/audios': 'http://localhost:3000',
       '/users': 'http://localhost:3000',
       '/health': 'http://localhost:3000',
-      '/analytics': 'http://localhost:3000'
+      '/analytics': 'http://localhost:3000',
+      '/categories': 'http://localhost:3000',
+      '/groups': 'http://localhost:3000'
     }
   }
 })

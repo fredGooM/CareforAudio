@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { dataService, CATEGORIES } from '../services/apiClient';
-import { UserDashboardData, User } from '../types';
-import { Clock, Flame, Trophy, RefreshCw } from 'lucide-react';
+import { UserDashboardData, User, Category, AudioTrack } from '../types';
+import { Clock, Flame, Trophy, RefreshCw, Play } from 'lucide-react';
 
 const CategoryCircle: React.FC<{ label: string; percent: number }> = ({ label, percent }) => {
   const radius = 44;
@@ -32,10 +32,12 @@ const CategoryCircle: React.FC<{ label: string; percent: number }> = ({ label, p
   );
 };
 
-const UserDashboard: React.FC = () => {
+const UserDashboard: React.FC<{ audios: AudioTrack[]; onPlay: (audio: AudioTrack) => void }> = ({ audios, onPlay }) => {
   const [data, setData] = useState<UserDashboardData | null>(null);
+  const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const audioMap = useMemo(() => new Map(audios.map(a => [a.id, a])), [audios]);
 
   const buildFallbackData = async (): Promise<UserDashboardData> => {
     try {
@@ -51,10 +53,11 @@ const UserDashboard: React.FC = () => {
 
     return {
       totalMinutes: 0,
+      last7DaysMinutes: 0,
       completionPercent: 0,
       streakDays: 0,
       completedCount: 0,
-      categoryProgress: CATEGORIES.map((category) => ({
+      categoryProgress: categories.map((category) => ({
         categoryId: category.id,
         percent: 0
       })),
@@ -97,6 +100,10 @@ const UserDashboard: React.FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    dataService.getCategories().then(setCategories).catch(() => undefined);
+  }, []);
+
   if (loading) {
     return <div className="p-6 text-center text-slate-500">Chargement des performances...</div>;
   }
@@ -105,7 +112,7 @@ const UserDashboard: React.FC = () => {
     return <div className="p-6 text-center text-slate-500">Aucune donnée disponible.</div>;
   }
 
-  const categoryLabels: Record<string, string> = CATEGORIES.reduce((acc, cat) => {
+  const categoryLabels: Record<string, string> = categories.reduce((acc, cat) => {
     acc[cat.id] = cat.name;
     return acc;
   }, {} as Record<string, string>);
@@ -127,18 +134,18 @@ const UserDashboard: React.FC = () => {
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
           <div className="p-3 bg-blue-50 text-blue-600 rounded-xl"><Clock size={24} /></div>
           <div>
-            <p className="text-sm text-slate-500">Temps passé</p>
+            <p className="text-sm text-slate-500">Temps passé (total)</p>
             <p className="text-2xl font-bold text-slate-900">{data.totalMinutes} min</p>
           </div>
         </div>
         <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
-          <div className="p-3 bg-amber-50 text-amber-600 rounded-xl"><Flame size={24} /></div>
+          <div className="p-3 bg-indigo-50 text-indigo-600 rounded-xl"><Clock size={24} /></div>
           <div>
-            <p className="text-sm text-slate-500">Série (jours)</p>
-            <p className="text-2xl font-bold text-slate-900">{data.streakDays}</p>
+            <p className="text-sm text-slate-500">Temps passé (7 jours)</p>
+            <p className="text-2xl font-bold text-slate-900">{data.last7DaysMinutes} min</p>
           </div>
         </div>
-        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4">
+        <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 flex items-center gap-4 md:col-span-1">
           <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><Trophy size={24} /></div>
           <div>
             <p className="text-sm text-slate-500">Podcasts terminés</p>
@@ -150,7 +157,7 @@ const UserDashboard: React.FC = () => {
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-sm text-slate-500">Progression globale</p>
+            <p className="text-sm text-slate-500">Progression globale par catégorie</p>
             <p className="text-3xl font-bold text-slate-900">{data.completionPercent}%</p>
           </div>
         </div>
@@ -176,7 +183,20 @@ const UserDashboard: React.FC = () => {
           )}
           {data.continueListening.map((item) => (
             <div key={item.audioId} className="p-4 border border-slate-100 rounded-2xl hover:border-primary-100 transition">
-              <p className="font-semibold text-slate-900">{item.title}</p>
+              <div className="flex items-center justify-between gap-4">
+                <p className="font-semibold text-slate-900">{item.title}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const audio = audioMap.get(item.audioId);
+                    if (audio) onPlay(audio);
+                  }}
+                  disabled={!audioMap.has(item.audioId)}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-semibold bg-primary-600 text-white hover:bg-primary-700 disabled:opacity-60"
+                >
+                  <Play size={14} /> Rejouer
+                </button>
+              </div>
               <div className="mt-2 h-2 bg-slate-100 rounded-full overflow-hidden">
                 <div
                   className="h-2 bg-primary-500 rounded-full"

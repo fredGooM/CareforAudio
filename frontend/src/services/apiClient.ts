@@ -1,5 +1,5 @@
 import axios from "axios";
-import { User, AudioTrack, Group, DashboardResponse } from "../types";
+import { User, AudioTrack, Group, DashboardResponse, Category } from "../types";
 
 // En DEV: si VITE_API_URL est vide/absent => baseURL = '' => on utilise le proxy Vite (vite.config.ts)
 // En PROD: VITE_API_URL = "https://ton-backend.onrender.com" => appels directs au backend
@@ -63,10 +63,19 @@ client.interceptors.response.use(
             coverUrl: fixMediaUrl(audio.coverUrl)
         }));
     }
+    if (response.config.url?.includes('/categories') && Array.isArray(response.data)) {
+        response.data = response.data.map((category: any) => ({
+            ...category,
+            image: fixMediaUrl(category.image)
+        }));
+    }
     // Correction pour un upload ou une création unique
     if (response.data && (response.data.url || response.data.coverUrl)) {
         if (response.data.url) response.data.url = fixMediaUrl(response.data.url);
         if (response.data.coverUrl) response.data.coverUrl = fixMediaUrl(response.data.coverUrl);
+    }
+    if (response.data && response.data.image) {
+        response.data.image = fixMediaUrl(response.data.image);
     }
     // Correction pour les avatars utilisateurs
     if (response.config.url?.includes('/users') && Array.isArray(response.data)) {
@@ -81,7 +90,8 @@ client.interceptors.response.use(
     return response;
   },
   (error) => {
-    if (error.response?.status === 401) {
+    const url = error.config?.url || '';
+    if (error.response?.status === 401 && !url.includes('/auth/login')) {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
       window.location.href = '/';
@@ -160,6 +170,14 @@ export const dataService = {
   updateUserAudioAccess: async (userId: string, directAudioIds: string[]) => {
     await client.put(`/users/${userId}/audio-access`, { audioIds: directAudioIds });
   },
+  getFavorites: async (): Promise<string[]> => {
+    const res = await client.get('/users/me/favorites');
+    return res.data;
+  },
+  setFavorite: async (audioId: string, isFavorite: boolean): Promise<string[]> => {
+    const res = await client.put('/users/me/favorites', { audioId, isFavorite });
+    return res.data;
+  },
   sendWelcomeEmail: async (userId: string) => {
     await client.post(`/users/${userId}/send-welcome`);
   },
@@ -170,6 +188,38 @@ export const dataService = {
     const res = await client.get('/analytics/dashboard', {
       params: userId ? { userId } : undefined
     });
+    return res.data;
+  },
+  getCategories: async (): Promise<Category[]> => {
+    const res = await client.get('/categories');
+    return res.data;
+  },
+  createCategory: async (payload: { name: string; color?: string; image?: string }): Promise<Category> => {
+    const res = await client.post('/categories', payload);
+    return res.data;
+  },
+  updateCategory: async (id: string, payload: { name?: string; color?: string; image?: string }): Promise<Category> => {
+    const res = await client.put(`/categories/${id}`, payload);
+    return res.data;
+  },
+  uploadCategoryImage: async (id: string, file: File): Promise<Category> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await client.post(`/categories/${id}/image`, formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return res.data;
+  },
+  getGroups: async (): Promise<Group[]> => {
+    const res = await client.get('/groups');
+    return res.data;
+  },
+  createGroup: async (payload: { name: string }): Promise<Group> => {
+    const res = await client.post('/groups', payload);
+    return res.data;
+  },
+  updateGroup: async (id: string, payload: { name: string }): Promise<Group> => {
+    const res = await client.put(`/groups/${id}`, payload);
     return res.data;
   }
 };
@@ -204,26 +254,26 @@ export const CATEGORIES = [
 export const GROUPS = [
   { 
     id: 'g1', 
-    name: 'Pré-compétition',
-    description: 'Équipe A - Olympique',
+    name: 'Voiture (GT, kart, F2)',
+    description: 'Voiture (GT, kart, F2)',
     image: '/images/pre_competition.png'
   },
   { 
     id: 'g2', 
-    name: 'Récupération',
-    description: 'Athlètes Endurance',
+    name: 'Tennis & padel',
+    description: 'Tennis & padel',
     image: '/images/recuperation.png'
   },
   { 
     id: 'g3', 
-    name: 'Sommeil',
-    description: 'Réhabilitation',
+    name: 'Aviron',
+    description: 'Aviron',
     image: '/images/sommeil.png'
   },
   { 
     id: 'g4', 
-    name: 'Concentration',
-    description: 'Focus & contrôle',
+    name: 'Rugby',
+    description: 'Rugby',
     image: '/images/concentration.png'
   },
 ];

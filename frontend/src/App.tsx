@@ -235,8 +235,16 @@ const App: React.FC = () => {
               } catch(e) { console.error(e); }
           } else {
               try {
-                 const audios = await dataService.getAudiosForUser(currentUser);
-                 setUserAudios(audios);
+                 const [audiosResult, favsResult] = await Promise.allSettled([
+                   dataService.getAudiosForUser(currentUser),
+                   dataService.getFavorites()
+                 ]);
+                 if (audiosResult.status === 'fulfilled') {
+                   setUserAudios(audiosResult.value);
+                 }
+                 if (favsResult.status === 'fulfilled') {
+                   setFavorites(favsResult.value);
+                 }
                  setCurrentView('USER_DASHBOARD');
               } catch(e) { console.error(e); }
           }
@@ -245,6 +253,16 @@ const App: React.FC = () => {
       }
     }
   }, [currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== UserRole.USER) return;
+    if (currentView !== 'FAVORITES') return;
+    dataService.getFavorites()
+      .then((fetched) => {
+        setFavorites((prev) => Array.from(new Set([...(prev || []), ...(fetched || [])])));
+      })
+      .catch(console.error);
+  }, [currentView, currentUser]);
 
   const handleLoginSuccess = (user: User) => {
     setCurrentUser(user);
@@ -264,16 +282,37 @@ const App: React.FC = () => {
     setCurrentTrack(null);
   };
 
-  const toggleFavorite = (audioId: string) => {
+  const toggleFavorite = async (audioId: string) => {
     if (!currentUser) return;
-    setFavorites(prev => 
-      prev.includes(audioId) ? prev.filter(id => id !== audioId) : [...prev, audioId]
-    );
+    const isFavorite = !favorites.includes(audioId);
+    const nextFavorites = isFavorite
+      ? Array.from(new Set([...favorites, audioId]))
+      : favorites.filter(id => id !== audioId);
+    setFavorites(nextFavorites);
+    try {
+      const favs = await dataService.setFavorite(audioId, isFavorite);
+      if (Array.isArray(favs)) {
+        const merged = isFavorite
+          ? Array.from(new Set([...favs, ...nextFavorites]))
+          : favs.filter(id => id !== audioId);
+        setFavorites(merged);
+      } else {
+        const refreshed = await dataService.getFavorites();
+        const merged = isFavorite
+          ? Array.from(new Set([...refreshed, ...nextFavorites]))
+          : refreshed.filter(id => id !== audioId);
+        setFavorites(merged);
+      }
+    } catch (e) {
+      console.error(e);
+      alert("Impossible d'enregistrer le favori.");
+    }
   };
 
+  const favoriteAudios = userAudios.filter(a => favorites.includes(a.id));
   const renderContent = () => {
     switch (currentView) {
-      case 'USER_DASHBOARD': return <UserDashboard />;
+      case 'USER_DASHBOARD': return <UserDashboard audios={userAudios} onPlay={setCurrentTrack} />;
       case 'ADMIN_DASHBOARD': return <AdminDashboard />;
       case 'ADMIN_AUDIOS': return <AdminLibrary onPlay={setCurrentTrack} />;
       case 'ADMIN_USERS': return <AdminUsers />;
@@ -290,7 +329,7 @@ const App: React.FC = () => {
       );
       case 'FAVORITES': return (
         <UserCatalog 
-          audios={userAudios.filter(a => favorites.includes(a.id))} 
+          audios={favoriteAudios} 
           onPlay={setCurrentTrack} 
           favorites={favorites} 
           onToggleFavorite={toggleFavorite}
@@ -353,7 +392,7 @@ const App: React.FC = () => {
               <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-4">Menu</p>
               <NavItem view="USER_DASHBOARD" icon={LayoutDashboard} label="Tableau de bord" />
               <NavItem view="CATALOG" icon={Home} label="Programme" />
-              <NavItem view="FAVORITES" icon={Heart} label="Training" />
+              <NavItem view="FAVORITES" icon={Heart} label="Favoris" />
             </>
           )}
         </nav>

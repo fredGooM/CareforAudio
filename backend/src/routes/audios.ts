@@ -181,6 +181,20 @@ router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'
                     await prisma.groupAccess.createMany({
                         data: groupIds.map((gid: string) => ({ groupId: gid, audioId: newAudio.id }))
                     });
+
+                    // Grant direct access to all users in selected groups
+                    if (groupIds.length > 0) {
+                        const groupUsers = await prisma.userGroup.findMany({
+                            where: { groupId: { in: groupIds } },
+                            select: { userId: true }
+                        });
+                        const uniqueUserIds = Array.from(new Set(groupUsers.map((u) => u.userId)));
+                        if (uniqueUserIds.length > 0) {
+                            await prisma.audioAccess.createMany({
+                                data: uniqueUserIds.map((uid: string) => ({ userId: uid, audioId: newAudio.id }))
+                            });
+                        }
+                    }
                 }
             } catch (e) { console.error('Error parsing groupIds', e); }
         }

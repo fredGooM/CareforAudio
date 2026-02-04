@@ -236,6 +236,12 @@ async function buildUserDashboard(userId: string) {
     _sum: { duration: true }
   });
   const totalMinutes = Math.round((totalDurationAgg._sum.duration || 0) / 60);
+  const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+  const weeklyDurationAgg = await prisma.audioLog.aggregate({
+    where: { userId, createdAt: { gte: sevenDaysAgo } },
+    _sum: { duration: true }
+  });
+  const last7DaysMinutes = Math.round((weeklyDurationAgg._sum.duration || 0) / 60);
 
   const progressRecords = await prisma.userProgress.findMany({
     where: { userId },
@@ -251,6 +257,28 @@ async function buildUserDashboard(userId: string) {
     current.total += 1;
     if (record.isCompleted) current.completed += 1;
     categoryMap.set(categoryId, current);
+  });
+
+  const userGroups = await prisma.userGroup.findMany({
+    where: { userId },
+    select: { groupId: true }
+  });
+  const groupIds = userGroups.map((g) => g.groupId);
+  const accessibleAudios = await prisma.audioTrack.findMany({
+    where: {
+      published: true,
+      OR: [
+        { allowedUsers: { some: { userId } } },
+        { allowedGroups: { some: { groupId: { in: groupIds } } } }
+      ]
+    },
+    select: { categoryId: true }
+  });
+  accessibleAudios.forEach((audio) => {
+    const categoryId = audio.categoryId || 'autre';
+    if (!categoryMap.has(categoryId)) {
+      categoryMap.set(categoryId, { total: 0, completed: 0 });
+    }
   });
   const categoryProgress = Array.from(categoryMap.entries()).map(([categoryId, stats]) => ({
     categoryId,
@@ -289,6 +317,7 @@ async function buildUserDashboard(userId: string) {
   return {
     role: 'USER',
     totalMinutes,
+    last7DaysMinutes,
     completionPercent,
     streakDays: streak,
     completedCount,
