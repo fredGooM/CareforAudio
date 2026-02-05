@@ -37,6 +37,7 @@ const UserDashboard: React.FC<{ audios: AudioTrack[]; onPlay: (audio: AudioTrack
   const [categories, setCategories] = useState<Category[]>(CATEGORIES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [progressView, setProgressView] = useState<'CATEGORY' | 'MY_PROGRAM'>('CATEGORY');
   const audioMap = useMemo(() => new Map(audios.map(a => [a.id, a])), [audios]);
 
   const buildFallbackData = async (): Promise<UserDashboardData> => {
@@ -61,6 +62,11 @@ const UserDashboard: React.FC<{ audios: AudioTrack[]; onPlay: (audio: AudioTrack
         categoryId: category.id,
         percent: 0
       })),
+      myProgramProgress: {
+        percent: 0,
+        total: 0,
+        completed: 0
+      },
       continueListening: []
     };
   };
@@ -157,16 +163,54 @@ const UserDashboard: React.FC<{ audios: AudioTrack[]; onPlay: (audio: AudioTrack
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">
         <div className="flex items-center justify-between mb-6">
           <div>
-            <p className="text-sm text-slate-500">Progression globale par catégorie</p>
-            <p className="text-3xl font-bold text-slate-900">{data.completionPercent}%</p>
+            <p className="text-sm text-slate-500">
+              {progressView === 'CATEGORY' ? 'Progression globale par catégorie' : 'Progression Mon Training'}
+            </p>
+            <p className="text-3xl font-bold text-slate-900">
+              {progressView === 'CATEGORY' ? `${data.completionPercent}%` : `${data.myProgramProgress.percent}%`}
+            </p>
+          </div>
+          <div className="flex items-center gap-2 bg-slate-50 border border-slate-200 rounded-lg p-1">
+            <button
+              type="button"
+              onClick={() => setProgressView('CATEGORY')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                progressView === 'CATEGORY' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Par catégorie
+            </button>
+            <button
+              type="button"
+              onClick={() => setProgressView('MY_PROGRAM')}
+              className={`px-3 py-1.5 text-xs font-semibold rounded-md transition ${
+                progressView === 'MY_PROGRAM' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-700'
+              }`}
+            >
+              Mon training
+            </button>
           </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {data.categoryProgress.map((cat) => (
-            <CategoryCircle key={cat.categoryId} label={categoryLabels[cat.categoryId] || cat.categoryId} percent={cat.percent} />
-          ))}
-          {data.categoryProgress.length === 0 && <p className="text-slate-500">Commence un audio pour voir ta progression par thème.</p>}
-        </div>
+        {progressView === 'CATEGORY' ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {data.categoryProgress.map((cat) => (
+              <CategoryCircle key={cat.categoryId} label={categoryLabels[cat.categoryId] || cat.categoryId} percent={cat.percent} />
+            ))}
+            {data.categoryProgress.length === 0 && <p className="text-slate-500">Commence un audio pour voir ta progression par thème.</p>}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-2">
+            <div className="h-3 w-full bg-slate-100 rounded-full overflow-hidden">
+              <div
+                className="h-3 bg-primary-500 rounded-full"
+                style={{ width: `${data.myProgramProgress.percent}%` }}
+              />
+            </div>
+            <p className="text-sm text-slate-500">
+              {data.myProgramProgress.completed} audio(s) écouté(s) sur {data.myProgramProgress.total}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6">

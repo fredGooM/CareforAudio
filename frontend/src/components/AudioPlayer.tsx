@@ -7,9 +7,10 @@ interface AudioPlayerProps {
   track: AudioTrack | null;
   userId: string;
   onClose: () => void;
+  onCompleted?: (audioId: string) => void;
 }
 
-export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose }) => {
+export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose, onCompleted }) => {
   const audioRef = useRef<HTMLAudioElement>(null);
   const sourceRef = useRef<HTMLSourceElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -38,13 +39,30 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
   const handleTimeUpdate = () => {
     if (audioRef.current) {
       const current = audioRef.current.currentTime;
-      setCurrentTime(current);
+      if (Number.isFinite(duration) && duration > 0 && current >= duration - 0.1) {
+        setCurrentTime(duration);
+      } else {
+        setCurrentTime(current);
+      }
     }
   };
 
   const handleLoadedMetadata = () => {
     if (audioRef.current) {
-      setDuration(audioRef.current.duration);
+      const d = audioRef.current.duration;
+      if (!Number.isFinite(d) || d === 0) {
+        setDuration(track?.duration || 0);
+      } else {
+        setDuration(d);
+      }
+    }
+  };
+
+  const handleDurationChange = () => {
+    if (!audioRef.current) return;
+    const d = audioRef.current.duration;
+    if (Number.isFinite(d) && d > 0) {
+      setDuration(d);
     }
   };
 
@@ -89,16 +107,23 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
     return `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
   };
 
-  const sendHeartbeat = useCallback(() => {
+  const sendHeartbeat = useCallback((forcedPosition?: number, completed?: boolean) => {
     if (!track || !audioRef.current) return;
+    const resolvedPosition = Number.isFinite(forcedPosition)
+      ? forcedPosition
+      : Number.isFinite(audioRef.current.currentTime)
+        ? audioRef.current.currentTime
+        : null;
+    if (resolvedPosition === null) return;
     const now = Date.now();
     const lastSent = lastHeartbeatRef.current;
     const sessionDuration = lastSent ? Math.round((now - lastSent) / 1000) : 10;
     lastHeartbeatRef.current = now;
     dataService.sendHeartbeat({
       audioId: track.id,
-      position: audioRef.current.currentTime,
-      sessionDuration
+      position: resolvedPosition,
+      sessionDuration,
+      completed
     }).catch(() => {});
   }, [track]);
 
@@ -132,9 +157,26 @@ export const AudioPlayer: React.FC<AudioPlayerProps> = ({ track, userId, onClose
         ref={audioRef}
         onTimeUpdate={handleTimeUpdate}
         onLoadedMetadata={handleLoadedMetadata}
+        onDurationChange={handleDurationChange}
         onEnded={() => {
-          sendHeartbeat();
+          const reportedDuration = audioRef.current?.duration;
+          const reportedCurrent = audioRef.current?.currentTime;
+          const endedPosition = Number.isFinite(reportedDuration)
+            ? reportedDuration
+            : Number.isFinite(reportedCurrent)
+              ? reportedCurrent
+              : duration;
+          if (Number.isFinite(endedPosition)) {
+            setCurrentTime(endedPosition);
+            if (!Number.isFinite(duration) || duration === 0 || duration < endedPosition) {
+              setDuration(endedPosition);
+            }
+          }
+          sendHeartbeat(endedPosition, true);
           setIsPlaying(false);
+          if (track?.id && onCompleted) {
+            onCompleted(track.id);
+          }
         }}
       >
         <source ref={sourceRef} />

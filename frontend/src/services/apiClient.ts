@@ -124,6 +124,21 @@ export const dataService = {
     const res = await client.get('/audios');
     return res.data;
   },
+  getFavoriteAudios: async (): Promise<AudioTrack[]> => {
+    const res = await client.get('/audios/favorites');
+    return res.data;
+  },
+  getMyProgramAudios: async (): Promise<Array<{ id: string; title: string; duration: number; categoryId: string; type?: string; timesListened: number }>> => {
+    const res = await client.get('/audios/my-program');
+    return res.data;
+  },
+  getMyProgramAudiosForUser: async (userId: string): Promise<Array<{ id: string; title: string; duration: number; categoryId: string; type?: string; timesListened: number }>> => {
+    const res = await client.get('/audios/my-program/admin', { params: { userId } });
+    return res.data;
+  },
+  setMyProgramForUser: async (userId: string, audioId: string, isMyProgram: boolean) => {
+    await client.post('/audios/my-program/admin', { userId, audioId, isMyProgram });
+  },
   getAllAudios: async (): Promise<AudioTrack[]> => {
     const res = await client.get('/audios');
     return res.data;
@@ -139,6 +154,12 @@ export const dataService = {
     formData.append('categoryId', audioData.categoryId || 'c1');
     formData.append('published', String(audioData.published));
     formData.append('duration', String(audioData.duration || 0));
+    if (audioData.type) {
+        formData.append('type', audioData.type);
+    }
+    if (audioData.orderToListen !== undefined) {
+        formData.append('orderToListen', String(audioData.orderToListen));
+    }
     
     if (audioData.file) {
         formData.append('file', audioData.file);
@@ -148,6 +169,9 @@ export const dataService = {
     }
     if (audioData.allowedUserIds) {
         formData.append('allowedUserIds', JSON.stringify(audioData.allowedUserIds));
+    }
+    if (audioData.myProgramUserIds) {
+        formData.append('myProgramUserIds', JSON.stringify(audioData.myProgramUserIds));
     }
 
     const res = await client.post('/audios', formData, {
@@ -181,7 +205,7 @@ export const dataService = {
   sendWelcomeEmail: async (userId: string) => {
     await client.post(`/users/${userId}/send-welcome`);
   },
-  sendHeartbeat: async (payload: { audioId: string; position: number; sessionDuration: number }) => {
+  sendHeartbeat: async (payload: { audioId: string; position: number; sessionDuration: number; completed?: boolean }) => {
     await client.post('/analytics/heartbeat', payload);
   },
   getAnalyticsDashboard: async (userId?: string): Promise<DashboardResponse> => {

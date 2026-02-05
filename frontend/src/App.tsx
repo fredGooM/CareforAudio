@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Headphones, ShieldCheck, LogOut, LayoutDashboard, Library, Users as UsersIcon, Home, Heart, Menu, X, KeyRound, Lock, Eye, EyeOff } from 'lucide-react';
-import { User, ViewState, AudioTrack, UserRole } from './types';
+import { User, ViewState, AudioTrack, UserRole, MyProgramAudio } from './types';
 import { authService, dataService } from './services/apiClient';
 import { AudioPlayer } from './components/AudioPlayer';
-import { AdminDashboard, AdminLibrary, AdminUsers } from './components/AdminViews';
+import { AdminDashboard, AdminLibrary, AdminUsers, AdminMyProgram } from './components/AdminViews';
 import UserDashboard from './components/UserDashboard';
-import { UserCatalog } from './components/UserViews';
+import { UserCatalog, MyProgramList } from './components/UserViews';
 
 // --- Login Component ---
 const LoginView: React.FC<{ onLogin: (user: User) => void }> = ({ onLogin }) => {
@@ -221,6 +221,8 @@ const App: React.FC = () => {
   // Data State
   const [userAudios, setUserAudios] = useState<AudioTrack[]>([]);
   const [favorites, setFavorites] = useState<string[]>([]);
+  const [myProgramAudios, setMyProgramAudios] = useState<MyProgramAudio[]>([]);
+  const [favoriteAudios, setFavoriteAudios] = useState<AudioTrack[]>([]);
 
   useEffect(() => {
     if (currentUser) {
@@ -245,6 +247,12 @@ const App: React.FC = () => {
                  if (favsResult.status === 'fulfilled') {
                    setFavorites(favsResult.value);
                  }
+                 dataService.getFavoriteAudios()
+                   .then(setFavoriteAudios)
+                   .catch(console.error);
+                 dataService.getMyProgramAudios()
+                   .then(setMyProgramAudios)
+                   .catch(console.error);
                  setCurrentView('USER_DASHBOARD');
               } catch(e) { console.error(e); }
           }
@@ -257,10 +265,19 @@ const App: React.FC = () => {
   useEffect(() => {
     if (!currentUser || currentUser.role !== UserRole.USER) return;
     if (currentView !== 'FAVORITES') return;
-    dataService.getFavorites()
-      .then((fetched) => {
-        setFavorites((prev) => Array.from(new Set([...(prev || []), ...(fetched || [])])));
+    dataService.getFavoriteAudios()
+      .then((audios) => {
+        setFavoriteAudios(audios);
+        setFavorites(audios.map(a => a.id));
       })
+      .catch(console.error);
+  }, [currentView, currentUser]);
+
+  useEffect(() => {
+    if (!currentUser || currentUser.role !== UserRole.USER) return;
+    if (currentView !== 'MY_PROGRAM') return;
+    dataService.getMyProgramAudios()
+      .then(setMyProgramAudios)
       .catch(console.error);
   }, [currentView, currentUser]);
 
@@ -309,13 +326,13 @@ const App: React.FC = () => {
     }
   };
 
-  const favoriteAudios = userAudios.filter(a => favorites.includes(a.id));
   const renderContent = () => {
     switch (currentView) {
       case 'USER_DASHBOARD': return <UserDashboard audios={userAudios} onPlay={setCurrentTrack} />;
       case 'ADMIN_DASHBOARD': return <AdminDashboard />;
       case 'ADMIN_AUDIOS': return <AdminLibrary onPlay={setCurrentTrack} />;
       case 'ADMIN_USERS': return <AdminUsers />;
+      case 'ADMIN_MY_PROGRAM': return <AdminMyProgram />;
       case 'CATALOG': return (
         <UserCatalog 
           audios={userAudios} 
@@ -325,6 +342,17 @@ const App: React.FC = () => {
           title="Mes programmes"
           showGroupFilters
           showGroupName={false}
+        />
+      );
+      case 'MY_PROGRAM': return (
+        <MyProgramList
+          items={myProgramAudios}
+          favorites={favorites}
+          onToggleFavorite={toggleFavorite}
+          onPlay={(id) => {
+            const audio = userAudios.find(a => a.id === id);
+            if (audio) setCurrentTrack(audio);
+          }}
         />
       );
       case 'FAVORITES': return (
@@ -385,14 +413,16 @@ const App: React.FC = () => {
               <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-4">Administration</p>
               <NavItem view="ADMIN_DASHBOARD" icon={LayoutDashboard} label="Tableau de bord" />
               <NavItem view="ADMIN_AUDIOS" icon={Library} label="Bibliothèque" />
+              <NavItem view="ADMIN_MY_PROGRAM" icon={Library} label="MonProgramme" />
               <NavItem view="ADMIN_USERS" icon={UsersIcon} label="Utilisateurs" />
             </>
           ) : (
             <>
               <p className="px-4 text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2 mt-4">Menu</p>
               <NavItem view="USER_DASHBOARD" icon={LayoutDashboard} label="Tableau de bord" />
-              <NavItem view="CATALOG" icon={Home} label="Programme" />
-              <NavItem view="FAVORITES" icon={Heart} label="Favoris" />
+              <NavItem view="CATALOG" icon={Home} label="Mes programmes" />
+              <NavItem view="MY_PROGRAM" icon={Library} label="Mon Training" />
+              <NavItem view="FAVORITES" icon={Heart} label="Mes favoris" />
             </>
           )}
         </nav>
@@ -435,15 +465,17 @@ const App: React.FC = () => {
                    <>
                      <NavItem view="ADMIN_DASHBOARD" icon={LayoutDashboard} label="Dashboard" />
                      <NavItem view="ADMIN_AUDIOS" icon={Library} label="Bibliothèque" />
+                     <NavItem view="ADMIN_MY_PROGRAM" icon={Library} label="MonProgramme" />
                      <NavItem view="ADMIN_USERS" icon={UsersIcon} label="Utilisateurs" />
                    </>
                  ) : (
                    <>
                       <NavItem view="USER_DASHBOARD" icon={LayoutDashboard} label="Dashboard" />
-                      <NavItem view="CATALOG" icon={Home} label="Programme" />
-                      <NavItem view="FAVORITES" icon={Heart} label="Mon training" />
-                   </>
-                 )}
+                      <NavItem view="CATALOG" icon={Home} label="Mes programmes" />
+                      <NavItem view="MY_PROGRAM" icon={Library} label="Mon Training" />
+                      <NavItem view="FAVORITES" icon={Heart} label="Mes favoris" />
+                    </>
+                  )}
                   <div className="border-t border-slate-100 my-4 pt-4">
                      <button onClick={handleLogout} className="flex items-center gap-3 px-4 py-3 text-red-500 w-full text-left">
                        <LogOut size={20} />
@@ -466,7 +498,13 @@ const App: React.FC = () => {
       <AudioPlayer 
         track={currentTrack} 
         userId={currentUser.id} 
-        onClose={() => setCurrentTrack(null)} 
+        onClose={() => setCurrentTrack(null)}
+        onCompleted={() => {
+          if (!currentUser || currentUser.role !== UserRole.USER) return;
+          dataService.getMyProgramAudios()
+            .then(setMyProgramAudios)
+            .catch(console.error);
+        }}
       />
 
     </div>

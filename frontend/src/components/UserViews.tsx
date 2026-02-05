@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Play, Clock, Heart, Search } from 'lucide-react';
-import { AudioTrack, Category } from '../types';
+import { AudioTrack, Category, MyProgramAudio } from '../types';
 import { CATEGORIES, dataService } from '../services/apiClient';
 
 interface UserCatalogProps {
@@ -183,6 +183,77 @@ export const UserCatalog: React.FC<UserCatalogProps> = ({
           <p>Aucun audio trouvé pour ces critères.</p>
         </div>
       )}
+    </div>
+  );
+};
+
+export const MyProgramList: React.FC<{ items: MyProgramAudio[]; favorites: string[]; onToggleFavorite: (id: string) => void; onPlay: (id: string) => void }> = ({ items, favorites, onToggleFavorite, onPlay }) => {
+  const categoryLabel = (id: string) => CATEGORIES.find(c => c.id === id)?.name || id;
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in pb-24">
+      <div>
+        <h1 className="text-3xl font-bold text-slate-900">Mon Training</h1>
+        <p className="text-slate-500 mt-1">Vos audios personnalisés.</p>
+      </div>
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600">
+            <thead className="bg-slate-50 text-slate-900 font-semibold border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-4 w-14"></th>
+                <th className="px-6 py-4">Audio</th>
+                <th className="px-6 py-4">Type</th>
+                <th className="px-6 py-4">Catégorie</th>
+                <th className="px-6 py-4">Durée</th>
+                <th className="px-6 py-4">Écoutes</th>
+                <th className="px-6 py-4 text-right">Favori</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4">
+                    <button
+                      onClick={() => onPlay(item.id)}
+                      className="w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 hover:bg-primary-600 hover:text-white transition-all shadow-sm"
+                    >
+                      <Play size={14} fill="currentColor" className="ml-0.5" />
+                    </button>
+                  </td>
+                  <td className="px-6 py-4 font-medium text-slate-900">{item.title}</td>
+                  <td className="px-6 py-4">{item.type || 'Training'}</td>
+                  <td className="px-6 py-4">{categoryLabel(item.categoryId)}</td>
+                  <td className="px-6 py-4">{formatTime(item.duration)}</td>
+                  <td className="px-6 py-4">{item.timesListened}</td>
+                  <td className="px-6 py-4 text-right">
+                    <button
+                      onClick={() => onToggleFavorite(item.id)}
+                      className={`p-1.5 rounded-full border text-slate-400 hover:text-pink-500 transition ${
+                        favorites.includes(item.id) ? 'text-pink-500 border-pink-200' : 'border-slate-200'
+                      }`}
+                    >
+                      <Heart
+                        size={14}
+                        fill={favorites.includes(item.id) ? 'currentColor' : 'none'}
+                        stroke={favorites.includes(item.id) ? 'none' : 'currentColor'}
+                      />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {items.length === 0 && (
+                <tr><td colSpan={7} className="text-center py-8 text-slate-500">Aucun audio dans Mon Programme.</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 };

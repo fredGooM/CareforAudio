@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import type { AxiosError } from 'axios';
 import { AreaChart, Area, XAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 import { Users, Clock, Activity, Edit, Trash2, Plus, Upload, X, Save, Search, Check, Play, Music, Lock, Mic, Square, Mail, KeyRound, RefreshCw, Layers } from 'lucide-react';
-import { AudioTrack, User, UserRole, Group, AdminDashboardData, Category } from '../types';
+import { AudioTrack, User, UserRole, Group, AdminDashboardData, Category, MyProgramAudio } from '../types';
 import { CATEGORIES, GROUPS, dataService, authService } from '../services/apiClient';
 
 // --- Dashboard ---
@@ -246,6 +246,8 @@ const createEmptyAudioForm = (): Partial<AudioTrack> => ({
   title: '',
   description: '',
   categoryId: '',
+  // @ts-ignore - extended on backend for permissions
+  myProgramUserIds: [],
   published: true,
   tags: [],
   allowedGroupIds: [],
@@ -488,6 +490,11 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
   const handleSave = async () => {
     setSaving(true);
     try {
+        if (!isEditMode && mode === 'RECORD' && !selectedFile) {
+            alert("Veuillez terminer l'enregistrement avant de publier.");
+            setSaving(false);
+            return;
+        }
         if (isEditMode && initialData) {
             await dataService.updateAudio({ ...initialData, ...formData, duration: durationSeconds } as AudioTrack);
         } else {
@@ -526,6 +533,19 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
       allowedUserIds: current.includes(userId)
         ? current.filter(id => id !== userId)
         : [...current, userId]
+    });
+  };
+
+  const toggleMyProgramUser = (userId: string) => {
+    const current = (formData as any).myProgramUserIds || [];
+    setFormData({
+      ...formData,
+      myProgramUserIds: current.includes(userId)
+        ? current.filter((id: string) => id !== userId)
+        : [...current, userId],
+      allowedUserIds: current.includes(userId)
+        ? formData.allowedUserIds
+        : Array.from(new Set([...(formData.allowedUserIds || []), userId]))
     });
   };
 
@@ -698,19 +718,32 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
                 </select>
               </div>
 
-              <div>
-                <label className="block text-xs font-semibold text-slate-500 mb-1">Catégorie</label>
-                <select
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100"
-                  value={formData.categoryId || ''}
-                  onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
-                >
-                  {categories.map(category => (
-                    <option key={category.id} value={category.id}>
-                      {category.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Catégorie</label>
+                  <select
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    value={formData.categoryId || ''}
+                    onChange={(e) => setFormData({ ...formData, categoryId: e.target.value })}
+                  >
+                    {categories.map(category => (
+                      <option key={category.id} value={category.id}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold text-slate-500 mb-1">Type</label>
+                  <select
+                    className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary-100"
+                    value={(formData as any).type || 'Training'}
+                    onChange={(e) => setFormData({ ...formData, type: e.target.value })}
+                  >
+                    <option value="Training">Training</option>
+                    <option value="Class">Class</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -756,7 +789,7 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
                       if (!formData.allowedUserIds?.length) {
                         setFormData({
                           ...formData,
-                          allowedUserIds: filteredUsers.map(u => u.id)
+                          allowedUserIds: users.map(u => u.id)
                         });
                       } else {
                         setFormData({
@@ -767,13 +800,14 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
                     }}
                     className="px-3 py-2 text-xs font-semibold border rounded-lg text-slate-600 bg-white hover:bg-slate-50"
                   >
-                    {formData.allowedUserIds?.length ? 'Tout désélectionné' : 'Tout sélectionné'}
+                    {formData.allowedUserIds?.length ? 'Non visible' : 'Visible pour tous'}
                   </button>
                 </div>
                 
                 <div className="flex-1 overflow-y-auto border border-slate-200 rounded-xl bg-slate-50 divide-y divide-slate-100">
                   {filteredUsers.map(user => {
                     const isSelected = formData.allowedUserIds?.includes(user.id);
+                    const isMyProgram = ((formData as any).myProgramUserIds || []).includes(user.id);
                     return (
                       <div key={user.id} className="p-3 flex items-center justify-between hover:bg-white transition-colors">
                          <div className="flex items-center gap-3">
@@ -785,12 +819,20 @@ const AudioModal: React.FC<AudioModalProps> = ({ initialData, initialMode = 'UPL
                              <p className="text-xs text-slate-500">{user.email}</p>
                            </div>
                          </div>
-                         <button 
-                            onClick={() => toggleUser(user.id)}
-                            className={`px-3 py-1 rounded text-xs font-semibold border transition-colors ${isSelected ? 'bg-secondary-50 border-secondary-200 text-secondary-600' : 'bg-white border-slate-200 text-slate-500'}`}
-                         >
-                           {isSelected ? 'Sélectionné' : 'Sélectionner'}
-                         </button>
+                         <div className="flex items-center gap-2">
+                           <button
+                              onClick={() => toggleMyProgramUser(user.id)}
+                              className={`px-3 py-1 rounded text-xs font-semibold border transition-colors ${isMyProgram ? 'bg-primary-50 border-primary-200 text-primary-700' : 'bg-white border-slate-200 text-slate-500'}`}
+                           >
+                             {isMyProgram ? 'MyProg' : <span className="line-through">MyProg</span>}
+                           </button>
+                           <button 
+                              onClick={() => toggleUser(user.id)}
+                              className={`px-3 py-1 rounded text-xs font-semibold border transition-colors ${isSelected ? 'bg-secondary-50 border-secondary-200 text-secondary-600' : 'bg-white border-slate-200 text-slate-500'}`}
+                           >
+                             {isSelected ? 'Visible' : 'Non visible'}
+                           </button>
+                         </div>
                       </div>
                     )
                   })}
@@ -1767,6 +1809,188 @@ export const AdminUsers: React.FC = () => {
               >
                 {savingGroups ? '...' : 'Enregistrer'}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const AdminMyProgram: React.FC = () => {
+  const [users, setUsers] = useState<User[]>([]);
+  const [selectedUserId, setSelectedUserId] = useState<string>('');
+  const [items, setItems] = useState<MyProgramAudio[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [addModalOpen, setAddModalOpen] = useState(false);
+  const [allAudios, setAllAudios] = useState<AudioTrack[]>([]);
+  const [savingAudioId, setSavingAudioId] = useState<string | null>(null);
+
+  useEffect(() => {
+    dataService.getUsers()
+      .then((list) => {
+        setUsers(list);
+        if (list.length > 0) {
+          setSelectedUserId(list[0].id);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  useEffect(() => {
+    if (!selectedUserId) return;
+    setLoading(true);
+    dataService.getMyProgramAudiosForUser(selectedUserId)
+      .then(setItems)
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [selectedUserId]);
+
+  useEffect(() => {
+    if (!addModalOpen) return;
+    dataService.getAllAudios()
+      .then(setAllAudios)
+      .catch(console.error);
+  }, [addModalOpen]);
+
+  const categoryLabel = (id: string) => CATEGORIES.find(c => c.id === id)?.name || id;
+  const formatTime = (seconds: number) => {
+    const mins = Math.floor(seconds / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+        <h2 className="text-2xl font-bold text-slate-900">
+          Edition du programme personnalisé de l'utilisateur
+        </h2>
+        <div className="flex items-center gap-3">
+          <select
+            className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm"
+            value={selectedUserId}
+            onChange={(e) => setSelectedUserId(e.target.value)}
+          >
+            {users.map(u => (
+              <option key={u.id} value={u.id}>
+                {u.firstName} {u.lastName}
+              </option>
+            ))}
+          </select>
+          {selectedUserId && (
+            <span className="text-sm text-slate-500">
+              {users.find(u => u.id === selectedUserId)?.email}
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={() => setAddModalOpen(true)}
+            className="px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors text-sm"
+          >
+            Ajouter
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm text-slate-600">
+            <thead className="bg-slate-50 text-slate-900 font-semibold border-b border-slate-200">
+              <tr>
+                <th className="px-6 py-4">Audio</th>
+                <th className="px-6 py-4">Type</th>
+                <th className="px-6 py-4">Catégorie</th>
+                <th className="px-6 py-4">Durée</th>
+                <th className="px-6 py-4">Écoutes</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {items.map((item) => (
+                <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 font-medium text-slate-900">{item.title}</td>
+                  <td className="px-6 py-4">{item.type || 'Training'}</td>
+                  <td className="px-6 py-4">{categoryLabel(item.categoryId)}</td>
+                  <td className="px-6 py-4">{formatTime(item.duration)}</td>
+                  <td className="px-6 py-4">{item.timesListened}</td>
+                </tr>
+              ))}
+              {!loading && items.length === 0 && (
+                <tr><td colSpan={5} className="text-center py-8 text-slate-500">Aucun audio MyProg.</td></tr>
+              )}
+              {loading && (
+                <tr><td colSpan={5} className="text-center py-8 text-slate-500">Chargement...</td></tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {addModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] flex flex-col overflow-hidden animate-fade-in">
+            <div className="flex items-center justify-between p-6 border-b border-slate-100">
+              <div>
+                <h3 className="text-xl font-bold text-slate-900">Ajouter un audio</h3>
+                <p className="text-sm text-slate-500">Sélectionner des audios pour MonProgramme.</p>
+              </div>
+              <button onClick={() => setAddModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="p-6 overflow-y-auto">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm text-slate-600">
+                  <thead className="bg-slate-50 text-slate-900 font-semibold border-b border-slate-200">
+                    <tr>
+                      <th className="px-4 py-3">Audio</th>
+                      <th className="px-4 py-3">Type</th>
+                      <th className="px-4 py-3">Catégorie</th>
+                      <th className="px-4 py-3">Durée</th>
+                      <th className="px-4 py-3 text-right">MyProg</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {allAudios.map((audio) => {
+                      const isSelected = items.some((i) => i.id === audio.id);
+                      return (
+                        <tr key={audio.id} className="hover:bg-slate-50 transition-colors">
+                          <td className="px-4 py-3 font-medium text-slate-900">{audio.title}</td>
+                          <td className="px-4 py-3">{audio.type || 'Training'}</td>
+                          <td className="px-4 py-3">{categoryLabel(audio.categoryId)}</td>
+                          <td className="px-4 py-3">{formatTime(audio.duration)}</td>
+                          <td className="px-4 py-3 text-right">
+                            <button
+                              type="button"
+                              onClick={async () => {
+                                if (!selectedUserId) return;
+                                setSavingAudioId(audio.id);
+                                try {
+                                  await dataService.setMyProgramForUser(selectedUserId, audio.id, !isSelected);
+                                  const refreshed = await dataService.getMyProgramAudiosForUser(selectedUserId);
+                                  setItems(refreshed);
+                                } catch (e) {
+                                  console.error(e);
+                                } finally {
+                                  setSavingAudioId(null);
+                                }
+                              }}
+                              className={`px-3 py-1 rounded text-xs font-semibold border transition-colors ${
+                                isSelected ? 'bg-primary-50 border-primary-200 text-primary-700' : 'bg-white border-slate-200 text-slate-500'
+                              }`}
+                            >
+                              {savingAudioId === audio.id ? '...' : (isSelected ? 'MyProg' : <span className="line-through">MyProg</span>)}
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                    {allAudios.length === 0 && (
+                      <tr><td colSpan={5} className="text-center py-8 text-slate-500">Aucun audio.</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>

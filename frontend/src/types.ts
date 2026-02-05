@@ -38,6 +38,8 @@ export interface AudioTrack {
   mimeType?: string;
   coverUrl: string;
   categoryId: string;
+  type?: string;
+  orderToListen?: number;
   tags: string[];
   createdAt: string;
   published: boolean;
@@ -54,15 +56,26 @@ export interface UserProgress {
   isFavorite: boolean;
 }
 
+export interface MyProgramAudio {
+  id: string;
+  title: string;
+  duration: number;
+  categoryId: string;
+  type?: string;
+  timesListened: number;
+}
+
 export type ViewState =
   | 'LOGIN'
   | 'CHANGE_PASSWORD'
   | 'USER_DASHBOARD'
   | 'CATALOG'
+  | 'MY_PROGRAM'
   | 'FAVORITES'
   | 'AUDIO_DETAIL'
   | 'ADMIN_DASHBOARD'
   | 'ADMIN_AUDIOS'
+  | 'ADMIN_MY_PROGRAM'
   | 'ADMIN_USERS';
 
 export interface UserDashboardData {
@@ -72,6 +85,7 @@ export interface UserDashboardData {
   streakDays: number;
   completedCount: number;
   categoryProgress: Array<{ categoryId: string; percent: number }>;
+  myProgramProgress: { percent: number; total: number; completed: number };
   continueListening: Array<{ audioId: string; title: string; progressPercent: number }>;
 }
 

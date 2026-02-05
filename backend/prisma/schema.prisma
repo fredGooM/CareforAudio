@@ -60,6 +60,8 @@ model AudioTrack {
   size         Int?
   categoryId   String?
   category     Category?     @relation(fields: [categoryId], references: [id])
+  type         String   @default("Training")
+  orderToListen Int     @default(1)
   published    Boolean       @default(false)
   coverUrl     String?
   createdAt    DateTime      @default(now())
@@ -116,7 +118,9 @@ model UserProgress {
   lastPosition  Float    @default(0)
   isCompleted   Boolean  @default(false)
   isFavorite    Boolean  @default(false)
+  isMyProgram   Boolean  @default(false)
   timesListened Int      @default(0)
+  timesToListened Int    @default(1)
   updatedAt     DateTime @updatedAt
 
   user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)

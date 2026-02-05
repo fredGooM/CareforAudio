@@ -137,10 +137,158 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
     }
 });
 
+// My Program audios for user
+router.get('/my-program', authenticateToken, async (req: any, res: any) => {
+    try {
+        const authReq = req as AuthRequest;
+        const userId = authReq.user!.id;
+        const records = await prisma.userProgress.findMany({
+            where: { userId, isMyProgram: true },
+            include: { audio: true }
+        });
+        const mapped = records
+            .filter((r) => r.audio)
+            .map((r) => ({
+                id: r.audio!.id,
+                title: r.audio!.title,
+                duration: r.audio!.duration,
+                categoryId: r.audio!.categoryId || 'c1',
+                type: r.audio!.type || 'Training',
+                timesListened: r.timesListened || 0
+            }));
+        res.json(mapped);
+    } catch (e) {
+        console.error('Failed to fetch my program audios', e);
+        res.status(500).json({ error: 'Failed to fetch my program audios' });
+    }
+});
+
+// Admin: My Program audios for a selected user
+router.get('/my-program/admin', authenticateToken, requireAdmin, async (req: any, res: any) => {
+    try {
+        const userId = typeof req.query.userId === 'string' ? req.query.userId : '';
+        if (!userId) {
+            res.status(400).json({ error: 'userId is required' });
+            return;
+        }
+        const records = await prisma.userProgress.findMany({
+            where: { userId, isMyProgram: true },
+            include: { audio: true }
+        });
+        const mapped = records
+            .filter((r) => r.audio)
+            .map((r) => ({
+                id: r.audio!.id,
+                title: r.audio!.title,
+                duration: r.audio!.duration,
+                categoryId: r.audio!.categoryId || 'c1',
+                type: r.audio!.type || 'Training',
+                timesListened: r.timesListened || 0
+            }));
+        res.json(mapped);
+    } catch (e) {
+        console.error('Failed to fetch admin my program audios', e);
+        res.status(500).json({ error: 'Failed to fetch admin my program audios' });
+    }
+});
+
+router.post('/my-program/admin', authenticateToken, requireAdmin, async (req: any, res: any) => {
+    try {
+        const { userId, audioId, isMyProgram } = req.body || {};
+        if (!userId || !audioId) {
+            res.status(400).json({ error: 'userId and audioId are required' });
+            return;
+        }
+        await prisma.userProgress.upsert({
+            where: { userId_audioId: { userId, audioId } },
+            update: { isMyProgram: Boolean(isMyProgram) },
+            create: { userId, audioId, isMyProgram: Boolean(isMyProgram) }
+        });
+        res.json({ success: true });
+    } catch (e) {
+        console.error('Failed to update admin my program', e);
+        res.status(500).json({ error: 'Failed to update admin my program' });
+    }
+});
+
+// Favorites for current user (based on UserProgress.isFavorite)
+router.get('/favorites', authenticateToken, async (req: any, res: any) => {
+    try {
+        const authReq = req as AuthRequest;
+        const userId = authReq.user!.id;
+        const role = authReq.user!.role;
+
+        const favoriteRecords = await prisma.userProgress.findMany({
+            where: { userId, isFavorite: true },
+            select: { audioId: true }
+        });
+        const favoriteIds = favoriteRecords.map((r) => r.audioId);
+        if (favoriteIds.length === 0) {
+            res.json([]);
+            return;
+        }
+
+        let audios;
+        if (role === 'ADMIN') {
+            audios = await prisma.audioTrack.findMany({
+                where: { id: { in: favoriteIds } },
+                include: { allowedGroups: true, allowedUsers: true }
+            });
+        } else {
+            const userGroups = await prisma.userGroup.findMany({
+                where: { userId },
+                select: { groupId: true }
+            });
+            const groupIds = userGroups.map(ug => ug.groupId);
+            audios = await prisma.audioTrack.findMany({
+                where: {
+                    id: { in: favoriteIds },
+                    published: true,
+                    OR: [
+                        { allowedUsers: { some: { userId } } },
+                        { allowedGroups: { some: { groupId: { in: groupIds } } } }
+                    ]
+                },
+                include: { allowedGroups: true, allowedUsers: true }
+            });
+        }
+
+        const mappedAudios = await Promise.all(audios.map(async (a: any) => {
+            const allowedGroupIds = (a as any).allowedGroups?.map((g: any) => g.groupId) || [];
+            const allowedUserIds = (a as any).allowedUsers?.map((u: any) => u.userId) || [];
+            const signedUrl = a.storageKey ? await getSignedUrlForObject(a.storageKey, 3600) : '';
+
+            return {
+                id: a.id,
+                title: a.title,
+                description: a.description,
+                duration: a.duration,
+                url: signedUrl || '',
+                coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
+                categoryId: a.categoryId || 'c1',
+                mimeType: a.mimeType || 'audio/mpeg',
+                tags: [],
+                createdAt: a.createdAt,
+                published: a.published,
+                allowedGroupIds,
+                allowedUserIds,
+                listenCount: 0,
+                type: a.type || 'Training',
+                orderToListen: a.orderToListen || 1
+            };
+        }));
+
+        res.json(mappedAudios);
+    } catch (e) {
+        console.error('Failed to fetch favorites', e);
+        res.status(500).json({ error: 'Failed to fetch favorites' });
+    }
+});
+
 // Upload Audio (Admin)
 router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'), async (req: any, res: any) => {
     try {
-        const { title, description, categoryId, duration, published } = req.body;
+        const { title, description, categoryId, duration, published, type, orderToListen } = req.body;
         const file = (req as any).file as Express.Multer.File | undefined;
 
         if (!file || !file.buffer) {
@@ -166,6 +314,8 @@ router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'
                 duration: finalDuration,
                 categoryId: categoryId || 'c1',
                 published: published === 'true',
+                type: type || 'Training',
+                orderToListen: orderToListen ? parseInt(orderToListen) : 1,
                 storageKey: uploadResult.objectName,
                 mimeType: processed.mimeType,
                 size: uploadResult.size,
@@ -210,6 +360,21 @@ router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'
             } catch (e) { console.error('Error parsing userIds', e); }
         }
 
+        if (req.body.myProgramUserIds) {
+            try {
+                const myProgramUserIds = JSON.parse(req.body.myProgramUserIds);
+                if (Array.isArray(myProgramUserIds) && myProgramUserIds.length > 0) {
+                    for (const uid of myProgramUserIds) {
+                        await prisma.userProgress.upsert({
+                            where: { userId_audioId: { userId: uid, audioId: newAudio.id } },
+                            update: { isMyProgram: true },
+                            create: { userId: uid, audioId: newAudio.id, isMyProgram: true }
+                        });
+                    }
+                }
+            } catch (e) { console.error('Error parsing myProgramUserIds', e); }
+        }
+
         const signedUrl = await getSignedUrlForObject(uploadResult.objectName, 3600);
 
         res.json({
@@ -226,13 +391,20 @@ router.post('/', authenticateToken, requireAdmin, uploadMiddleware.single('file'
 // Update permissions
 router.put('/:id', authenticateToken, requireAdmin, async (req: any, res: any) => {
     const { id } = req.params;
-    const { title, description, published, allowedGroupIds, allowedUserIds, duration } = req.body;
+    const { title, description, published, allowedGroupIds, allowedUserIds, duration, type, orderToListen, myProgramUserIds } = req.body;
 
     try {
         const updateData: any = { title, description, published };
         if (duration !== undefined) {
             const parsed = parseInt(duration);
             updateData.duration = isNaN(parsed) ? 0 : parsed;
+        }
+        if (type !== undefined) {
+            updateData.type = type;
+        }
+        if (orderToListen !== undefined) {
+            const parsedOrder = parseInt(orderToListen);
+            updateData.orderToListen = isNaN(parsedOrder) ? 1 : parsedOrder;
         }
 
         await prisma.audioTrack.update({
@@ -252,10 +424,24 @@ router.put('/:id', authenticateToken, requireAdmin, async (req: any, res: any) =
 
         // Sync Users
         if (Array.isArray(allowedUserIds)) {
-            await prisma.audioAccess.deleteMany({ where: { audioId: id } });
+             await prisma.audioAccess.deleteMany({ where: { audioId: id } });
             if (allowedUserIds.length > 0) {
                 await prisma.audioAccess.createMany({
                     data: allowedUserIds.map((uid: string) => ({ userId: uid, audioId: id }))
+                });
+            }
+        }
+
+        if (Array.isArray(myProgramUserIds)) {
+            await prisma.userProgress.updateMany({
+                where: { audioId: id },
+                data: { isMyProgram: false }
+            });
+            for (const uid of myProgramUserIds) {
+                await prisma.userProgress.upsert({
+                    where: { userId_audioId: { userId: uid, audioId: id } },
+                    update: { isMyProgram: true },
+                    create: { userId: uid, audioId: id, isMyProgram: true }
                 });
             }
         }

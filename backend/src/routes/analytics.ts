@@ -10,7 +10,7 @@ router.post('/heartbeat', authenticateToken, async (req: any, res: any) => {
   try {
     const authReq = req as AuthRequest;
     const userId = authReq.user?.id;
-    const { audioId, position, sessionDuration } = req.body || {};
+    const { audioId, position, sessionDuration, completed } = req.body || {};
 
     if (!userId || !audioId || typeof position !== 'number') {
       res.status(400).json({ error: 'Invalid payload' });
@@ -27,7 +27,15 @@ router.post('/heartbeat', authenticateToken, async (req: any, res: any) => {
     const existingProgress = await prisma.userProgress.findUnique({ where: progressKey });
 
     const audioDuration = audio.duration || 0;
-    const completedNow = audioDuration > 0 && position >= audioDuration * 0.9;
+    const completedFlag =
+      completed === true ||
+      completed === 'true' ||
+      completed === 1 ||
+      completed === '1';
+    const completionThreshold = audioDuration > 0
+      ? Math.max(audioDuration * 0.9, audioDuration - 0.5)
+      : 0;
+    const completedNow = completedFlag || (audioDuration > 0 && position >= completionThreshold);
     let timesListened = existingProgress?.timesListened ?? 0;
     let isCompleted = existingProgress?.isCompleted ?? false;
 
@@ -285,6 +293,14 @@ async function buildUserDashboard(userId: string) {
     percent: stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0
   }));
 
+  const myProgramTotal = await prisma.userProgress.count({
+    where: { userId, isMyProgram: true }
+  });
+  const myProgramCompleted = await prisma.userProgress.count({
+    where: { userId, isMyProgram: true, isCompleted: true }
+  });
+  const myProgramPercent = myProgramTotal > 0 ? Math.round((myProgramCompleted / myProgramTotal) * 100) : 0;
+
   const logs = await prisma.audioLog.findMany({ where: { userId }, orderBy: { createdAt: 'desc' } });
   const daySet = new Set(logs.map((log) => log.createdAt.toISOString().slice(0, 10)));
   let streak = 0;
@@ -322,6 +338,11 @@ async function buildUserDashboard(userId: string) {
     streakDays: streak,
     completedCount,
     categoryProgress,
+    myProgramProgress: {
+      percent: myProgramPercent,
+      total: myProgramTotal,
+      completed: myProgramCompleted
+    },
     continueListening
   };
 }
