@@ -1,0 +1,378 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In } from 'typeorm';
+import {
+    AudioTrack,
+    AudioAccess,
+    GroupAccess,
+    UserGroup,
+    UserProgress,
+} from '../entities';
+import { StorageService } from '../storage/storage.service';
+
+@Injectable()
+export class AudiosService {
+    constructor(
+        @InjectRepository(AudioTrack)
+        private readonly audioRepo: Repository<AudioTrack>,
+        @InjectRepository(AudioAccess)
+        private readonly audioAccessRepo: Repository<AudioAccess>,
+        @InjectRepository(GroupAccess)
+        private readonly groupAccessRepo: Repository<GroupAccess>,
+        @InjectRepository(UserGroup)
+        private readonly userGroupRepo: Repository<UserGroup>,
+        @InjectRepository(UserProgress)
+        private readonly progressRepo: Repository<UserProgress>,
+        private readonly storageService: StorageService,
+    ) { }
+
+    async findAllForUser(userId: string, role: string) {
+        let audios: AudioTrack[];
+
+        if (role === 'ADMIN') {
+            audios = await this.audioRepo.find({
+                order: { createdAt: 'DESC' },
+                relations: ['allowedGroups', 'allowedUsers'],
+            });
+        } else {
+            const userGroups = await this.userGroupRepo.find({
+                where: { userId },
+                select: ['groupId'],
+            });
+            const groupIds = userGroups.map((ug) => ug.groupId);
+
+            // Get audio IDs user has direct access to
+            const directAccess = await this.audioAccessRepo.find({
+                where: { userId },
+                select: ['audioId'],
+            });
+            const directIds = directAccess.map((a) => a.audioId);
+
+            // Get audio IDs accessible via groups
+            let groupAudioIds: string[] = [];
+            if (groupIds.length > 0) {
+                const groupAccess = await this.groupAccessRepo.find({
+                    where: { groupId: In(groupIds) },
+                    select: ['audioId'],
+                });
+                groupAudioIds = groupAccess.map((g) => g.audioId);
+            }
+
+            const allIds = [...new Set([...directIds, ...groupAudioIds])];
+            if (allIds.length === 0) return [];
+
+            audios = await this.audioRepo.find({
+                where: { id: In(allIds), published: true },
+            });
+        }
+
+        return Promise.all(
+            audios.map(async (a: any) => {
+                const signedUrl = a.storageKey
+                    ? await this.storageService.getSignedUrl(a.storageKey, 3600)
+                    : '';
+                return {
+                    id: a.id,
+                    title: a.title,
+                    description: a.description,
+                    duration: a.duration,
+                    url: signedUrl,
+                    coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
+                    categoryId: a.categoryId || 'c1',
+                    mimeType: a.mimeType || 'audio/mpeg',
+                    type: a.type || 'Training',
+                    orderToListen: a.orderToListen || 1,
+                    tags: [],
+                    createdAt: a.createdAt,
+                    published: a.published,
+                    allowedGroupIds:
+                        a.allowedGroups?.map((g: any) => g.groupId) || [],
+                    allowedUserIds:
+                        a.allowedUsers?.map((u: any) => u.userId) || [],
+                    listenCount: 0,
+                };
+            }),
+        );
+    }
+
+    async getFavoriteAudios(userId: string, role: string) {
+        const favRecords = await this.progressRepo.find({
+            where: { userId, isFavorite: true },
+            select: ['audioId'],
+        });
+        const favIds = favRecords.map((r) => r.audioId);
+        if (favIds.length === 0) return [];
+
+        let audios: AudioTrack[];
+        if (role === 'ADMIN') {
+            audios = await this.audioRepo.find({
+                where: { id: In(favIds) },
+                relations: ['allowedGroups', 'allowedUsers'],
+            });
+        } else {
+            audios = await this.audioRepo.find({
+                where: { id: In(favIds), published: true },
+                relations: ['allowedGroups', 'allowedUsers'],
+            });
+        }
+
+        return Promise.all(
+            audios.map(async (a: any) => {
+                const signedUrl = a.storageKey
+                    ? await this.storageService.getSignedUrl(a.storageKey, 3600)
+                    : '';
+                return {
+                    id: a.id,
+                    title: a.title,
+                    description: a.description,
+                    duration: a.duration,
+                    url: signedUrl,
+                    coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
+                    categoryId: a.categoryId || 'c1',
+                    mimeType: a.mimeType || 'audio/mpeg',
+                    type: a.type || 'Training',
+                    orderToListen: a.orderToListen || 1,
+                    tags: [],
+                    createdAt: a.createdAt,
+                    published: a.published,
+                    allowedGroupIds: a.allowedGroups?.map((g: any) => g.groupId) || [],
+                    allowedUserIds: a.allowedUsers?.map((u: any) => u.userId) || [],
+                    listenCount: 0,
+                };
+            }),
+        );
+    }
+
+    async getMyProgram(userId: string) {
+        const records = await this.progressRepo.find({
+            where: { userId, isMyProgram: true },
+            relations: ['audio'],
+        });
+        return records
+            .filter((r) => r.audio)
+            .map((r) => ({
+                id: r.audio.id,
+                title: r.audio.title,
+                duration: r.audio.duration,
+                categoryId: r.audio.categoryId || 'c1',
+                type: r.audio.type || 'Training',
+                timesListened: r.timesListened || 0,
+            }));
+    }
+
+    async getMyProgramAdmin(userId: string) {
+        return this.getMyProgram(userId);
+    }
+
+    async setMyProgramAdmin(
+        userId: string,
+        audioId: string,
+        isMyProgram: boolean,
+    ) {
+        const existing = await this.progressRepo.findOne({
+            where: { userId, audioId },
+        });
+        if (existing) {
+            existing.isMyProgram = isMyProgram;
+            await this.progressRepo.save(existing);
+        } else {
+            await this.progressRepo.save({ userId, audioId, isMyProgram });
+        }
+        return { success: true };
+    }
+
+    async create(
+        data: {
+            title: string;
+            description?: string;
+            categoryId?: string;
+            published?: string;
+            duration?: string;
+            type?: string;
+            orderToListen?: string;
+            allowedGroupIds?: string;
+            allowedUserIds?: string;
+            myProgramUserIds?: string;
+        },
+        file: Express.Multer.File,
+    ) {
+        if (!file || !file.buffer) {
+            throw new BadRequestException('No file uploaded');
+        }
+
+        const uploadResult = await this.storageService.upload(
+            file.buffer,
+            file.mimetype,
+            file.originalname,
+            'audios',
+        );
+
+        const newAudio = this.audioRepo.create({
+            title: data.title,
+            description: data.description,
+            duration: parseInt(data.duration || '0') || 0,
+            categoryId: data.categoryId || 'c1',
+            published: data.published === 'true',
+            type: data.type || 'Training',
+            orderToListen: data.orderToListen ? parseInt(data.orderToListen) : 1,
+            storageKey: uploadResult.objectName,
+            mimeType: file.mimetype,
+            size: uploadResult.size,
+            coverUrl: `https://picsum.photos/400/400?random=${Date.now()}`,
+        });
+
+        const saved = await this.audioRepo.save(newAudio);
+
+        // Handle group permissions
+        if (data.allowedGroupIds) {
+            try {
+                const groupIds = JSON.parse(data.allowedGroupIds);
+                if (Array.isArray(groupIds) && groupIds.length > 0) {
+                    await this.groupAccessRepo.save(
+                        groupIds.map((gid: string) => ({
+                            groupId: gid,
+                            audioId: saved.id,
+                        })),
+                    );
+                    // Auto-grant access to users in those groups
+                    const groupUsers = await this.userGroupRepo.find({
+                        where: { groupId: In(groupIds) },
+                        select: ['userId'],
+                    });
+                    const uniqueUserIds = [
+                        ...new Set(groupUsers.map((u) => u.userId)),
+                    ];
+                    if (uniqueUserIds.length > 0) {
+                        await this.audioAccessRepo.save(
+                            uniqueUserIds.map((uid) => ({
+                                userId: uid,
+                                audioId: saved.id,
+                            })),
+                        );
+                    }
+                }
+            } catch { }
+        }
+
+        // Handle direct user permissions
+        if (data.allowedUserIds) {
+            try {
+                const userIds = JSON.parse(data.allowedUserIds);
+                if (Array.isArray(userIds)) {
+                    await this.audioAccessRepo.save(
+                        userIds.map((uid: string) => ({
+                            userId: uid,
+                            audioId: saved.id,
+                        })),
+                    );
+                }
+            } catch { }
+        }
+
+        // Handle my-program assignments
+        if (data.myProgramUserIds) {
+            try {
+                const myProgramUserIds = JSON.parse(data.myProgramUserIds);
+                if (Array.isArray(myProgramUserIds)) {
+                    for (const uid of myProgramUserIds) {
+                        const existing = await this.progressRepo.findOne({
+                            where: { userId: uid, audioId: saved.id },
+                        });
+                        if (existing) {
+                            existing.isMyProgram = true;
+                            await this.progressRepo.save(existing);
+                        } else {
+                            await this.progressRepo.save({
+                                userId: uid,
+                                audioId: saved.id,
+                                isMyProgram: true,
+                            });
+                        }
+                    }
+                }
+            } catch { }
+        }
+
+        const signedUrl = await this.storageService.getSignedUrl(
+            uploadResult.objectName,
+            3600,
+        );
+
+        return { ...saved, url: signedUrl };
+    }
+
+    async update(
+        id: string,
+        data: {
+            title?: string;
+            description?: string;
+            published?: boolean;
+            duration?: number;
+            type?: string;
+            orderToListen?: number;
+            allowedGroupIds?: string[];
+            allowedUserIds?: string[];
+            myProgramUserIds?: string[];
+        },
+    ) {
+        const updateData: any = {};
+        if (data.title !== undefined) updateData.title = data.title;
+        if (data.description !== undefined) updateData.description = data.description;
+        if (data.published !== undefined) updateData.published = data.published;
+        if (data.duration !== undefined) updateData.duration = data.duration;
+        if (data.type !== undefined) updateData.type = data.type;
+        if (data.orderToListen !== undefined) updateData.orderToListen = data.orderToListen;
+
+        await this.audioRepo.update(id, updateData);
+
+        if (Array.isArray(data.allowedGroupIds)) {
+            await this.groupAccessRepo.delete({ audioId: id });
+            if (data.allowedGroupIds.length > 0) {
+                await this.groupAccessRepo.save(
+                    data.allowedGroupIds.map((gid) => ({ groupId: gid, audioId: id })),
+                );
+            }
+        }
+
+        if (Array.isArray(data.allowedUserIds)) {
+            await this.audioAccessRepo.delete({ audioId: id });
+            if (data.allowedUserIds.length > 0) {
+                await this.audioAccessRepo.save(
+                    data.allowedUserIds.map((uid) => ({ userId: uid, audioId: id })),
+                );
+            }
+        }
+
+        if (Array.isArray(data.myProgramUserIds)) {
+            await this.progressRepo.update({ audioId: id }, { isMyProgram: false });
+            for (const uid of data.myProgramUserIds) {
+                const existing = await this.progressRepo.findOne({
+                    where: { userId: uid, audioId: id },
+                });
+                if (existing) {
+                    existing.isMyProgram = true;
+                    await this.progressRepo.save(existing);
+                } else {
+                    await this.progressRepo.save({
+                        userId: uid,
+                        audioId: id,
+                        isMyProgram: true,
+                    });
+                }
+            }
+        }
+
+        return { success: true };
+    }
+
+    async remove(id: string) {
+        const audio = await this.audioRepo.findOne({ where: { id } });
+        if (!audio) throw new NotFoundException('Audio not found');
+
+        await this.audioRepo.delete(id);
+        if (audio.storageKey) {
+            await this.storageService.delete(audio.storageKey).catch(() => { });
+        }
+        return { success: true };
+    }
+}

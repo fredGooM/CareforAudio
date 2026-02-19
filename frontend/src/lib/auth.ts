@@ -1,0 +1,100 @@
+import NextAuth, { type DefaultSession, type NextAuthConfig } from 'next-auth';
+import CredentialsProvider from 'next-auth/providers/credentials';
+
+declare module 'next-auth' {
+    interface Session extends DefaultSession {
+        user: {
+            id: string;
+            role: string;
+            mustChangePassword: boolean;
+            accessToken: string;
+        } & DefaultSession['user'];
+        accessToken: string;
+    }
+    interface User {
+        role: string;
+        mustChangePassword: boolean;
+        accessToken: string;
+        refreshToken: string;
+        firstName?: string;
+        lastName?: string;
+    }
+}
+
+declare module 'next-auth' {
+    interface JWT {
+        role?: string;
+        mustChangePassword?: boolean;
+        accessToken?: string;
+        refreshToken?: string;
+    }
+}
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+
+export const authConfig: NextAuthConfig = {
+    providers: [
+        CredentialsProvider({
+            name: 'Credentials',
+            credentials: {
+                email: { label: 'Email', type: 'email' },
+                password: { label: 'Password', type: 'password' },
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) return null;
+                try {
+                    const res = await fetch(`${API_URL}/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            email: credentials.email,
+                            password: credentials.password,
+                        }),
+                    });
+                    if (!res.ok) return null;
+                    const data = await res.json();
+                    return {
+                        id: data.user.id,
+                        email: data.user.email,
+                        name: `${data.user.firstName} ${data.user.lastName}`,
+                        role: data.user.role,
+                        mustChangePassword: data.user.mustChangePassword,
+                        accessToken: data.accessToken,
+                        refreshToken: data.refreshToken,
+                        firstName: data.user.firstName,
+                        lastName: data.user.lastName,
+                    };
+                } catch {
+                    return null;
+                }
+            },
+        }),
+    ],
+    callbacks: {
+        async jwt({ token, user }: any) {
+            if (user) {
+                token.role = user.role;
+                token.mustChangePassword = user.mustChangePassword;
+                token.accessToken = user.accessToken;
+                token.refreshToken = user.refreshToken;
+                token.id = user.id;
+            }
+            return token;
+        },
+        async session({ session, token }: any) {
+            session.user.id = token.id as string;
+            session.user.role = token.role as string;
+            session.user.mustChangePassword = token.mustChangePassword as boolean;
+            session.accessToken = token.accessToken as string;
+            return session;
+        },
+    },
+    pages: {
+        signIn: '/login',
+    },
+    session: {
+        strategy: 'jwt',
+    },
+};
+
+export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);
