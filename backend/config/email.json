@@ -1,8 +1,0 @@
-{
-  "smtpHost": "smtp-relay.brevo.com",
-  "smtpPort": 587,
-  "smtpSecure": false,
-  "smtpUser": "CHANGE_ME",
-  "smtpPass": "",
-  "templateId": 0
-}

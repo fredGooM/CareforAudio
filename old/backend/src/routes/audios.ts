@@ -4,7 +4,8 @@ import os from 'os';
 import fs from 'fs';
 // @ts-ignore
 import { PrismaClient } from '@prisma/client';
-import { parseBuffer } from 'music-metadata';
+// @ts-ignore
+// import { parseBuffer } from 'music-metadata';
 import { v4 as uuidv4 } from 'uuid';
 import { authenticateToken, requireAdmin, AuthRequest } from '../middleware/auth';
 import { uploadMiddleware } from '../services/upload';
@@ -54,13 +55,14 @@ async function convertIfNeeded(file: Express.Multer.File) {
             mimeType: 'audio/wav'
         };
     } finally {
-        fs.promises.unlink(tempInput).catch(() => {});
-        fs.promises.unlink(tempOutput).catch(() => {});
+        fs.promises.unlink(tempInput).catch(() => { });
+        fs.promises.unlink(tempOutput).catch(() => { });
     }
 }
 
 async function detectDuration(buffer: Buffer, mimeType: string) {
     try {
+        const { parseBuffer } = await import('music-metadata');
         const metadata = await parseBuffer(buffer, mimeType);
         if (metadata.format.duration) {
             return Math.round(metadata.format.duration);
@@ -125,7 +127,7 @@ router.get('/', authenticateToken, async (req: any, res: any) => {
                 published: a.published,
                 allowedGroupIds,
                 allowedUserIds,
-                listenCount: 0 
+                listenCount: 0
             };
         }));
 
@@ -424,7 +426,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req: any, res: any) =
 
         // Sync Users
         if (Array.isArray(allowedUserIds)) {
-             await prisma.audioAccess.deleteMany({ where: { audioId: id } });
+            await prisma.audioAccess.deleteMany({ where: { audioId: id } });
             if (allowedUserIds.length > 0) {
                 await prisma.audioAccess.createMany({
                     data: allowedUserIds.map((uid: string) => ({ userId: uid, audioId: id }))
@@ -447,7 +449,7 @@ router.put('/:id', authenticateToken, requireAdmin, async (req: any, res: any) =
         }
 
         res.json({ success: true });
-    } catch(e) {
+    } catch (e) {
         console.error('Failed to update audio', e);
         res.status(500).json({ error: 'Update failed' });
     }
