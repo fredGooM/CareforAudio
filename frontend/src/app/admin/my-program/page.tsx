@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api-client';
+import Loader from '@/components/Loader';
 import type { UserProfile, AudioTrack } from '@/types';
 
 interface ProgramAudio {
@@ -54,7 +55,7 @@ export default function AdminMyProgramPage() {
         setProgram(updated);
     };
 
-    if (loading) return <div className="page-loading">Chargement...</div>;
+    if (loading) return <Loader />;
 
     return (
         <div className="page-content">

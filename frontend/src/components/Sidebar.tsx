@@ -58,6 +58,12 @@ const icons = {
             <polyline points="10 9 9 9 8 9" />
         </svg>
     ),
+    profile: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
+            <circle cx="12" cy="7" r="4" />
+        </svg>
+    ),
     logout: (
         <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" />
@@ -134,13 +140,13 @@ export default function Sidebar() {
                         <span className="tab-label">{link.label}</span>
                     </Link>
                 ))}
-                <button
-                    className="tab-item"
-                    onClick={() => signOut({ callbackUrl: '/login' })}
+                <Link
+                    href="/profile"
+                    className={`tab-item${isActive('/profile') ? ' active' : ''}`}
                 >
-                    <span className="tab-icon">{icons.logout}</span>
-                    <span className="tab-label">Sortir</span>
-                </button>
+                    <span className="tab-icon">{icons.profile}</span>
+                    <span className="tab-label">Profil</span>
+                </Link>
             </nav>
         </>
     );

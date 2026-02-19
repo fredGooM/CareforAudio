@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, useRef, FormEvent } from 'react';
 import apiClient from '@/lib/api-client';
+import Loader from '@/components/Loader';
 import type { AudioTrack, Category, Group } from '@/types';
 
 export default function AdminLibraryPage() {
@@ -70,7 +71,7 @@ export default function AdminLibraryPage() {
         setAudios(audios.filter((a) => a.id !== id));
     };
 
-    if (loading) return <div className="page-loading">Chargement...</div>;
+    if (loading) return <Loader />;
 
     return (
         <div className="page-content">

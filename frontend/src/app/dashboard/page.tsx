@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api-client';
+import Loader from '@/components/Loader';
 import type { Dashboard, DashboardUser, DashboardAdmin } from '@/types';
 
 export default function DashboardPage() {
@@ -19,7 +20,7 @@ export default function DashboardPage() {
         }).catch(() => setLoading(false));
     }, [session]);
 
-    if (loading) return <div className="page-loading">Chargement...</div>;
+    if (loading) return <Loader />;
     if (!dashboard) return <div className="page-error">Erreur de chargement</div>;
 
     if (dashboard.role === 'ADMIN') {

@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api-client';
+import Loader from '@/components/Loader';
 import AudioPlayer from '@/components/AudioPlayer';
 import type { AudioTrack } from '@/types';
 
@@ -21,7 +22,7 @@ export default function FavoritesPage() {
         }).catch(() => setLoading(false));
     }, [session]);
 
-    if (loading) return <div className="page-loading">Chargement...</div>;
+    if (loading) return <Loader />;
 
     return (
         <div className="page-content">

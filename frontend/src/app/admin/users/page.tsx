@@ -3,6 +3,7 @@
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
 import apiClient from '@/lib/api-client';
+import Loader from '@/components/Loader';
 import type { UserProfile, Group } from '@/types';
 
 export default function AdminUsersPage() {
@@ -52,7 +53,7 @@ export default function AdminUsersPage() {
         alert('Mot de passe réinitialisé à care1234!');
     };
 
-    if (loading) return <div className="page-loading">Chargement...</div>;
+    if (loading) return <Loader />;
 
     return (
         <div className="page-content">
