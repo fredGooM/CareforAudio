@@ -30,7 +30,7 @@ declare module 'next-auth' {
     }
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3939';
 
 export const authConfig: NextAuthConfig = {
     providers: [
@@ -95,6 +95,7 @@ export const authConfig: NextAuthConfig = {
     session: {
         strategy: 'jwt',
     },
+    trustHost: true,
 };
 
 export const { handlers, auth, signIn, signOut } = NextAuth(authConfig);

@@ -103,7 +103,7 @@ export class StorageService {
     ): Promise<string> {
         if (this.isLocalStorage || !this.bucket) {
             const baseUrl =
-                this.configService.get('API_URL') || 'http://localhost:3001';
+                this.configService.get('API_URL') || 'http://localhost:3939';
             return `${baseUrl}/uploads/${objectName}`;
         }
         const file = this.bucket.file(objectName);

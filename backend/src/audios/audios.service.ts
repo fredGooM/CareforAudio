@@ -310,6 +310,7 @@ export class AudiosService {
             duration?: number;
             type?: string;
             orderToListen?: number;
+            categoryId?: string;
             allowedGroupIds?: string[];
             allowedUserIds?: string[];
             myProgramUserIds?: string[];
@@ -322,6 +323,7 @@ export class AudiosService {
         if (data.duration !== undefined) updateData.duration = data.duration;
         if (data.type !== undefined) updateData.type = data.type;
         if (data.orderToListen !== undefined) updateData.orderToListen = data.orderToListen;
+        if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
 
         await this.audioRepo.update(id, updateData);
 

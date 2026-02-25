@@ -2,30 +2,38 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
+import { Edit, KeyRound, Mail, Check, X } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import type { UserProfile, Group } from '@/types';
 
+interface UserDTO extends UserProfile {
+    groupIds: string[];
+}
+
 export default function AdminUsersPage() {
     const { data: session } = useSession();
-    const [users, setUsers] = useState<UserProfile[]>([]);
+    const [users, setUsers] = useState<UserDTO[]>([]);
     const [groups, setGroups] = useState<Group[]>([]);
-    const [showCreate, setShowCreate] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [showCreate, setShowCreate] = useState(false);
+    const [editingUser, setEditingUser] = useState<UserDTO | null>(null);
+    const [actionMsg, setActionMsg] = useState('');
 
-    const [form, setForm] = useState({
+    const emptyForm = {
         email: '',
         firstName: '',
         lastName: '',
         role: 'USER',
         groupIds: [] as string[],
-    });
+    };
+    const [form, setForm] = useState(emptyForm);
 
     useEffect(() => {
         if (!session) return;
         apiClient.setToken((session as any).accessToken);
         Promise.all([
-            apiClient.get<UserProfile[]>('/users'),
+            apiClient.get<UserDTO[]>('/users'),
             apiClient.get<Group[]>('/groups'),
         ]).then(([u, g]) => {
             setUsers(u);
@@ -34,38 +42,118 @@ export default function AdminUsersPage() {
         }).catch(() => setLoading(false));
     }, [session]);
 
+    const reload = async () => {
+        const u = await apiClient.get<UserDTO[]>('/users');
+        setUsers(u);
+    };
+
+    /* ── Create ── */
     const handleCreate = async (e: FormEvent) => {
         e.preventDefault();
         try {
             await apiClient.post('/users', form);
-            const updated = await apiClient.get<UserProfile[]>('/users');
-            setUsers(updated);
+            await reload();
             setShowCreate(false);
-            setForm({ email: '', firstName: '', lastName: '', role: 'USER', groupIds: [] });
+            setForm(emptyForm);
         } catch (err: any) {
             alert(err.message);
         }
     };
 
+    /* ── Edit ── */
+    const openEdit = (user: UserDTO) => {
+        setEditingUser(user);
+        setForm({
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+            groupIds: user.groupIds || [],
+        });
+        setShowCreate(false);
+    };
+
+    const handleEdit = async (e: FormEvent) => {
+        e.preventDefault();
+        if (!editingUser) return;
+        try {
+            await apiClient.put(`/users/${editingUser.id}`, {
+                firstName: form.firstName,
+                lastName: form.lastName,
+                role: form.role,
+                groupIds: form.groupIds,
+            });
+            await reload();
+            setEditingUser(null);
+            setForm(emptyForm);
+        } catch (err: any) {
+            alert(err.message);
+        }
+    };
+
+    const cancelEdit = () => {
+        setEditingUser(null);
+        setForm(emptyForm);
+    };
+
+    /* ── Actions ── */
     const handleResetPassword = async (userId: string) => {
         if (!confirm('Réinitialiser le mot de passe ?')) return;
         await apiClient.post(`/users/${userId}/reset-password`);
-        alert('Mot de passe réinitialisé à care1234!');
+        showMsg('Mot de passe réinitialisé à care1234!');
+    };
+
+    const handleSendWelcome = async (userId: string) => {
+        if (!confirm('Envoyer les identifiants par email ?')) return;
+        try {
+            const result = await apiClient.post<{ success: boolean; message: string }>(`/users/${userId}/send-welcome`);
+            showMsg(result.message || (result.success ? 'Email envoyé !' : "Échec de l'envoi"));
+        } catch (err: any) {
+            showMsg(err.message || "Échec de l'envoi");
+        }
+    };
+
+    const toggleActive = async (user: UserDTO) => {
+        await apiClient.put(`/users/${user.id}`, { isActive: !user.isActive });
+        await reload();
+    };
+
+    const showMsg = (msg: string) => {
+        setActionMsg(msg);
+        setTimeout(() => setActionMsg(''), 4000);
+    };
+
+    const toggleGroup = (gid: string) => {
+        setForm((f) => ({
+            ...f,
+            groupIds: f.groupIds.includes(gid)
+                ? f.groupIds.filter((id) => id !== gid)
+                : [...f.groupIds, gid],
+        }));
     };
 
     if (loading) return <Loader />;
+
+    const isEditing = !!editingUser;
+    const isFormOpen = showCreate || isEditing;
 
     return (
         <div className="page-content">
             <div className="page-header">
                 <h1>Gestion des utilisateurs</h1>
-                <button className="btn-primary" onClick={() => setShowCreate(!showCreate)}>
-                    {showCreate ? 'Annuler' : '+ Nouvel utilisateur'}
-                </button>
+                {!isFormOpen && (
+                    <button className="btn-primary" onClick={() => { setShowCreate(true); setForm(emptyForm); }}>
+                        + Nouvel utilisateur
+                    </button>
+                )}
             </div>
 
-            {showCreate && (
-                <form onSubmit={handleCreate} className="upload-form">
+            {actionMsg && <div className="action-toast">{actionMsg}</div>}
+
+            {/* ── Create / Edit form ── */}
+            {isFormOpen && (
+                <form onSubmit={isEditing ? handleEdit : handleCreate} className="upload-form">
+                    <h2>{isEditing ? `Modifier ${editingUser!.firstName} ${editingUser!.lastName}` : 'Nouvel utilisateur'}</h2>
                     <div className="form-row">
                         <div className="form-group">
                             <label>Prénom</label>
@@ -79,7 +167,7 @@ export default function AdminUsersPage() {
                     <div className="form-row">
                         <div className="form-group">
                             <label>Email</label>
-                            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required />
+                            <input type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} required disabled={isEditing} />
                         </div>
                         <div className="form-group">
                             <label>Rôle</label>
@@ -97,22 +185,22 @@ export default function AdminUsersPage() {
                                     <input
                                         type="checkbox"
                                         checked={form.groupIds.includes(g.id)}
-                                        onChange={(e) => {
-                                            const ids = e.target.checked
-                                                ? [...form.groupIds, g.id]
-                                                : form.groupIds.filter((id) => id !== g.id);
-                                            setForm({ ...form, groupIds: ids });
-                                        }}
+                                        onChange={() => toggleGroup(g.id)}
                                     />
                                     {g.name}
                                 </label>
                             ))}
+                            {groups.length === 0 && <span className="text-muted">Aucun groupe créé</span>}
                         </div>
                     </div>
-                    <button type="submit" className="btn-primary">Créer</button>
+                    <div className="form-actions">
+                        <button type="submit" className="btn-primary">{isEditing ? 'Enregistrer' : 'Créer'}</button>
+                        <button type="button" className="btn-secondary" onClick={isEditing ? cancelEdit : () => setShowCreate(false)}>Annuler</button>
+                    </div>
                 </form>
             )}
 
+            {/* ── Users table ── */}
             <div className="table-container">
                 <table>
                     <thead>
@@ -120,6 +208,7 @@ export default function AdminUsersPage() {
                             <th>Nom</th>
                             <th>Email</th>
                             <th>Rôle</th>
+                            <th>Groupes</th>
                             <th>Actif</th>
                             <th>Actions</th>
                         </tr>
@@ -130,11 +219,36 @@ export default function AdminUsersPage() {
                                 <td>{user.firstName} {user.lastName}</td>
                                 <td>{user.email}</td>
                                 <td>{user.role === 'ADMIN' ? 'Admin' : 'Athlète'}</td>
-                                <td>{user.isActive ? '✅' : '❌'}</td>
                                 <td>
-                                    <button className="btn-secondary" onClick={() => handleResetPassword(user.id)}>
-                                        Reset MDP
+                                    {user.groupIds?.length
+                                        ? user.groupIds.map((gid) => {
+                                            const g = groups.find((gr) => gr.id === gid);
+                                            return g ? g.name : gid;
+                                        }).join(', ')
+                                        : '—'
+                                    }
+                                </td>
+                                <td>
+                                    <button className="btn-toggle" onClick={() => toggleActive(user)} title={user.isActive ? 'Désactiver' : 'Activer'}>
+                                        {user.isActive ? (
+                                            <Check className="text-success" size={20} />
+                                        ) : (
+                                            <X className="text-muted" size={20} />
+                                        )}
                                     </button>
+                                </td>
+                                <td>
+                                    <div className="action-btns">
+                                        <button className="btn-secondary" onClick={() => openEdit(user)} title="Modifier">
+                                            <Edit size={16} />
+                                        </button>
+                                        <button className="btn-secondary" onClick={() => handleResetPassword(user.id)} title="Reset MDP">
+                                            <KeyRound size={16} />
+                                        </button>
+                                        <button className="btn-secondary" onClick={() => handleSendWelcome(user.id)} title="Envoyer identifiants">
+                                            <Mail size={16} />
+                                        </button>
+                                    </div>
                                 </td>
                             </tr>
                         ))}

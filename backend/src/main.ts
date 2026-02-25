@@ -25,7 +25,7 @@ async function bootstrap() {
     res.status(200).send('OK');
   });
 
-  const port = configService.get('PORT', 3001);
+  const port = configService.get('PORT', 3939);
   await app.listen(port);
   console.log(`🚀 NestJS server running on port ${port}`);
 }

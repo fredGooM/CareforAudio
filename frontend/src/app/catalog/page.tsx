@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { Heart } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import AudioPlayer from '@/components/AudioPlayer';
 import Loader from '@/components/Loader';
@@ -98,7 +99,11 @@ export default function CatalogPage() {
                                 toggleFavorite(audio.id);
                             }}
                         >
-                            {favorites.includes(audio.id) ? '❤️' : '🤍'}
+                            <Heart
+                                size={24}
+                                fill={favorites.includes(audio.id) ? 'currentColor' : 'none'}
+                                className={favorites.includes(audio.id) ? 'text-red-500' : 'text-gray-400'}
+                            />
                         </button>
                     </div>
                 ))}

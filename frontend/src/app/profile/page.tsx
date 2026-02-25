@@ -1,6 +1,7 @@
 'use client';
 
 import { useSession, signOut } from 'next-auth/react';
+import { ChevronRight } from 'lucide-react';
 
 export default function ProfilePage() {
     const { data: session } = useSession();
@@ -28,9 +29,7 @@ export default function ProfilePage() {
                 <div className="profile-actions">
                     <a href="/change-password" className="profile-action-item">
                         <span>Changer le mot de passe</span>
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                            <polyline points="9 18 15 12 9 6" />
-                        </svg>
+                        <ChevronRight size={16} />
                     </a>
                 </div>
             </div>

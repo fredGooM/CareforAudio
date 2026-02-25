@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { Play, Pause } from 'lucide-react';
 
 interface AudioPlayerProps {
     src: string;
@@ -90,7 +91,7 @@ export default function AudioPlayer({
 
             <div className="player-controls">
                 <button onClick={togglePlay} className="player-play-btn">
-                    {playing ? '⏸' : '▶'}
+                    {playing ? <Pause size={24} /> : <Play size={24} />}
                 </button>
 
                 <span className="player-time">{formatTime(currentTime)}</span>

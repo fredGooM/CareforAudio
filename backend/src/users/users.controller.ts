@@ -8,15 +8,18 @@ import {
     UseGuards,
     Request,
     BadRequestException,
-    NotFoundException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminGuard } from '../auth/roles.guard';
 import { UsersService } from './users.service';
+import { EmailService } from '../email/email.service';
 
 @Controller('users')
 export class UsersController {
-    constructor(private readonly usersService: UsersService) { }
+    constructor(
+        private readonly usersService: UsersService,
+        private readonly emailService: EmailService,
+    ) { }
 
     @UseGuards(JwtAuthGuard, AdminGuard)
     @Get()
@@ -65,7 +68,12 @@ export class UsersController {
     @UseGuards(JwtAuthGuard, AdminGuard)
     @Post(':id/send-welcome')
     async sendWelcome(@Param('id') id: string) {
-        // TODO: Implement Brevo email sending (same logic as POC)
-        return { success: true, message: 'Email sending not yet configured' };
+        const user = await this.usersService.findById(id);
+        if (!user) throw new BadRequestException('User not found');
+        return this.emailService.sendWelcomeEmail({
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+        });
     }
 }

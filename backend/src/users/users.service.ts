@@ -33,6 +33,10 @@ export class UsersService {
         }));
     }
 
+    async findById(id: string) {
+        return this.userRepo.findOne({ where: { id } });
+    }
+
     async create(data: {
         email: string;
         firstName: string;

@@ -8,6 +8,7 @@ import { CategoriesModule } from './categories/categories.module';
 import { GroupsModule } from './groups/groups.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { StorageModule } from './storage/storage.module';
+import { EmailModule } from './email/email.module';
 import {
   User,
   Group,
@@ -52,6 +53,7 @@ import {
       }),
     }),
     StorageModule,
+    EmailModule,
     AuthModule,
     UsersModule,
     AudiosModule,

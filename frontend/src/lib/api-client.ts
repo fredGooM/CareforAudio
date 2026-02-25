@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3939';
 
 class ApiClient {
     private accessToken: string | null = null;
@@ -31,6 +31,13 @@ class ApiClient {
         });
 
         if (!res.ok) {
+            if (res.status === 401 && typeof window !== 'undefined') {
+                // Auto-logout on 401
+                import('next-auth/react').then(({ signOut }) => {
+                    signOut({ callbackUrl: '/login' });
+                });
+            }
+
             const errorBody = await res.json().catch(() => ({}));
             throw new Error(
                 errorBody.message || `API error: ${res.status} ${res.statusText}`,

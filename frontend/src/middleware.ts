@@ -15,12 +15,12 @@ export default auth((req: any) => {
     }
 
     // Must change password
-    if (req.auth.user.mustChangePassword && pathname !== '/change-password') {
+    if (req.auth?.user?.mustChangePassword && pathname !== '/change-password') {
         return NextResponse.redirect(new URL('/change-password', req.url));
     }
 
     // Admin routes
-    if (pathname.startsWith('/admin') && req.auth.user.role !== 'ADMIN') {
+    if (pathname.startsWith('/admin') && req.auth?.user?.role !== 'ADMIN') {
         return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 

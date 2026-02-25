@@ -61,6 +61,20 @@ body {
   background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1e2e 100%);
 }
 
+/* ===== Utilities ===== */
+
+.text-success {
+  color: var(--success);
+}
+
+.text-danger {
+  color: var(--danger);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
 /* ===== Sidebar ===== */
 
 .sidebar {
@@ -496,6 +510,68 @@ tbody tr:hover {
 
 tbody tr:last-child td {
   border-bottom: none;
+}
+
+/* ===== Action Buttons Row ===== */
+
+.action-btns {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: nowrap;
+}
+
+.action-btns .btn-secondary {
+  padding: 0.3rem 0.5rem;
+  font-size: 0.85rem;
+  min-height: auto;
+  line-height: 1;
+}
+
+.btn-toggle {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.2rem;
+  transition: var(--transition);
+}
+
+.btn-toggle:hover {
+  transform: scale(1.15);
+}
+
+/* ===== Toast Message ===== */
+
+.action-toast {
+  padding: 0.75rem 1.25rem;
+  background: rgba(6, 214, 160, 0.15);
+  border: 1px solid rgba(6, 214, 160, 0.3);
+  color: var(--accent);
+  border-radius: var(--radius-sm);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 1rem;
+  animation: fadeIn 0.3s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ===== Form Actions Row ===== */
+
+.form-actions {
+  display: flex;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
 }
 
 /* ===== Buttons ===== */

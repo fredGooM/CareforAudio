@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { Plus, Trash2 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import type { UserProfile, AudioTrack } from '@/types';
@@ -108,8 +109,19 @@ export default function AdminMyProgramPage() {
                                                 <button
                                                     className={inProgram ? 'btn-danger' : 'btn-primary'}
                                                     onClick={() => toggleProgram(audio.id)}
+                                                    style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
                                                 >
-                                                    {inProgram ? 'Retirer' : 'Ajouter'}
+                                                    {inProgram ? (
+                                                        <>
+                                                            <Trash2 size={16} />
+                                                            Retirer
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Plus size={16} />
+                                                            Ajouter
+                                                        </>
+                                                    )}
                                                 </button>
                                             </td>
                                         </tr>
