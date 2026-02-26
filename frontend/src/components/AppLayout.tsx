@@ -12,7 +12,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         pathname.startsWith('/login') || pathname.startsWith('/change-password');
 
     const devQuickLog = process.env.NODE_ENV === 'development' && (
-        <div className="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50">
+        <div className="fixed bottom-4 right-4 bg-white p-4 rounded-lg shadow-lg border border-gray-200 z-50 desktop-only flex-col">
             <h3 className="text-sm font-medium text-gray-800 mb-3 text-center">Développement Rapide</h3>
             <div className="flex flex-col gap-2">
                 <button

@@ -209,14 +209,14 @@ export default function AdminLibraryPage() {
 
             {/* MODAL */}
             {showModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
+                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <h2>{editingAudio ? 'Modifier Audio' : 'Ajouter Audio'}</h2>
-                        <form onSubmit={handleSubmit} className="upload-form">
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             {!editingAudio && (
-                                <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <div className="form-group" style={{ marginBottom: '0.5rem' }}>
                                     <label>Méthode d'ajout</label>
-                                    <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem' }}>
+                                    <div style={{ display: 'flex', gap: '1.5rem', marginBottom: '1rem', marginTop: '0.5rem' }}>
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                                             <input
                                                 type="radio"
@@ -239,12 +239,12 @@ export default function AdminLibraryPage() {
 
                                     {uploadMode === 'FILE' && (
                                         <div style={{ marginTop: '0.5rem' }}>
-                                            <input ref={fileRef} type="file" accept=".mp3,.wav,.aiff" required={uploadMode === 'FILE'} />
+                                            <input ref={fileRef} type="file" accept=".mp3,.wav,.aiff" required={uploadMode === 'FILE'} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-input)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }} />
                                         </div>
                                     )}
 
                                     {uploadMode === 'RECORD' && (
-                                        <div style={{ padding: '1rem', background: '#f8f9fa', borderRadius: '8px', border: '1px solid #e9ecef' }}>
+                                        <div style={{ padding: '1.25rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border)' }}>
                                             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                                                 <strong>Enregistrement local</strong>
                                                 {isRecording && <span className="text-danger font-mono font-bold animate-pulse">{formatTime(recordingTime)}</span>}
@@ -253,7 +253,7 @@ export default function AdminLibraryPage() {
                                                 {!isRecording ? (
                                                     <button type="button" className="btn-primary" onClick={startRecording} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                                         <Mic size={18} />
-                                                        Démarrer
+                                                        Démarrer l'enregistrement
                                                     </button>
                                                 ) : (
                                                     <button type="button" className="btn-danger" onClick={stopRecording} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -262,11 +262,11 @@ export default function AdminLibraryPage() {
                                                     </button>
                                                 )}
                                                 {recordedUrl && !isRecording && (
-                                                    <audio src={recordedUrl} controls style={{ height: '38px', outline: 'none' }} />
+                                                    <audio src={recordedUrl} controls style={{ height: '38px', outline: 'none', maxWidth: '100%' }} />
                                                 )}
                                             </div>
                                             {!recordedBlob && !isRecording && (
-                                                <p className="text-muted" style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>Aucun enregistrement en cours.</p>
+                                                <p className="text-muted" style={{ marginTop: '0.75rem', fontSize: '0.85rem' }}>Aucun enregistrement en cours.</p>
                                             )}
                                         </div>
                                     )}
@@ -275,13 +275,13 @@ export default function AdminLibraryPage() {
                             <div className="form-row">
                                 <div className="form-group">
                                     <label>Titre</label>
-                                    <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
+                                    <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder="Titre de la piste audio" />
                                 </div>
                                 <div className="form-group">
                                     <label>Catégories</label>
-                                    <div className="checkbox-group" style={{ maxHeight: '150px', overflowY: 'auto', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                                    <div className="checkbox-group" style={{ maxHeight: '150px', overflowY: 'auto', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
                                         {categories.map((c) => (
-                                            <label key={c.id} className="checkbox-label">
+                                            <label key={c.id} className="checkbox-label" style={{ width: '100%', padding: '0.2rem 0' }}>
                                                 <input
                                                     type="checkbox"
                                                     checked={form.categoryIds.includes(c.id)}
@@ -300,7 +300,7 @@ export default function AdminLibraryPage() {
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
-                                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Détails à propos de cet audio..." />
                             </div>
                             <div className="form-row">
                                 <div className="form-group">
@@ -321,9 +321,9 @@ export default function AdminLibraryPage() {
                             </div>
                             <div className="form-group">
                                 <label>Groupes autorisés</label>
-                                <div className="checkbox-group">
+                                <div className="checkbox-group" style={{ padding: '0.6rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
                                     {groups.map((g) => (
-                                        <label key={g.id} className="checkbox-label">
+                                        <label key={g.id} className="checkbox-label" style={{ width: '100%', padding: '0.2rem 0' }}>
                                             <input
                                                 type="checkbox"
                                                 checked={form.allowedGroupIds.includes(g.id)}
@@ -337,6 +337,7 @@ export default function AdminLibraryPage() {
                                             {g.name}
                                         </label>
                                     ))}
+                                    {groups.length === 0 && <span className="text-muted text-sm">Aucun groupe</span>}
                                 </div>
                             </div>
                             <div className="modal-actions">

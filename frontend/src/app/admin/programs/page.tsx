@@ -144,23 +144,23 @@ export default function AdminProgramsPage() {
 
             {/* CREATE / EDIT MODAL */}
             {showModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
+                <div className="modal-overlay" onClick={() => setShowModal(false)}>
+                    <div className="modal-content" onClick={e => e.stopPropagation()}>
                         <h2>{editingProgram ? 'Modifier le programme' : 'Nouveau Programme'}</h2>
-                        <form onSubmit={handleSubmit} className="upload-form">
+                        <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div className="form-group">
                                 <label>Nom</label>
-                                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required />
+                                <input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} required placeholder="Nom du programme" />
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
-                                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
+                                <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Détails du programme..." />
                             </div>
                             <div className="form-group">
                                 <label>Audios inclus</label>
-                                <div className="checkbox-group" style={{ maxHeight: '200px', overflowY: 'auto' }}>
+                                <div className="checkbox-group" style={{ maxHeight: '200px', overflowY: 'auto', padding: '0.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
                                     {audios.map(audio => (
-                                        <label key={audio.id} className="checkbox-label">
+                                        <label key={audio.id} className="checkbox-label" style={{ width: '100%', padding: '0.25rem 0' }}>
                                             <input 
                                                 type="checkbox"
                                                 checked={form.audioIds.includes(audio.id)}
@@ -171,10 +171,10 @@ export default function AdminProgramsPage() {
                                                     setForm({ ...form, audioIds: ids });
                                                 }}
                                             />
-                                            {audio.title} ({Math.round(audio.duration / 60)} min)
+                                            {audio.title} <span className="text-muted">({Math.round(audio.duration / 60)} min)</span>
                                         </label>
                                     ))}
-                                    {audios.length === 0 && <span className="text-muted">Aucun audio disponible</span>}
+                                    {audios.length === 0 && <span className="text-muted" style={{ padding: '0.5rem' }}>Aucun audio disponible</span>}
                                 </div>
                             </div>
                             <div className="modal-actions">
@@ -188,16 +188,16 @@ export default function AdminProgramsPage() {
 
             {/* SHARE MODAL */}
             {showShareModal && sharingProgram && (
-                <div className="modal-overlay">
-                    <div className="modal-content" style={{ maxWidth: '500px' }}>
-                        <h2>Partager: {sharingProgram.name}</h2>
+                <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
+                    <div className="modal-content" style={{ maxWidth: '450px' }} onClick={e => e.stopPropagation()}>
+                        <h2>Partager : {sharingProgram.name}</h2>
                         
-                        <form onSubmit={handleShare} className="upload-form" style={{ marginTop: '1rem' }}>
+                        <form onSubmit={handleShare} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
                             <div className="form-group">
                                 <label>Attribuer à l'utilisateur</label>
-                                <div style={{ display: 'flex', gap: '1rem' }}>
+                                <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <select value={shareUserId} onChange={(e) => setShareUserId(e.target.value)} required style={{ flex: 1 }}>
-                                        <option value="">Sélectionner...</option>
+                                        <option value="">Sélectionner un utilisateur...</option>
                                         {users.map(u => <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role})</option>)}
                                     </select>
                                     <button type="submit" className="btn-primary">Ajouter</button>
@@ -205,25 +205,30 @@ export default function AdminProgramsPage() {
                             </div>
                         </form>
 
-                        <div className="mt-4">
-                            <h3 style={{ marginBottom: '1rem' }}>Personnes y ayant accès:</h3>
+                        <div>
+                            <h3 style={{ fontSize: '0.9rem', textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', marginBottom: '0.75rem' }}>Accès actuels</h3>
                             {shares[sharingProgram.id]?.length ? (
-                                <ul style={{ listStyle: 'none', padding: 0 }}>
+                                <ul style={{ listStyle: 'none', padding: 0, display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
                                     {shares[sharingProgram.id].map(share => (
-                                        <li key={share.id} style={{ display: 'flex', justifyContent: 'space-between', padding: '0.5rem', borderBottom: '1px solid #eee' }}>
-                                            <span>{share.user?.firstName} {share.user?.lastName} ({share.user?.role})</span>
-                                            <button onClick={() => handleRemoveShare(sharingProgram.id, share.userId)} className="btn-toggle text-danger border-none" style={{ border: 'none', background: 'transparent' }}>
+                                        <li key={share.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem 1rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px solid var(--border)' }}>
+                                            <div>
+                                                <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{share.user?.firstName} {share.user?.lastName}</div>
+                                                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{share.user?.role}</div>
+                                            </div>
+                                            <button onClick={() => handleRemoveShare(sharingProgram.id, share.userId)} className="btn-danger" style={{ padding: '0.35rem 0.6rem', fontSize: '0.75rem' }}>
                                                 Retirer
                                             </button>
                                         </li>
                                     ))}
                                 </ul>
                             ) : (
-                                <p className="text-muted">Aucun partage actif.</p>
+                                <div className="empty-state" style={{ padding: '1.5rem', background: 'var(--bg-input)', borderRadius: 'var(--radius-sm)', border: '1px dashed var(--border)' }}>
+                                    Aucun partage actif pour ce programme.
+                                </div>
                             )}
                         </div>
 
-                        <div className="modal-actions" style={{ marginTop: '2rem' }}>
+                        <div className="modal-actions">
                             <button type="button" className="btn-secondary" onClick={() => setShowShareModal(false)}>Fermer</button>
                         </div>
                     </div>
