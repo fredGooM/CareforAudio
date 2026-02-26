@@ -31,7 +31,7 @@ export default function AdminMyProgramPage() {
             apiClient.get<UserProfile[]>('/users'),
             apiClient.get<AudioTrack[]>('/audios'),
         ]).then(([u, a]) => {
-            setUsers(u.filter((us) => us.role === 'USER'));
+            setUsers(u.filter((us) => us.role === 'ATHLETE'));
             setAudios(a);
             setLoading(false);
         }).catch(() => setLoading(false));

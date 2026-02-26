@@ -9,6 +9,7 @@ import { GroupsModule } from './groups/groups.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { StorageModule } from './storage/storage.module';
 import { EmailModule } from './email/email.module';
+import { ProgramsModule } from './programs/programs.module';
 import {
   User,
   Group,
@@ -21,6 +22,8 @@ import {
   UserProgress,
   AudioLog,
   AppConfig,
+  Program,
+  ProgramShare,
 } from './entities';
 
 @Module({
@@ -48,6 +51,8 @@ import {
           UserProgress,
           AudioLog,
           AppConfig,
+          Program,
+          ProgramShare,
         ],
         synchronize: true, // Dev only — use migrations in production
       }),
@@ -59,6 +64,7 @@ import {
     AudiosModule,
     CategoriesModule,
     GroupsModule,
+    ProgramsModule,
     AnalyticsModule,
   ],
 })

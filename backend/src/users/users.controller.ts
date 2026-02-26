@@ -10,7 +10,7 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AdminGuard } from '../auth/roles.guard';
+import { AdminGuard, AdminOrTeacherGuard } from '../auth/roles.guard';
 import { UsersService } from './users.service';
 import { EmailService } from '../email/email.service';
 
@@ -21,10 +21,10 @@ export class UsersController {
         private readonly emailService: EmailService,
     ) { }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Get()
-    findAll() {
-        return this.usersService.findAll();
+    findAll(@Request() req: any) {
+        return this.usersService.findAll(req.user);
     }
 
     @UseGuards(JwtAuthGuard)
@@ -40,40 +40,34 @@ export class UsersController {
         return this.usersService.setFavorite(req.user.id, body.audioId, body.isFavorite);
     }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Post()
-    create(@Body() body: any) {
-        return this.usersService.create(body);
+    create(@Body() body: any, @Request() req: any) {
+        return this.usersService.create(body, req.user);
     }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Put(':id')
-    update(@Param('id') id: string, @Body() body: any) {
-        return this.usersService.update(id, body);
+    update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+        return this.usersService.update(id, body, req.user);
     }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Put(':id/audio-access')
-    updateAudioAccess(@Param('id') id: string, @Body() body: { audioIds: string[] }) {
+    updateAudioAccess(@Param('id') id: string, @Body() body: { audioIds: string[] }, @Request() req: any) {
         if (!Array.isArray(body.audioIds)) throw new BadRequestException('audioIds must be an array');
-        return this.usersService.updateAudioAccess(id, body.audioIds);
+        return this.usersService.updateAudioAccess(id, body.audioIds, req.user);
     }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Post(':id/reset-password')
-    resetPassword(@Param('id') id: string) {
-        return this.usersService.resetPassword(id);
+    resetPassword(@Param('id') id: string, @Request() req: any) {
+        return this.usersService.resetPassword(id, req.user);
     }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Post(':id/send-welcome')
-    async sendWelcome(@Param('id') id: string) {
-        const user = await this.usersService.findById(id);
-        if (!user) throw new BadRequestException('User not found');
-        return this.emailService.sendWelcomeEmail({
-            email: user.email,
-            firstName: user.firstName,
-            lastName: user.lastName,
-        });
+    async sendWelcome(@Param('id') id: string, @Request() req: any) {
+        return this.usersService.sendWelcome(id, req.user, this.emailService);
     }
 }

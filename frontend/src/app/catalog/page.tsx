@@ -44,7 +44,7 @@ export default function CatalogPage() {
     const filtered =
         selectedCategory === 'all'
             ? audios
-            : audios.filter((a) => a.categoryId === selectedCategory);
+            : audios.filter((a) => a.categoryIds?.includes(selectedCategory));
 
     const handleHeartbeat = (position: number, sessionDuration: number) => {
         if (currentAudio) {

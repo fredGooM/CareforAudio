@@ -5,6 +5,8 @@ import {
   CreateDateColumn,
   UpdateDateColumn,
   OneToMany,
+  ManyToOne,
+  JoinColumn,
 } from 'typeorm';
 import { UserGroup } from './user-group.entity';
 import { AudioAccess } from './audio-access.entity';
@@ -14,7 +16,8 @@ import { RefreshToken } from './refresh-token.entity';
 
 export enum Role {
   ADMIN = 'ADMIN',
-  USER = 'USER',
+  TEACHER = 'TEACHER',
+  ATHLETE = 'ATHLETE',
 }
 
 @Entity('users')
@@ -34,8 +37,18 @@ export class User {
   @Column()
   lastName: string;
 
-  @Column({ type: 'enum', enum: Role, default: Role.USER })
+  @Column({ type: 'enum', enum: Role, default: Role.ATHLETE })
   role: Role;
+
+  @Column({ nullable: true })
+  createdById: string;
+
+  @ManyToOne(() => User, (user) => user.createdUsers, { nullable: true, onDelete: 'SET NULL' })
+  @JoinColumn({ name: 'createdById' })
+  createdBy: User;
+
+  @OneToMany(() => User, (user) => user.createdBy)
+  createdUsers: User[];
 
   @Column({ default: true })
   isActive: boolean;

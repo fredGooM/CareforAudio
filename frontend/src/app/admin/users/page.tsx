@@ -24,7 +24,7 @@ export default function AdminUsersPage() {
         email: '',
         firstName: '',
         lastName: '',
-        role: 'USER',
+        role: 'ATHLETE',
         groupIds: [] as string[],
     };
     const [form, setForm] = useState(emptyForm);
@@ -172,8 +172,13 @@ export default function AdminUsersPage() {
                         <div className="form-group">
                             <label>Rôle</label>
                             <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                                <option value="USER">Athlète</option>
-                                <option value="ADMIN">Admin</option>
+                                {(session?.user as any)?.role === 'ADMIN' && (
+                                    <>
+                                        <option value="TEACHER">Professeur</option>
+                                        <option value="ADMIN">Admin</option>
+                                    </>
+                                )}
+                                <option value="ATHLETE">Athlète</option>
                             </select>
                         </div>
                     </div>
@@ -218,7 +223,7 @@ export default function AdminUsersPage() {
                             <tr key={user.id}>
                                 <td>{user.firstName} {user.lastName}</td>
                                 <td>{user.email}</td>
-                                <td>{user.role === 'ADMIN' ? 'Admin' : 'Athlète'}</td>
+                                <td>{user.role === 'ADMIN' ? 'Admin' : user.role === 'TEACHER' ? 'Professeur' : 'Athlète'}</td>
                                 <td>
                                     {user.groupIds?.length
                                         ? user.groupIds.map((gid) => {

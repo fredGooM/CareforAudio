@@ -19,8 +19,8 @@ export default auth((req: any) => {
         return NextResponse.redirect(new URL('/change-password', req.url));
     }
 
-    // Admin routes
-    if (pathname.startsWith('/admin') && req.auth?.user?.role !== 'ADMIN') {
+    // Admin & Teacher routes
+    if (pathname.startsWith('/admin') && !['ADMIN', 'TEACHER'].includes(req.auth?.user?.role as string)) {
         return NextResponse.redirect(new URL('/dashboard', req.url));
     }
 

@@ -34,7 +34,7 @@ export default function AdminLibraryPage() {
     const initialForm = {
         title: '',
         description: '',
-        categoryId: '',
+        categoryIds: [] as string[],
         published: 'true',
         type: 'Training',
         orderToListen: '1',
@@ -70,7 +70,7 @@ export default function AdminLibraryPage() {
         setForm({
             title: audio.title,
             description: audio.description || '',
-            categoryId: audio.categoryId,
+            categoryIds: audio.categoryIds || [],
             published: String(audio.published),
             type: audio.type,
             orderToListen: String(audio.orderToListen || 1),
@@ -138,7 +138,7 @@ export default function AdminLibraryPage() {
                 await apiClient.put(`/audios/${editingAudio.id}`, {
                     title: form.title,
                     description: form.description,
-                    categoryId: form.categoryId,
+                    categoryIds: form.categoryIds,
                     published: form.published === 'true',
                     type: form.type,
                     orderToListen: parseInt(form.orderToListen),
@@ -157,7 +157,7 @@ export default function AdminLibraryPage() {
                 const formData = new FormData();
                 formData.append('title', form.title);
                 formData.append('description', form.description);
-                formData.append('categoryId', form.categoryId || categories[0]?.id || '');
+                formData.append('categoryIds', JSON.stringify(form.categoryIds));
                 formData.append('published', form.published);
                 formData.append('type', form.type);
                 formData.append('orderToListen', form.orderToListen);
@@ -278,11 +278,24 @@ export default function AdminLibraryPage() {
                                     <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required />
                                 </div>
                                 <div className="form-group">
-                                    <label>Catégorie</label>
-                                    <select value={form.categoryId} onChange={(e) => setForm({ ...form, categoryId: e.target.value })}>
-                                        <option value="">Choisir...</option>
-                                        {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
-                                    </select>
+                                    <label>Catégories</label>
+                                    <div className="checkbox-group" style={{ maxHeight: '150px', overflowY: 'auto', padding: '0.5rem', border: '1px solid #e2e8f0', borderRadius: '4px' }}>
+                                        {categories.map((c) => (
+                                            <label key={c.id} className="checkbox-label">
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.categoryIds.includes(c.id)}
+                                                    onChange={(e) => {
+                                                        const ids = e.target.checked
+                                                            ? [...form.categoryIds, c.id]
+                                                            : form.categoryIds.filter((id) => id !== c.id);
+                                                        setForm({ ...form, categoryIds: ids });
+                                                    }}
+                                                />
+                                                {c.name}
+                                            </label>
+                                        ))}
+                                    </div>
                                 </div>
                             </div>
                             <div className="form-group">
@@ -343,6 +356,7 @@ export default function AdminLibraryPage() {
                         <tr>
                             <th>Titre</th>
                             <th>Durée</th>
+                            <th>Catégories</th>
                             <th>Type</th>
                             <th>Publié</th>
                             <th>Actions</th>
@@ -353,6 +367,12 @@ export default function AdminLibraryPage() {
                             <tr key={audio.id}>
                                 <td>{audio.title}</td>
                                 <td>{Math.round(audio.duration / 60)} min</td>
+                                <td>
+                                    {audio.categoryIds?.map(cid => {
+                                        const c = categories.find(cat => cat.id === cid);
+                                        return c ? c.name : '';
+                                    }).filter(Boolean).join(', ') || '—'}
+                                </td>
                                 <td>{audio.type}</td>
                                 <td>
                                     {audio.published ? (

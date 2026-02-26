@@ -5,18 +5,18 @@ import {
     ForbiddenException,
 } from '@nestjs/common';
 
-@Injectable()
-export class RolesGuard implements CanActivate {
-    constructor(private readonly requiredRole: string) { }
+export class MultipleRolesGuard implements CanActivate {
+    constructor(private readonly requiredRoles: string[]) { }
 
     canActivate(context: ExecutionContext): boolean {
         const request = context.switchToHttp().getRequest();
         const user = request.user;
-        if (!user || user.role !== this.requiredRole) {
-            throw new ForbiddenException('Admin access required');
+        if (!user || (!this.requiredRoles.includes(user.role))) {
+            throw new ForbiddenException(`Access forbidden. Required roles: ${this.requiredRoles.join(', ')}`);
         }
         return true;
     }
 }
 
-export const AdminGuard = new RolesGuard('ADMIN');
+export const AdminGuard = new MultipleRolesGuard(['ADMIN']);
+export const AdminOrTeacherGuard = new MultipleRolesGuard(['ADMIN', 'TEACHER']);

@@ -5,10 +5,13 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     ManyToOne,
+    ManyToMany,
+    JoinTable,
     OneToMany,
     JoinColumn,
 } from 'typeorm';
 import { Category } from './category.entity';
+import { User } from './user.entity';
 import { AudioAccess } from './audio-access.entity';
 import { GroupAccess } from './group-access.entity';
 import { UserProgress } from './user-progress.entity';
@@ -37,12 +40,16 @@ export class AudioTrack {
     @Column({ nullable: true })
     size: number;
 
-    @Column({ nullable: true })
-    categoryId: string;
+    @ManyToMany(() => Category, (c) => c.audios)
+    @JoinTable({ name: 'audio_categories' })
+    categories: Category[];
 
-    @ManyToOne(() => Category, (c) => c.audios, { nullable: true })
-    @JoinColumn({ name: 'categoryId' })
-    category: Category;
+    @Column({ nullable: true })
+    createdById: string;
+
+    @ManyToOne(() => User, undefined, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'createdById' })
+    createdBy: User;
 
     @Column({ default: 'Training' })
     type: string;

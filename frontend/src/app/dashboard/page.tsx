@@ -4,20 +4,33 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import type { Dashboard, DashboardUser, DashboardAdmin } from '@/types';
+import { CalendarHeart } from 'lucide-react';
+import type { Dashboard, DashboardUser, DashboardAdmin, Program } from '@/types';
 
 export default function DashboardPage() {
     const { data: session } = useSession();
     const [dashboard, setDashboard] = useState<Dashboard | null>(null);
+    const [programs, setPrograms] = useState<Program[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
         if (!session) return;
-        apiClient.setToken((session as any).accessToken);
-        apiClient.get<Dashboard>('/analytics/dashboard').then((data) => {
-            setDashboard(data);
-            setLoading(false);
-        }).catch(() => setLoading(false));
+        const init = async () => {
+            try {
+                apiClient.setToken((session as any).accessToken);
+                const [dashData, progsData] = await Promise.all([
+                    apiClient.get<Dashboard>('/analytics/dashboard'),
+                    apiClient.get<Program[]>('/programs')
+                ]);
+                setDashboard(dashData);
+                setPrograms(progsData);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setLoading(false);
+            }
+        };
+        init();
     }, [session]);
 
     if (loading) return <Loader />;
@@ -111,11 +124,24 @@ export default function DashboardPage() {
             </div>
 
             <div className="section">
-                <h2>Mon Programme</h2>
-                <div className="progress-bar-container">
-                    <div className="progress-bar" style={{ width: `${d.myProgramProgress.percent}%` }} />
-                </div>
-                <p>{d.myProgramProgress.completed}/{d.myProgramProgress.total} audios complétés</p>
+                <h2>Mes Programmes ({programs.length})</h2>
+                {programs.length > 0 ? (
+                    <div className="continue-list">
+                        {programs.map(prog => (
+                            <div key={prog.id} className="continue-item" style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                <CalendarHeart className="text-primary" size={28} />
+                                <div>
+                                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{prog.name}</h3>
+                                    <p style={{ margin: '0.2rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>
+                                        {prog.description || 'Aucune description'} — {prog.audios?.length || 0} séances
+                                    </p>
+                                </div>
+                            </div>
+                        ))}
+                    </div>
+                ) : (
+                    <p className="text-muted">Aucun programme assigné pour le moment.</p>
+                )}
             </div>
 
             {d.continueListening.length > 0 && (

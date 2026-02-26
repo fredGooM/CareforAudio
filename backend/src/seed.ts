@@ -13,6 +13,8 @@ import {
     AudioLog,
     RefreshToken,
     AppConfig,
+    Program,
+    ProgramShare,
 } from './entities';
 
 dotenv.config();
@@ -27,8 +29,10 @@ const AppDataSource = new DataSource({
     entities: [
         User, Group, UserGroup, AudioTrack, Category,
         GroupAccess, AudioAccess, RefreshToken, UserProgress, AudioLog, AppConfig,
+        Program, ProgramShare
     ],
     synchronize: true,
+    dropSchema: true,
 });
 
 const groupSeeds = [
@@ -49,6 +53,10 @@ const athleteSeeds = [
     { email: 'athlete@careformance.com', firstName: 'Thomas', lastName: 'Runner', avatar: 'https://picsum.photos/150/150?random=2', groups: ['g1', 'g2'] },
     { email: 'lisa@careformance.com', firstName: 'Lisa', lastName: 'Swim', avatar: 'https://picsum.photos/150/150?random=3', groups: ['g2'] },
     { email: 'david@careformance.com', firstName: 'David', lastName: 'Focus', avatar: 'https://picsum.photos/150/150?random=4', groups: ['g1', 'g3'] },
+];
+
+const teacherSeeds = [
+    { email: 'teacher@careformance.com', firstName: 'Sarah', lastName: 'Coach', avatar: 'https://picsum.photos/150/150?random=5' },
 ];
 
 const randomBetween = (min: number, max: number) =>
@@ -133,7 +141,7 @@ async function seed() {
                 passwordHash: athletePassword,
                 firstName: a.firstName,
                 lastName: a.lastName,
-                role: 'USER' as any,
+                role: 'ATHLETE' as any,
                 mustChangePassword: true,
                 avatar: a.avatar,
             }));
@@ -150,12 +158,37 @@ async function seed() {
         }
     }
 
+    // Teacher users
+    const teacherPassword = await bcrypt.hash('care1234!', 10);
+    for (const t of teacherSeeds) {
+        let user = await userRepo.findOne({ where: { email: t.email } });
+        if (user) {
+            user.firstName = t.firstName;
+            user.lastName = t.lastName;
+            user.avatar = t.avatar;
+            user.passwordHash = teacherPassword;
+            user.mustChangePassword = true;
+            await userRepo.save(user);
+        } else {
+            user = await userRepo.save(userRepo.create({
+                email: t.email,
+                passwordHash: teacherPassword,
+                firstName: t.firstName,
+                lastName: t.lastName,
+                role: 'TEACHER' as any,
+                mustChangePassword: true,
+                avatar: t.avatar,
+            }));
+        }
+        userIds.push(user.id);
+    }
+
     // Audio tracks
     const audioSeeds = [
-        { title: 'Bienvenue sur Careformance', description: 'Introduction à la plateforme.', duration: 600, categoryId: categoryIds[0], coverUrl: 'https://picsum.photos/400/400?random=10', groups: ['g1', 'g2', 'g3'] },
-        { title: 'Pré-compétition – Visualisation', description: 'Prépare ton esprit avant la compétition.', duration: 900, categoryId: categoryIds[0], coverUrl: 'https://picsum.photos/400/400?random=11', groups: ['g1'] },
-        { title: 'Sommeil profond', description: 'Routine audio pour optimiser le sommeil.', duration: 1200, categoryId: categoryIds[2], coverUrl: 'https://picsum.photos/400/400?random=12', groups: ['g2', 'g3'] },
-        { title: 'Récupération active', description: 'Ramène le calme après un entrainement intense.', duration: 780, categoryId: categoryIds[1], coverUrl: 'https://picsum.photos/400/400?random=13', groups: ['g1', 'g2'] },
+        { title: 'Bienvenue sur Careformance', description: 'Introduction à la plateforme.', duration: 600, categoryIds: [categoryIds[0]], coverUrl: 'https://picsum.photos/400/400?random=10', groups: ['g1', 'g2', 'g3'] },
+        { title: 'Pré-compétition – Visualisation', description: 'Prépare ton esprit avant la compétition.', duration: 900, categoryIds: [categoryIds[0]], coverUrl: 'https://picsum.photos/400/400?random=11', groups: ['g1'] },
+        { title: 'Sommeil profond', description: 'Routine audio pour optimiser le sommeil.', duration: 1200, categoryIds: [categoryIds[2]], coverUrl: 'https://picsum.photos/400/400?random=12', groups: ['g2', 'g3'] },
+        { title: 'Récupération active', description: 'Ramène le calme après un entrainement intense.', duration: 780, categoryIds: [categoryIds[1]], coverUrl: 'https://picsum.photos/400/400?random=13', groups: ['g1', 'g2'] },
     ];
 
     const savedAudioIds: string[] = [];
@@ -166,7 +199,7 @@ async function seed() {
             audio.title = a.title;
             audio.description = a.description;
             audio.duration = a.duration;
-            audio.categoryId = a.categoryId;
+            audio.categories = a.categoryIds.map(id => ({ id } as Category));
             audio.coverUrl = a.coverUrl;
             audio.published = true;
             await audioRepo.save(audio);
@@ -178,7 +211,7 @@ async function seed() {
                 storageKey: `seed-a${i + 1}.mp3`,
                 mimeType: 'audio/mpeg',
                 size: 1024,
-                categoryId: a.categoryId,
+                categories: a.categoryIds.map(id => ({ id } as Category)),
                 published: true,
                 coverUrl: a.coverUrl,
             }));

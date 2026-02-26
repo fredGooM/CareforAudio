@@ -187,7 +187,7 @@ export class AnalyticsService {
 
         // Athletes list
         const athletes = await this.userRepo.find({
-            where: { role: 'USER' as any },
+            where: { role: 'ATHLETE' as any },
             select: ['id', 'firstName', 'lastName'],
         });
 
@@ -247,7 +247,7 @@ export class AnalyticsService {
 
         const progressRecords = await this.progressRepo.find({
             where: { userId },
-            relations: ['audio'],
+            relations: ['audio', 'audio.categories'],
         });
         const completedCount = progressRecords.filter((r) => r.isCompleted).length;
         const completionPercent =
@@ -261,11 +261,24 @@ export class AnalyticsService {
             { total: number; completed: number }
         >();
         progressRecords.forEach((record) => {
-            const catId = record.audio?.categoryId || 'autre';
-            const cur = categoryMap.get(catId) || { total: 0, completed: 0 };
-            cur.total += 1;
-            if (record.isCompleted) cur.completed += 1;
-            categoryMap.set(catId, cur);
+            const categories = record.audio?.categories || [];
+            if (categories.length === 0) {
+                const catId = 'autre';
+                const cur = categoryMap.get(catId) || { total: 0, completed: 0 };
+                cur.total += 1;
+                if (record.isCompleted) cur.completed += 1;
+                categoryMap.set(catId, cur);
+            } else {
+                categories.forEach((cat: any) => {
+                    const catId = cat.id;
+                    const cur = categoryMap.get(catId) || { total: 0, completed: 0 };
+                    // Avoid double counting total listenings per category for the same record?
+                    // actually if it's counting per category, it's fine.
+                    cur.total += 1;
+                    if (record.isCompleted) cur.completed += 1;
+                    categoryMap.set(catId, cur);
+                });
+            }
         });
         const categoryProgress = Array.from(categoryMap.entries()).map(
             ([categoryId, stats]) => ({
@@ -328,7 +341,7 @@ export class AnalyticsService {
             });
 
         return {
-            role: 'USER',
+            role: 'ATHLETE',
             totalMinutes,
             last7DaysMinutes,
             completionPercent,

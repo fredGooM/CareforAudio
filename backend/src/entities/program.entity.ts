@@ -4,13 +4,16 @@ import {
     Column,
     CreateDateColumn,
     UpdateDateColumn,
-    OneToMany,
+    ManyToOne,
     ManyToMany,
+    JoinTable,
+    JoinColumn
 } from 'typeorm';
+import { User } from './user.entity';
 import { AudioTrack } from './audio-track.entity';
 
-@Entity('categories')
-export class Category {
+@Entity('programs')
+export class Program {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
@@ -18,17 +21,22 @@ export class Category {
     name: string;
 
     @Column({ nullable: true })
-    color: string;
+    description: string;
 
     @Column({ nullable: true })
-    image: string;
+    createdById: string;
+
+    @ManyToOne(() => User, undefined, { nullable: true, onDelete: 'SET NULL' })
+    @JoinColumn({ name: 'createdById' })
+    createdBy: User;
+
+    @ManyToMany(() => AudioTrack)
+    @JoinTable({ name: 'program_audios' })
+    audios: AudioTrack[];
 
     @CreateDateColumn()
     createdAt: Date;
 
     @UpdateDateColumn()
     updatedAt: Date;
-
-    @ManyToMany(() => AudioTrack, (at) => at.categories)
-    audios: AudioTrack[];
 }

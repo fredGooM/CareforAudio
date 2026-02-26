@@ -32,7 +32,7 @@ export class AudiosService {
         if (role === 'ADMIN') {
             audios = await this.audioRepo.find({
                 order: { createdAt: 'DESC' },
-                relations: ['allowedGroups', 'allowedUsers'],
+                relations: ['allowedGroups', 'allowedUsers', 'categories'],
             });
         } else {
             const userGroups = await this.userGroupRepo.find({
@@ -63,6 +63,7 @@ export class AudiosService {
 
             audios = await this.audioRepo.find({
                 where: { id: In(allIds), published: true },
+                relations: ['allowedGroups', 'allowedUsers', 'categories'],
             });
         }
 
@@ -78,7 +79,7 @@ export class AudiosService {
                     duration: a.duration,
                     url: signedUrl,
                     coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
-                    categoryId: a.categoryId || 'c1',
+                    categoryIds: a.categories?.map((c: any) => c.id) || [],
                     mimeType: a.mimeType || 'audio/mpeg',
                     type: a.type || 'Training',
                     orderToListen: a.orderToListen || 1,
@@ -107,12 +108,12 @@ export class AudiosService {
         if (role === 'ADMIN') {
             audios = await this.audioRepo.find({
                 where: { id: In(favIds) },
-                relations: ['allowedGroups', 'allowedUsers'],
+                relations: ['allowedGroups', 'allowedUsers', 'categories'],
             });
         } else {
             audios = await this.audioRepo.find({
                 where: { id: In(favIds), published: true },
-                relations: ['allowedGroups', 'allowedUsers'],
+                relations: ['allowedGroups', 'allowedUsers', 'categories'],
             });
         }
 
@@ -128,7 +129,7 @@ export class AudiosService {
                     duration: a.duration,
                     url: signedUrl,
                     coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
-                    categoryId: a.categoryId || 'c1',
+                    categoryIds: a.categories?.map((c: any) => c.id) || [],
                     mimeType: a.mimeType || 'audio/mpeg',
                     type: a.type || 'Training',
                     orderToListen: a.orderToListen || 1,
@@ -146,15 +147,15 @@ export class AudiosService {
     async getMyProgram(userId: string) {
         const records = await this.progressRepo.find({
             where: { userId, isMyProgram: true },
-            relations: ['audio'],
+            relations: ['audio', 'audio.categories'],
         });
         return records
             .filter((r) => r.audio)
-            .map((r) => ({
+            .map((r: any) => ({
                 id: r.audio.id,
                 title: r.audio.title,
                 duration: r.audio.duration,
-                categoryId: r.audio.categoryId || 'c1',
+                categoryIds: r.audio.categories?.map((c: any) => c.id) || [],
                 type: r.audio.type || 'Training',
                 timesListened: r.timesListened || 0,
             }));
@@ -186,6 +187,7 @@ export class AudiosService {
             title: string;
             description?: string;
             categoryId?: string;
+            categoryIds?: string;
             published?: string;
             duration?: string;
             type?: string;
@@ -195,6 +197,7 @@ export class AudiosService {
             myProgramUserIds?: string;
         },
         file: Express.Multer.File,
+        user: any,
     ) {
         if (!file || !file.buffer) {
             throw new BadRequestException('No file uploaded');
@@ -207,11 +210,21 @@ export class AudiosService {
             'audios',
         );
 
+        let categories: { id: string }[] = [];
+        if (data.categoryIds) {
+            try {
+                const parsed = JSON.parse(data.categoryIds);
+                categories = parsed.map((id: string) => ({ id }));
+            } catch {}
+        } else if (data.categoryId) {
+            categories = [{ id: data.categoryId }];
+        }
+
         const newAudio = this.audioRepo.create({
             title: data.title,
             description: data.description,
             duration: parseInt(data.duration || '0') || 0,
-            categoryId: data.categoryId || 'c1',
+            categories: categories,
             published: data.published === 'true',
             type: data.type || 'Training',
             orderToListen: data.orderToListen ? parseInt(data.orderToListen) : 1,
@@ -219,6 +232,7 @@ export class AudiosService {
             mimeType: file.mimetype,
             size: uploadResult.size,
             coverUrl: `https://picsum.photos/400/400?random=${Date.now()}`,
+            createdById: user.id,
         });
 
         const saved = await this.audioRepo.save(newAudio);
@@ -311,11 +325,21 @@ export class AudiosService {
             type?: string;
             orderToListen?: number;
             categoryId?: string;
+            categoryIds?: string[];
             allowedGroupIds?: string[];
             allowedUserIds?: string[];
             myProgramUserIds?: string[];
         },
+        user: any,
     ) {
+        const audio = await this.audioRepo.findOne({ where: { id } });
+        if (!audio) throw new NotFoundException('Audio not found');
+
+        // Teacher can only update their own audios. Admins can update any.
+        if (user.role === 'TEACHER' && audio.createdById !== user.id) {
+            throw new BadRequestException('You do not have permission to update this audio.');
+        }
+
         const updateData: any = {};
         if (data.title !== undefined) updateData.title = data.title;
         if (data.description !== undefined) updateData.description = data.description;
@@ -323,9 +347,16 @@ export class AudiosService {
         if (data.duration !== undefined) updateData.duration = data.duration;
         if (data.type !== undefined) updateData.type = data.type;
         if (data.orderToListen !== undefined) updateData.orderToListen = data.orderToListen;
-        if (data.categoryId !== undefined) updateData.categoryId = data.categoryId;
+        
+        if (data.categoryIds) {
+            updateData.categories = data.categoryIds.map(cid => ({ id: cid }));
+        } else if (data.categoryId !== undefined) {
+            updateData.categories = [{ id: data.categoryId }];
+        }
 
-        await this.audioRepo.update(id, updateData);
+        // Must update relations (categories) by using save instead of update
+        Object.assign(audio, updateData);
+        await this.audioRepo.save(audio);
 
         if (Array.isArray(data.allowedGroupIds)) {
             await this.groupAccessRepo.delete({ audioId: id });
@@ -367,9 +398,13 @@ export class AudiosService {
         return { success: true };
     }
 
-    async remove(id: string) {
+    async remove(id: string, user: any) {
         const audio = await this.audioRepo.findOne({ where: { id } });
         if (!audio) throw new NotFoundException('Audio not found');
+
+        if (user.role === 'TEACHER' && audio.createdById !== user.id) {
+            throw new BadRequestException('You do not have permission to delete this audio.');
+        }
 
         await this.audioRepo.delete(id);
         if (audio.storageKey) {

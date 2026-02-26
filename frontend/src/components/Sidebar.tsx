@@ -37,21 +37,23 @@ export default function Sidebar() {
 
     const isActive = (path: string) => pathname === path;
 
-    const userLinks = [
+    const athleteLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
         { href: '/catalog', label: 'Catalogue', icon: icons.catalog },
         { href: '/training', label: 'Training', icon: icons.training },
         { href: '/favorites', label: 'Favoris', icon: icons.favorites },
     ];
 
-    const adminLinks = [
+    const adminOrTeacherLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
         { href: '/admin/library', label: 'Biblio', icon: icons.library },
         { href: '/admin/users', label: 'Users', icon: icons.users },
-        { href: '/admin/my-program', label: 'Programme', icon: icons.program },
+        { href: '/admin/programs', label: 'Programmes', icon: icons.program },
     ];
 
-    const links = role === 'ADMIN' ? adminLinks : userLinks;
+    const links = (role === 'ADMIN' || role === 'TEACHER') ? adminOrTeacherLinks : athleteLinks;
+
+    const displayRole = role === 'ADMIN' ? 'Admin' : role === 'TEACHER' ? 'Professeur' : 'Athlète';
 
     return (
         <>
@@ -60,7 +62,7 @@ export default function Sidebar() {
                 <div className="sidebar-header">
                     <h2>CareforAudio</h2>
                     <p className="sidebar-user">{userName}</p>
-                    <span className="sidebar-role">{role === 'ADMIN' ? 'Admin' : 'Athlète'}</span>
+                    <span className="sidebar-role">{displayRole}</span>
                 </div>
 
                 <nav className="sidebar-nav">

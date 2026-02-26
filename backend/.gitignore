@@ -3,3 +3,4 @@ dist/
 uploads/
 .env
 *.js.map
+gcs.json

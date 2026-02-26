@@ -16,8 +16,12 @@ export class UsersService {
         private readonly progressRepo: Repository<UserProgress>,
     ) { }
 
-    async findAll() {
-        const users = await this.userRepo.find();
+    async findAll(currentUser: any) {
+        let qs = this.userRepo.createQueryBuilder('user');
+        if (currentUser.role === 'TEACHER') {
+            qs = qs.where('user.createdById = :createdById', { createdById: currentUser.id });
+        }
+        const users = await qs.getMany();
         const allGroups = await this.userGroupRepo.find();
         return users.map((u) => ({
             id: u.id,
@@ -45,7 +49,11 @@ export class UsersService {
         password?: string;
         groupIds?: string[];
         mustChangePassword?: boolean;
-    }) {
+    }, currentUser: any) {
+        if (currentUser.role === 'TEACHER' && data.role !== 'ATHLETE') {
+            throw new BadRequestException('Teachers can only create Athletes');
+        }
+
         const hash = await bcrypt.hash(data.password || 'care1234!', 10);
         const newUser = this.userRepo.create({
             email: data.email,
@@ -55,6 +63,7 @@ export class UsersService {
             passwordHash: hash,
             mustChangePassword: data.mustChangePassword ?? true,
             avatar: `https://picsum.photos/150/150?random=${Date.now()}`,
+            createdById: currentUser.id,
         });
         const saved = await this.userRepo.save(newUser);
 
@@ -75,7 +84,18 @@ export class UsersService {
             isActive?: boolean;
             groupIds?: string[];
         },
+        currentUser: any,
     ) {
+        const targetUser = await this.findById(id);
+        if (!targetUser) throw new BadRequestException('User not found');
+        if (currentUser.role === 'TEACHER' && targetUser.createdById !== currentUser.id) {
+            throw new BadRequestException('Forbidden to update this user');
+        }
+
+        if (currentUser.role === 'TEACHER' && data.role && data.role !== 'ATHLETE') {
+            throw new BadRequestException('Teachers cannot escalate roles');
+        }
+
         await this.userRepo.update(id, {
             firstName: data.firstName,
             lastName: data.lastName,
@@ -94,7 +114,13 @@ export class UsersService {
         return { success: true };
     }
 
-    async updateAudioAccess(userId: string, audioIds: string[]) {
+    async updateAudioAccess(userId: string, audioIds: string[], currentUser: any) {
+        const targetUser = await this.findById(userId);
+        if (!targetUser) throw new BadRequestException('User not found');
+        if (currentUser.role === 'TEACHER' && targetUser.createdById !== currentUser.id) {
+            throw new BadRequestException('Forbidden to update this user');
+        }
+
         await this.audioAccessRepo.delete({ userId });
         if (audioIds.length > 0) {
             await this.audioAccessRepo.save(
@@ -104,13 +130,33 @@ export class UsersService {
         return { success: true };
     }
 
-    async resetPassword(userId: string) {
+    async resetPassword(userId: string, currentUser: any) {
+        const targetUser = await this.findById(userId);
+        if (!targetUser) throw new BadRequestException('User not found');
+        if (currentUser.role === 'TEACHER' && targetUser.createdById !== currentUser.id) {
+            throw new BadRequestException('Forbidden to reset this user password');
+        }
+
         const hash = await bcrypt.hash('care1234!', 10);
         await this.userRepo.update(userId, {
             passwordHash: hash,
             mustChangePassword: true,
         });
         return { success: true };
+    }
+
+    async sendWelcome(userId: string, currentUser: any, emailService: any) {
+        const targetUser = await this.findById(userId);
+        if (!targetUser) throw new BadRequestException('User not found');
+        if (currentUser.role === 'TEACHER' && targetUser.createdById !== currentUser.id) {
+            throw new BadRequestException('Forbidden to email this user');
+        }
+
+        return emailService.sendWelcomeEmail({
+            email: targetUser.email,
+            firstName: targetUser.firstName,
+            lastName: targetUser.lastName,
+        });
     }
 
     async getFavorites(userId: string): Promise<string[]> {

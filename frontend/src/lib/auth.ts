@@ -71,13 +71,16 @@ export const authConfig: NextAuthConfig = {
         }),
     ],
     callbacks: {
-        async jwt({ token, user }: any) {
+        async jwt({ token, user, trigger, session }: any) {
             if (user) {
                 token.role = user.role;
                 token.mustChangePassword = user.mustChangePassword;
                 token.accessToken = user.accessToken;
                 token.refreshToken = user.refreshToken;
                 token.id = user.id;
+            }
+            if (trigger === 'update' && session?.mustChangePassword !== undefined) {
+                token.mustChangePassword = session.mustChangePassword;
             }
             return token;
         },

@@ -14,7 +14,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AdminGuard } from '../auth/roles.guard';
+import { AdminGuard, AdminOrTeacherGuard } from '../auth/roles.guard';
 import { AudiosService } from './audios.service';
 import { memoryStorage } from 'multer';
 
@@ -71,7 +71,7 @@ export class AudiosController {
         );
     }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Post()
     @UseInterceptors(
         FileInterceptor('file', {
@@ -80,19 +80,19 @@ export class AudiosController {
             limits: { fileSize: 50 * 1024 * 1024 },
         }),
     )
-    create(@Body() body: any, @UploadedFile() file: Express.Multer.File) {
-        return this.audiosService.create(body, file);
+    create(@Body() body: any, @UploadedFile() file: Express.Multer.File, @Request() req: any) {
+        return this.audiosService.create(body, file, req.user);
     }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Put(':id')
-    update(@Param('id') id: string, @Body() body: any) {
-        return this.audiosService.update(id, body);
+    update(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+        return this.audiosService.update(id, body, req.user);
     }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Delete(':id')
-    remove(@Param('id') id: string) {
-        return this.audiosService.remove(id);
+    remove(@Param('id') id: string, @Request() req: any) {
+        return this.audiosService.remove(id, req.user);
     }
 }

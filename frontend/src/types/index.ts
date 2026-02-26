@@ -3,7 +3,7 @@ export interface UserProfile {
     email: string;
     firstName: string;
     lastName: string;
-    role: 'ADMIN' | 'USER';
+    role: 'ADMIN' | 'TEACHER' | 'ATHLETE';
     isActive: boolean;
     mustChangePassword: boolean;
     groupIds: string[];
@@ -17,7 +17,7 @@ export interface AudioTrack {
     duration: number;
     url: string;
     coverUrl: string;
-    categoryId: string;
+    categoryIds: string[];
     mimeType: string;
     type: string;
     orderToListen: number;
@@ -41,8 +41,30 @@ export interface Group {
     name: string;
 }
 
+export interface Program {
+    id: string;
+    name: string;
+    description?: string;
+    createdById?: string;
+    createdBy?: UserProfile;
+    audios?: AudioTrack[];
+    createdAt: string;
+    updatedAt: string;
+}
+
+export interface ProgramShare {
+    id: string;
+    programId: string;
+    program?: Program;
+    userId: string;
+    user?: UserProfile;
+    sharedById?: string;
+    sharedBy?: UserProfile;
+    createdAt: string;
+}
+
 export interface DashboardUser {
-    role: 'USER';
+    role: 'ATHLETE';
     totalMinutes: number;
     last7DaysMinutes: number;
     completionPercent: number;
