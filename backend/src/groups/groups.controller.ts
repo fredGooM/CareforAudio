@@ -9,14 +9,14 @@ import {
     BadRequestException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AdminGuard } from '../auth/roles.guard';
+import { AdminGuard, AdminOrTeacherGuard } from '../auth/roles.guard';
 import { GroupsService } from './groups.service';
 
 @Controller('groups')
 export class GroupsController {
     constructor(private readonly groupsService: GroupsService) { }
 
-    @UseGuards(JwtAuthGuard, AdminGuard)
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Get()
     findAll() {
         return this.groupsService.findAll();

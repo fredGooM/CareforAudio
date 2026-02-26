@@ -18,7 +18,7 @@ export class UsersService {
 
     async findAll(currentUser: any) {
         let qs = this.userRepo.createQueryBuilder('user');
-        if (currentUser.role === 'TEACHER') {
+        if (currentUser.role === 'TEACHER' || currentUser.role === 'ADMIN') {
             qs = qs.where('user.createdById = :createdById', { createdById: currentUser.id });
         }
         const users = await qs.getMany();
@@ -34,6 +34,7 @@ export class UsersService {
                 .filter((g) => g.userId === u.id)
                 .map((g) => g.groupId),
             avatar: u.avatar,
+            createdById: u.createdById,
         }));
     }
 
@@ -49,9 +50,21 @@ export class UsersService {
         password?: string;
         groupIds?: string[];
         mustChangePassword?: boolean;
-    }, currentUser: any) {
-        if (currentUser.role === 'TEACHER' && data.role !== 'ATHLETE') {
+    }, currentUser?: any) {
+        if (currentUser && currentUser.role === 'TEACHER' && data.role !== 'ATHLETE') {
             throw new BadRequestException('Teachers can only create Athletes');
+        }
+
+        let createdById = currentUser?.id;
+
+        // If no user is logged in (e.g. public registration), assign to default teacher
+        if (!createdById) {
+            const sarahCoach = await this.userRepo.findOne({
+                where: { email: 'teacher@careformance.com' }
+            });
+            if (sarahCoach) {
+                createdById = sarahCoach.id;
+            }
         }
 
         const hash = await bcrypt.hash(data.password || 'care1234!', 10);
@@ -63,7 +76,7 @@ export class UsersService {
             passwordHash: hash,
             mustChangePassword: data.mustChangePassword ?? true,
             avatar: `https://picsum.photos/150/150?random=${Date.now()}`,
-            createdById: currentUser.id,
+            createdById: createdById,
         });
         const saved = await this.userRepo.save(newUser);
 

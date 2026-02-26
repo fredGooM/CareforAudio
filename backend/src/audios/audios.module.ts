@@ -8,6 +8,8 @@ import {
     GroupAccess,
     UserGroup,
     UserProgress,
+    Program,
+    ProgramShare,
 } from '../entities';
 
 @Module({
@@ -18,6 +20,8 @@ import {
             GroupAccess,
             UserGroup,
             UserProgress,
+            Program,
+            ProgramShare,
         ]),
     ],
     controllers: [AudiosController],

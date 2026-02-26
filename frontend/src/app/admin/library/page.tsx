@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import { Check, X, Play, Edit, Trash2, Mic, Square } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import type { AudioTrack, Category, Group } from '@/types';
+import type { AudioTrack, Category, Group, UserProfile } from '@/types';
 import AudioPlayer from '@/components/AudioPlayer';
 
 export default function AdminLibraryPage() {
@@ -13,6 +13,7 @@ export default function AdminLibraryPage() {
     const [audios, setAudios] = useState<AudioTrack[]>([]);
     const [categories, setCategories] = useState<Category[]>([]);
     const [groups, setGroups] = useState<Group[]>([]);
+    const [users, setUsers] = useState<UserProfile[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [editingAudio, setEditingAudio] = useState<AudioTrack | null>(null);
     const [loading, setLoading] = useState(true);
@@ -39,6 +40,7 @@ export default function AdminLibraryPage() {
         type: 'Training',
         orderToListen: '1',
         allowedGroupIds: [] as string[],
+        allowedUserIds: [] as string[],
     };
     const [form, setForm] = useState(initialForm);
 
@@ -49,10 +51,12 @@ export default function AdminLibraryPage() {
             apiClient.get<AudioTrack[]>('/audios'),
             apiClient.get<Category[]>('/categories'),
             apiClient.get<Group[]>('/groups'),
-        ]).then(([a, c, g]) => {
+            apiClient.get<UserProfile[]>('/users'),
+        ]).then(([a, c, g, u]) => {
             setAudios(a);
             setCategories(c);
             setGroups(g);
+            setUsers(u);
             setLoading(false);
         }).catch(() => setLoading(false));
     }, [session]);
@@ -75,6 +79,7 @@ export default function AdminLibraryPage() {
             type: audio.type,
             orderToListen: String(audio.orderToListen || 1),
             allowedGroupIds: audio.allowedGroupIds || [],
+            allowedUserIds: audio.allowedUserIds || [],
         });
         setShowModal(true);
     };
@@ -143,6 +148,7 @@ export default function AdminLibraryPage() {
                     type: form.type,
                     orderToListen: parseInt(form.orderToListen),
                     allowedGroupIds: form.allowedGroupIds,
+                    allowedUserIds: form.allowedUserIds,
                 });
 
                 // Update local list
@@ -162,6 +168,7 @@ export default function AdminLibraryPage() {
                 formData.append('type', form.type);
                 formData.append('orderToListen', form.orderToListen);
                 formData.append('allowedGroupIds', JSON.stringify(form.allowedGroupIds));
+                formData.append('allowedUserIds', JSON.stringify(form.allowedUserIds));
 
                 if (uploadMode === 'FILE') {
                     const file = fileRef.current?.files?.[0];
@@ -338,6 +345,33 @@ export default function AdminLibraryPage() {
                                         </label>
                                     ))}
                                     {groups.length === 0 && <span className="text-muted text-sm">Aucun groupe</span>}
+                                </div>
+                            </div>
+                            <div className="form-group">
+                                <label>Utilisateurs autorisés</label>
+                                <div className="checkbox-group" style={{ maxHeight: '150px', overflowY: 'auto', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
+                                    {users
+                                        .filter(u => {
+                                            if ((session?.user as any)?.role === 'ADMIN') return u.role === 'TEACHER';
+                                            if ((session?.user as any)?.role === 'TEACHER') return u.role === 'ATHLETE' && u.createdById === (session?.user as any)?.id;
+                                            return false;
+                                        })
+                                        .map((u) => (
+                                            <label key={u.id} className="checkbox-label" style={{ width: '100%', padding: '0.2rem 0' }}>
+                                                <input
+                                                    type="checkbox"
+                                                    checked={form.allowedUserIds.includes(u.id)}
+                                                    onChange={(e) => {
+                                                        const ids = e.target.checked
+                                                            ? [...form.allowedUserIds, u.id]
+                                                            : form.allowedUserIds.filter((id) => id !== u.id);
+                                                        setForm({ ...form, allowedUserIds: ids });
+                                                    }}
+                                                />
+                                                {u.firstName} {u.lastName} <span className="text-muted text-sm">({u.role})</span>
+                                            </label>
+                                        ))
+                                    }
                                 </div>
                             </div>
                             <div className="modal-actions">

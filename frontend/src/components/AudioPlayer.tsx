@@ -89,11 +89,11 @@ export default function AudioPlayer({
                 <span className="player-title">{title}</span>
             </div>
 
-            <div className="player-controls">
-                <button onClick={togglePlay} className="player-play-btn">
-                    {playing ? <Pause size={24} /> : <Play size={24} />}
-                </button>
+            <button onClick={togglePlay} className="player-play-btn">
+                {playing ? <Pause size={24} /> : <Play size={24} />}
+            </button>
 
+            <div className="player-controls">
                 <span className="player-time">{formatTime(currentTime)}</span>
 
                 <input

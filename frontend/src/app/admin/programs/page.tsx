@@ -198,7 +198,13 @@ export default function AdminProgramsPage() {
                                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                                     <select value={shareUserId} onChange={(e) => setShareUserId(e.target.value)} required style={{ flex: 1 }}>
                                         <option value="">Sélectionner un utilisateur...</option>
-                                        {users.map(u => <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role})</option>)}
+                                        {users
+                                            .filter(u => {
+                                                if (currentUser.role === 'ADMIN') return u.role === 'TEACHER';
+                                                if (currentUser.role === 'TEACHER') return u.role === 'ATHLETE' && u.createdById === currentUser.id;
+                                                return false;
+                                            })
+                                            .map(u => <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role})</option>)}
                                     </select>
                                     <button type="submit" className="btn-primary">Ajouter</button>
                                 </div>
@@ -250,7 +256,24 @@ export default function AdminProgramsPage() {
                     <tbody>
                         {programs.map(prog => (
                             <tr key={prog.id}>
-                                <td>{prog.name}</td>
+                                <td>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                        {prog.name}
+                                        {currentUser?.role === 'TEACHER' && prog.createdById !== currentUser?.id && (
+                                            <span style={{
+                                                padding: '0.15rem 0.5rem',
+                                                borderRadius: '20px',
+                                                fontSize: '0.65rem',
+                                                fontWeight: 600,
+                                                textTransform: 'uppercase',
+                                                background: 'rgba(108, 99, 255, 0.15)',
+                                                color: 'var(--primary-light)'
+                                            }}>
+                                                Hérité
+                                            </span>
+                                        )}
+                                    </div>
+                                </td>
                                 <td>{prog.description || '—'}</td>
                                 <td>{prog.createdBy?.firstName} {prog.createdBy?.lastName}</td>
                                 <td>{prog.audios?.length || 0}</td>
@@ -265,7 +288,7 @@ export default function AdminProgramsPage() {
                                         <button className="btn-secondary" onClick={() => openShare(prog)} title="Partager / Assigner">
                                             <Share2 size={18} />
                                         </button>
-                                        {(currentUser.role === 'ADMIN' || prog.createdById === currentUser.id) && (
+                                        {(currentUser?.role === 'ADMIN' || prog.createdById === currentUser?.id) && (
                                             <>
                                                 <button className="btn-secondary" onClick={() => openEdit(prog)} title="Modifier">
                                                     <Edit size={18} />

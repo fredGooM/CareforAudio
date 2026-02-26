@@ -1264,35 +1264,42 @@ tbody tr:last-child td {
   .audio-player {
     left: 0;
     bottom: calc(56px + env(safe-area-inset-bottom, 0px));
-    /* above tab bar */
-    padding: 0.5rem 0.75rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+    padding: 0.75rem 1rem;
+    display: grid;
+    grid-template-areas: 
+      "info btn"
+      "controls controls";
+    grid-template-columns: 1fr auto;
+    gap: 0.5rem 1rem;
+    background: rgba(15, 23, 42, 0.98);
   }
 
   .player-info {
-    min-width: unset;
-    flex: 1;
-    overflow: hidden;
+    grid-area: info;
+    min-width: 0;
+    width: 100%;
   }
 
-  .player-cover {
-    width: 36px;
-    height: 36px;
-  }
-
-  .player-title {
-    font-size: 0.8rem;
+  .player-play-btn {
+    grid-area: btn;
+    width: 44px;
+    height: 44px;
+    font-size: 1rem;
+    align-self: center;
   }
 
   .player-controls {
+    grid-area: controls;
     width: 100%;
     gap: 0.5rem;
   }
 
-  .player-play-btn {
-    width: 36px;
-    height: 36px;
+  .player-cover {
+    width: 40px;
+    height: 40px;
+  }
+
+  .player-title {
     font-size: 0.9rem;
   }
 

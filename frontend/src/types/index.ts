@@ -8,6 +8,7 @@ export interface UserProfile {
     mustChangePassword: boolean;
     groupIds: string[];
     avatar?: string;
+    createdById?: string;
 }
 
 export interface AudioTrack {

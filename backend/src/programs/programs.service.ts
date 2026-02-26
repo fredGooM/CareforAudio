@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { Program, ProgramShare, User, AudioTrack } from '../entities';
+import { StorageService } from '../storage/storage.service';
 
 @Injectable()
 export class ProgramsService {
@@ -10,7 +11,19 @@ export class ProgramsService {
         @InjectRepository(ProgramShare) private shareRepo: Repository<ProgramShare>,
         @InjectRepository(User) private userRepo: Repository<User>,
         @InjectRepository(AudioTrack) private audioRepo: Repository<AudioTrack>,
+        private storageService: StorageService,
     ) {}
+
+    private async mapProgramAudios(program: Program) {
+        if (!program.audios) return program;
+        const audiosWithUrls = await Promise.all(
+            program.audios.map(async (a) => {
+                const url = a.storageKey ? await this.storageService.getSignedUrl(a.storageKey, 3600) : '';
+                return { ...a, url };
+            })
+        );
+        return { ...program, audios: audiosWithUrls };
+    }
 
     async create(data: { name: string; description?: string; audioIds: string[] }, currentUser: any) {
         if (currentUser.role === 'ATHLETE') throw new ForbiddenException('Athletes cannot create programs');
@@ -24,29 +37,33 @@ export class ProgramsService {
             audios,
         });
 
-        return this.programRepo.save(program);
+        const saved = await this.programRepo.save(program);
+        return this.mapProgramAudios(saved);
     }
 
     async findAll(currentUser: any) {
+        let programs: Program[] = [];
         if (currentUser.role === 'ADMIN') {
-            return this.programRepo.find({ relations: ['audios', 'createdBy'] });
+            programs = await this.programRepo.find({ relations: ['audios', 'createdBy'] });
+        } else {
+            const shared = await this.shareRepo.find({ where: { userId: currentUser.id }, select: ['programId'] });
+            const sharedIds = shared.map(s => s.programId);
+
+            if (currentUser.role === 'TEACHER') {
+                programs = await this.programRepo.find({
+                    where: [{ createdById: currentUser.id }, { id: In(sharedIds) }],
+                    relations: ['audios', 'createdBy']
+                });
+            } else {
+                if (sharedIds.length > 0) {
+                    programs = await this.programRepo.find({
+                        where: { id: In(sharedIds) },
+                        relations: ['audios']
+                    });
+                }
+            }
         }
-
-        const shared = await this.shareRepo.find({ where: { userId: currentUser.id }, select: ['programId'] });
-        const sharedIds = shared.map(s => s.programId);
-
-        if (currentUser.role === 'TEACHER') {
-            return this.programRepo.find({
-                where: [{ createdById: currentUser.id }, { id: In(sharedIds) }],
-                relations: ['audios', 'createdBy']
-            });
-        }
-
-        if (sharedIds.length === 0) return [];
-        return this.programRepo.find({
-            where: { id: In(sharedIds) },
-            relations: ['audios']
-        });
+        return Promise.all(programs.map(p => this.mapProgramAudios(p)));
     }
 
     async findOne(id: string, currentUser: any) {
@@ -55,11 +72,11 @@ export class ProgramsService {
             relations: ['audios', 'createdBy']
         });
         if (!program) throw new NotFoundException('Program not found');
-        return program;
+        return this.mapProgramAudios(program);
     }
 
     async update(id: string, data: { name?: string; description?: string; audioIds?: string[] }, currentUser: any) {
-        const program = await this.programRepo.findOne({ where: { id } });
+        const program = await this.programRepo.findOne({ where: { id }, relations: ['audios'] });
         if (!program) throw new NotFoundException('Program not found');
 
         if (currentUser.role === 'TEACHER' && program.createdById !== currentUser.id) {
@@ -73,7 +90,8 @@ export class ProgramsService {
             program.audios = await this.audioRepo.find({ where: { id: In(data.audioIds) } });
         }
 
-        return this.programRepo.save(program);
+        const saved = await this.programRepo.save(program);
+        return this.mapProgramAudios(saved);
     }
 
     async remove(id: string, currentUser: any) {

@@ -2,6 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Heart } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import AudioPlayer from '@/components/AudioPlayer';
@@ -16,9 +17,16 @@ export default function CatalogPage() {
     const [currentAudio, setCurrentAudio] = useState<AudioTrack | null>(null);
     const [favorites, setFavorites] = useState<string[]>([]);
     const [loading, setLoading] = useState(true);
+    const router = useRouter();
 
     useEffect(() => {
         if (!session) return;
+        const role = (session.user as any)?.role;
+        if (role === 'ATHLETE') {
+            router.replace('/training');
+            return;
+        }
+
         apiClient.setToken((session as any).accessToken);
         Promise.all([
             apiClient.get<AudioTrack[]>('/audios'),

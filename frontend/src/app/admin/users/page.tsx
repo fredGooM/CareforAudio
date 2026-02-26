@@ -171,14 +171,16 @@ export default function AdminUsersPage() {
                         </div>
                         <div className="form-group">
                             <label>Rôle</label>
-                            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-                                {(session?.user as any)?.role === 'ADMIN' && (
+                            <select value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })} disabled={(session?.user as any)?.role !== 'ADMIN'}>
+                                {((session?.user as any)?.role === 'ADMIN') ? (
                                     <>
+                                        <option value="ATHLETE">Athlète</option>
                                         <option value="TEACHER">Professeur</option>
                                         <option value="ADMIN">Admin</option>
                                     </>
+                                ) : (
+                                    <option value="ATHLETE">Athlète</option>
                                 )}
-                                <option value="ATHLETE">Athlète</option>
                             </select>
                         </div>
                     </div>

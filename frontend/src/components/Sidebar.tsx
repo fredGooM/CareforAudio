@@ -39,7 +39,6 @@ export default function Sidebar() {
 
     const athleteLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
-        { href: '/catalog', label: 'Catalogue', icon: icons.catalog },
         { href: '/training', label: 'Training', icon: icons.training },
         { href: '/favorites', label: 'Favoris', icon: icons.favorites },
     ];

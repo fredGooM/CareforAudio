@@ -7,6 +7,8 @@ import {
     GroupAccess,
     UserGroup,
     UserProgress,
+    Program,
+    ProgramShare,
 } from '../entities';
 import { StorageService } from '../storage/storage.service';
 
@@ -23,48 +25,71 @@ export class AudiosService {
         private readonly userGroupRepo: Repository<UserGroup>,
         @InjectRepository(UserProgress)
         private readonly progressRepo: Repository<UserProgress>,
+        @InjectRepository(Program)
+        private readonly programRepo: Repository<Program>,
+        @InjectRepository(ProgramShare)
+        private readonly programShareRepo: Repository<ProgramShare>,
         private readonly storageService: StorageService,
     ) { }
 
     async findAllForUser(userId: string, role: string) {
         let audios: AudioTrack[];
 
-        if (role === 'ADMIN') {
-            audios = await this.audioRepo.find({
-                order: { createdAt: 'DESC' },
-                relations: ['allowedGroups', 'allowedUsers', 'categories'],
-            });
-        } else {
-            const userGroups = await this.userGroupRepo.find({
-                where: { userId },
-                select: ['groupId'],
-            });
-            const groupIds = userGroups.map((ug) => ug.groupId);
+        const userGroups = await this.userGroupRepo.find({
+            where: { userId },
+            select: ['groupId'],
+        });
+        const groupIds = userGroups.map((ug) => ug.groupId);
 
-            // Get audio IDs user has direct access to
-            const directAccess = await this.audioAccessRepo.find({
-                where: { userId },
+        // Get audio IDs user has direct access to
+        const directAccess = await this.audioAccessRepo.find({
+            where: { userId },
+            select: ['audioId'],
+        });
+        const directIds = directAccess.map((a) => a.audioId);
+
+        // Get audio IDs accessible via groups
+        let groupAudioIds: string[] = [];
+        if (groupIds.length > 0) {
+            const groupAccess = await this.groupAccessRepo.find({
+                where: { groupId: In(groupIds) },
                 select: ['audioId'],
             });
-            const directIds = directAccess.map((a) => a.audioId);
+            groupAudioIds = groupAccess.map((g) => g.audioId);
+        }
 
-            // Get audio IDs accessible via groups
-            let groupAudioIds: string[] = [];
-            if (groupIds.length > 0) {
-                const groupAccess = await this.groupAccessRepo.find({
-                    where: { groupId: In(groupIds) },
-                    select: ['audioId'],
-                });
-                groupAudioIds = groupAccess.map((g) => g.audioId);
-            }
-
-            const allIds = [...new Set([...directIds, ...groupAudioIds])];
-            if (allIds.length === 0) return [];
-
-            audios = await this.audioRepo.find({
-                where: { id: In(allIds), published: true },
-                relations: ['allowedGroups', 'allowedUsers', 'categories'],
+        // Get audio IDs accessible via shared programs
+        const sharedPrograms = await this.programShareRepo.find({
+            where: { userId },
+            select: ['programId'],
+        });
+        const sharedProgramIds = sharedPrograms.map(s => s.programId);
+        let programAudioIds: string[] = [];
+        if (sharedProgramIds.length > 0) {
+            const programsWithAudios = await this.programRepo.find({
+                where: { id: In(sharedProgramIds) },
+                relations: ['audios'],
             });
+            programsWithAudios.forEach(p => {
+                p.audios?.forEach(a => programAudioIds.push(a.id));
+            });
+        }
+
+        const allIds = [...new Set([...directIds, ...groupAudioIds, ...programAudioIds])];
+        
+        const whereConditions: any[] = [{ createdById: userId }];
+        if (allIds.length > 0) {
+            whereConditions.push({ id: In(allIds) });
+        }
+
+        audios = await this.audioRepo.find({
+            where: whereConditions,
+            relations: ['allowedGroups', 'allowedUsers', 'categories'],
+        });
+
+        // For Athletes, filter out unpublished audios if they are somehow pulled
+        if (role === 'ATHLETE') {
+            audios = audios.filter(a => a.published);
         }
 
         return Promise.all(
