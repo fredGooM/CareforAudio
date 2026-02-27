@@ -126,14 +126,14 @@ export default function DashboardPage() {
             <div className="section">
                 <h2>Mes Programmes ({programs.length})</h2>
                 {programs.length > 0 ? (
-                    <div className="continue-list">
+                    <div className="programs-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '1rem' }}>
                         {programs.map(prog => (
-                            <div key={prog.id} className="continue-item" style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '8px', display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                <CalendarHeart className="text-primary" size={28} />
-                                <div>
-                                    <h3 style={{ margin: 0, fontSize: '1.1rem' }}>{prog.name}</h3>
-                                    <p style={{ margin: '0.2rem 0 0 0', color: '#666', fontSize: '0.9rem' }}>
-                                        {prog.description || 'Aucune description'} — {prog.audios?.length || 0} séances
+                            <div key={prog.id} style={{ background: 'var(--bg-card)', padding: '1.25rem', borderRadius: '12px', border: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: '1rem', transition: 'var(--transition)', boxShadow: 'var(--shadow-sm)' }}>
+                                <CalendarHeart className="text-primary" size={28} style={{ flexShrink: 0 }} />
+                                <div style={{ minWidth: 0, flex: 1 }}>
+                                    <h3 style={{ margin: 0, fontSize: '1.05rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{prog.name}</h3>
+                                    <p style={{ margin: '0.2rem 0 0 0', color: 'var(--text-muted)', fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {prog.audios?.length || 0} séances {prog.description ? `— ${prog.description}` : ''}
                                     </p>
                                 </div>
                             </div>

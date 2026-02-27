@@ -7,11 +7,11 @@ import { usePathname } from 'next/navigation';
 import { 
     LayoutDashboard, 
     ListMusic, 
-    Dumbbell, 
-    Heart, 
+    Heart,
     Library, 
     UsersRound, 
     CalendarCheck, 
+    CalendarHeart,
     User, 
     LogOut 
 } from 'lucide-react';
@@ -20,7 +20,7 @@ import {
 const icons = {
     dashboard: <LayoutDashboard size={24} />,
     catalog: <ListMusic size={24} />,
-    training: <Dumbbell size={24} />,
+    training: <CalendarHeart size={24} />,
     favorites: <Heart size={24} />,
     library: <Library size={24} />,
     users: <UsersRound size={24} />,
@@ -39,7 +39,7 @@ export default function Sidebar() {
 
     const athleteLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
-        { href: '/training', label: 'Training', icon: icons.training },
+        { href: '/training', label: 'Programmes', icon: icons.training },
         { href: '/favorites', label: 'Favoris', icon: icons.favorites },
     ];
 

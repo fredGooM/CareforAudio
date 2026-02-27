@@ -22,6 +22,17 @@ export default function FavoritesPage() {
         }).catch(() => setLoading(false));
     }, [session]);
 
+    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean) => {
+        if (currentAudio) {
+            apiClient.post('/analytics/heartbeat', {
+                audioId: currentAudio.id,
+                position,
+                sessionDuration,
+                completed,
+            });
+        }
+    };
+
     if (loading) return <Loader />;
 
     return (
@@ -53,6 +64,8 @@ export default function FavoritesPage() {
                     src={currentAudio.url}
                     title={currentAudio.title}
                     coverUrl={currentAudio.coverUrl}
+                    duration={currentAudio.duration}
+                    onHeartbeat={handleHeartbeat}
                 />
             )}
         </div>

@@ -1,13 +1,15 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Play, Pause } from 'lucide-react';
+import { useRef, useEffect } from 'react';
+import H5AudioPlayer from 'react-h5-audio-player';
+import 'react-h5-audio-player/lib/styles.css';
 
 interface AudioPlayerProps {
     src: string;
     title: string;
     coverUrl?: string;
-    onHeartbeat?: (position: number, sessionDuration: number) => void;
+    duration?: number;
+    onHeartbeat?: (position: number, sessionDuration: number, completed?: boolean) => void;
     onComplete?: () => void;
 }
 
@@ -15,98 +17,82 @@ export default function AudioPlayer({
     src,
     title,
     coverUrl,
+    duration: backendDuration,
     onHeartbeat,
     onComplete,
 }: AudioPlayerProps) {
-    const audioRef = useRef<HTMLAudioElement>(null);
-    const [playing, setPlaying] = useState(false);
-    const [currentTime, setCurrentTime] = useState(0);
-    const [duration, setDuration] = useState(0);
-    const [sessionStart, setSessionStart] = useState(0);
+    const sessionStartRef = useRef(0);
+    const lastEmitTimeRef = useRef(0);
+
+    const flushSession = (completed: boolean = false, currentTime: number = 0) => {
+        if (sessionStartRef.current === 0) return;
+        
+        const sessionDur = (Date.now() - sessionStartRef.current) / 1000;
+        if (sessionDur >= 2 || completed) { 
+            const pos = Number.isFinite(currentTime) ? currentTime : 0;
+            if (onHeartbeat) onHeartbeat(pos, sessionDur, completed);
+        }
+        sessionStartRef.current = 0;
+        lastEmitTimeRef.current = 0;
+    };
+
+    const handleListen = (e: any) => {
+        const currentTime = e.target.currentTime;
+        
+        if (sessionStartRef.current > 0 && Math.round(currentTime) > 0 && Math.round(currentTime) % 10 === 0) {
+            // Prevent duplicate emission at the exact same 10s boundary
+            if (Math.round(currentTime) !== lastEmitTimeRef.current) {
+                const sessionDur = (Date.now() - sessionStartRef.current) / 1000;
+                if (sessionDur >= 5) {
+                    const pos = Number.isFinite(currentTime) ? currentTime : 0;
+                    if (onHeartbeat) onHeartbeat(pos, sessionDur, false);
+                    sessionStartRef.current = Date.now();
+                    lastEmitTimeRef.current = Math.round(currentTime);
+                }
+            }
+        }
+    };
+
+    const handlePlay = () => {
+        sessionStartRef.current = Date.now();
+    };
+
+    const handlePause = (e: any) => {
+        flushSession(false, e.target.currentTime);
+    };
+
+    const handleEnded = (e: any) => {
+        flushSession(true, e.target.currentTime);
+        onComplete?.();
+    };
 
     useEffect(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-
-        const onLoadedMetadata = () => setDuration(audio.duration);
-        const onTimeUpdate = () => {
-            setCurrentTime(audio.currentTime);
-            if (onHeartbeat && Math.round(audio.currentTime) % 10 === 0) {
-                const sessionDur = (Date.now() - sessionStart) / 1000;
-                onHeartbeat(audio.currentTime, sessionDur);
-            }
-        };
-        const onEnded = () => {
-            setPlaying(false);
-            onComplete?.();
-        };
-
-        audio.addEventListener('loadedmetadata', onLoadedMetadata);
-        audio.addEventListener('timeupdate', onTimeUpdate);
-        audio.addEventListener('ended', onEnded);
-
         return () => {
-            audio.removeEventListener('loadedmetadata', onLoadedMetadata);
-            audio.removeEventListener('timeupdate', onTimeUpdate);
-            audio.removeEventListener('ended', onEnded);
+            flushSession(false);
         };
-    }, [src, sessionStart, onHeartbeat, onComplete]);
-
-    const togglePlay = () => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        if (playing) {
-            audio.pause();
-        } else {
-            if (sessionStart === 0) setSessionStart(Date.now());
-            audio.play();
-        }
-        setPlaying(!playing);
-    };
-
-    const seek = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        audio.currentTime = Number(e.target.value);
-    };
-
-    const formatTime = (seconds: number) => {
-        const mins = Math.floor(seconds / 60);
-        const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
-    };
+    }, []);
 
     if (!src) return null;
 
     return (
         <div className="audio-player">
-            <audio ref={audioRef} src={src} preload="metadata" />
-
-            <div className="player-info">
+            <div className="player-info" style={{ minWidth: '180px', flexShrink: 0 }}>
                 {coverUrl && (
                     <img src={coverUrl} alt={title} className="player-cover" />
                 )}
                 <span className="player-title">{title}</span>
             </div>
 
-            <button onClick={togglePlay} className="player-play-btn">
-                {playing ? <Pause size={24} /> : <Play size={24} />}
-            </button>
-
-            <div className="player-controls">
-                <span className="player-time">{formatTime(currentTime)}</span>
-
-                <input
-                    type="range"
-                    min={0}
-                    max={duration || 0}
-                    value={currentTime}
-                    onChange={seek}
-                    className="player-seek"
-                />
-
-                <span className="player-time">{formatTime(duration)}</span>
-            </div>
+            <H5AudioPlayer
+                src={src}
+                onPlay={handlePlay}
+                onPause={handlePause}
+                onEnded={handleEnded}
+                onListen={handleListen}
+                listenInterval={1000}
+                customAdditionalControls={[]}
+                customVolumeControls={[]}
+            />
         </div>
     );
 }

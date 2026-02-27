@@ -61,19 +61,20 @@ export default function TrainingPage() {
         setExpandedProgramId(prev => prev === id ? null : id);
     };
 
-    const handleHeartbeat = (position: number, sessionDuration: number) => {
+    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean) => {
         if (currentAudio) {
             apiClient.post('/analytics/heartbeat', {
                 audioId: currentAudio.id,
                 position,
                 sessionDuration,
+                completed,
             });
         }
     };
 
     return (
         <div className="page-content">
-            <h1>Mon Training</h1>
+            <h1>Mes Programmes</h1>
 
             {programs.length === 0 ? (
                 <p className="empty-state">Aucun programme ne vous a été affecté pour le moment.</p>
@@ -87,9 +88,9 @@ export default function TrainingPage() {
                                 key={prog.id} 
                                 className="program-card" 
                                 style={{ 
-                                    background: 'var(--bg-card, #fff)', 
+                                    background: 'var(--bg-card)', 
                                     borderRadius: '12px', 
-                                    boxShadow: '0 4px 6px rgba(0,0,0,0.05)',
+                                    boxShadow: 'var(--shadow-sm)',
                                     overflow: 'hidden',
                                     border: '1px solid var(--border)'
                                 }}
@@ -97,54 +98,66 @@ export default function TrainingPage() {
                                 <div 
                                     onClick={() => toggleProgram(prog.id)}
                                     style={{ 
-                                        padding: '1.5rem', 
+                                        padding: '1.25rem', 
                                         cursor: 'pointer', 
                                         display: 'flex', 
+                                        gap: '1rem',
                                         justifyContent: 'space-between', 
                                         alignItems: 'center',
                                         background: isExpanded ? 'var(--bg-input)' : 'transparent',
                                         transition: 'background 0.2s'
                                     }}
                                 >
-                                    <div>
-                                        <h2 style={{ fontSize: '1.25rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                            <PlayCircle size={24} className="text-primary" />
-                                            {prog.name}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <h2 style={{ fontSize: '1.1rem', marginBottom: '0.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            <PlayCircle size={24} className="text-primary" style={{ flexShrink: 0 }} />
+                                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{prog.name}</span>
                                         </h2>
-                                        <div style={{ color: 'var(--text-muted, #666)', fontSize: '0.9rem', display: 'flex', gap: '1rem' }}>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
                                             <span>{prog.audios?.length || 0} audios</span>
-                                            {prog.description && <span>• {prog.description}</span>}
+                                            {prog.description && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>• {prog.description}</span>}
                                         </div>
                                     </div>
-                                    <div style={{ color: 'var(--text-muted, #666)' }}>
+                                    <div style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
                                         {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
                                     </div>
                                 </div>
                                 
                                 {isExpanded && (
-                                    <div style={{ padding: '0 1.5rem 1.5rem 1.5rem', borderTop: '1px solid var(--border)' }}>
+                                    <div style={{ padding: '0 1.25rem 1.25rem 1.25rem', borderTop: '1px solid var(--border)' }}>
                                         {prog.audios?.length === 0 ? (
-                                            <p className="text-muted" style={{ marginTop: '1.5rem' }}>Aucun audio dans ce programme.</p>
+                                            <p className="text-muted" style={{ marginTop: '1.25rem' }}>Aucun audio dans ce programme.</p>
                                         ) : (
-                                            <div className="training-list" style={{ marginTop: '1.5rem' }}>
+                                            <div className="training-list" style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                                                 {prog.audios.map((audio) => (
                                                     <div 
                                                         key={audio.id} 
                                                         className={`training-item${currentAudio?.id === audio.id ? ' playing' : ''}`}
                                                         onClick={() => setCurrentAudio(audio)}
-                                                        style={{ cursor: 'pointer', background: currentAudio?.id === audio.id ? 'var(--bg-secondary)' : 'transparent' }}
+                                                        style={{ 
+                                                            cursor: 'pointer', 
+                                                            background: currentAudio?.id === audio.id ? 'var(--bg-input)' : 'transparent',
+                                                            borderRadius: '8px',
+                                                            padding: '0.75rem',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'space-between',
+                                                            gap: '1rem',
+                                                            border: currentAudio?.id === audio.id ? '1px solid var(--primary)' : '1px solid transparent',
+                                                            transition: 'var(--transition)'
+                                                        }}
                                                     >
-                                                        <div className="training-info" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                                                        <div className="training-info" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
                                                             {audio.coverUrl && (
-                                                                <img src={audio.coverUrl} alt={audio.title} style={{ width: '48px', height: '48px', objectFit: 'cover', borderRadius: '6px' }} />
+                                                                <img src={audio.coverUrl} alt={audio.title} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
                                                             )}
-                                                            <div>
-                                                                <h3>{audio.title}</h3>
-                                                                <p>{Math.round(audio.duration / 60)} min • {audio.type}</p>
+                                                            <div style={{ flex: 1, minWidth: 0 }}>
+                                                                <h3 style={{ fontSize: '0.95rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{audio.title}</h3>
+                                                                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{Math.round(audio.duration / 60)} min • {audio.type}</p>
                                                             </div>
                                                         </div>
-                                                        <div className="training-stats" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                                                            <span>Écoutes : {audio.timesListened || 0}</span>
+                                                        <div className="training-stats" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
+                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{audio.timesListened || 0} écoutes</span>
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
@@ -184,6 +197,7 @@ export default function TrainingPage() {
                     src={currentAudio.url}
                     title={currentAudio.title}
                     coverUrl={currentAudio.coverUrl}
+                    duration={currentAudio.duration}
                     onHeartbeat={handleHeartbeat}
                 />
             )}

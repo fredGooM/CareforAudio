@@ -54,12 +54,13 @@ export default function CatalogPage() {
             ? audios
             : audios.filter((a) => a.categoryIds?.includes(selectedCategory));
 
-    const handleHeartbeat = (position: number, sessionDuration: number) => {
+    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean) => {
         if (currentAudio) {
             apiClient.post('/analytics/heartbeat', {
                 audioId: currentAudio.id,
                 position,
                 sessionDuration,
+                completed,
             });
         }
     };
@@ -122,6 +123,7 @@ export default function CatalogPage() {
                     src={currentAudio.url}
                     title={currentAudio.title}
                     coverUrl={currentAudio.coverUrl}
+                    duration={currentAudio.duration}
                     onHeartbeat={handleHeartbeat}
                 />
             )}

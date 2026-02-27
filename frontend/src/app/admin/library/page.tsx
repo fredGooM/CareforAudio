@@ -7,6 +7,7 @@ import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import type { AudioTrack, Category, Group, UserProfile } from '@/types';
 import AudioPlayer from '@/components/AudioPlayer';
+import fixWebmDuration from 'webm-duration-fix';
 
 export default function AdminLibraryPage() {
     const { data: session } = useSession();
@@ -98,9 +99,19 @@ export default function AdminLibraryPage() {
                 }
             };
 
-            mediaRecorder.onstop = () => {
+            mediaRecorder.onstop = async () => {
                 const mimeType = mediaRecorder.mimeType || 'audio/webm';
-                const blob = new Blob(recordingChunksRef.current, { type: mimeType });
+                let blob = new Blob(recordingChunksRef.current, { type: mimeType });
+                
+                // Chrome/Safari WebM recordings omit duration metadata (producing Infinity)
+                // We use webm-duration-fix to parse the blob and inject the duration header natively.
+                try {
+                    // @ts-ignore
+                    blob = await fixWebmDuration(blob, { duration: recordingTime * 1000 });
+                } catch (e) {
+                    console.error("Failed to fix WebM duration", e);
+                }
+                
                 setRecordedBlob(blob);
                 setRecordedUrl(URL.createObjectURL(blob));
                 // Stop microphone
@@ -179,6 +190,7 @@ export default function AdminLibraryPage() {
                     const ext = recordedBlob.type.includes('mp4') || recordedBlob.type.includes('m4a') ? 'm4a' : 'webm';
                     const file = new File([recordedBlob], `recording.${ext}`, { type: recordedBlob.type });
                     formData.append('file', file);
+                    formData.append('duration', recordingTime.toString());
                 }
 
                 const newAudio = await apiClient.post<AudioTrack>('/audios', formData);
@@ -201,6 +213,17 @@ export default function AdminLibraryPage() {
 
     const handlePlay = (audio: AudioTrack) => {
         setCurrentTrack(audio);
+    };
+
+    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean) => {
+        if (currentTrack) {
+            apiClient.post('/analytics/heartbeat', {
+                audioId: currentTrack.id,
+                position,
+                sessionDuration,
+                completed,
+            });
+        }
     };
 
     if (loading) return <Loader />;
@@ -441,6 +464,8 @@ export default function AdminLibraryPage() {
                         src={currentTrack.url}
                         title={currentTrack.title}
                         coverUrl={currentTrack.coverUrl}
+                        duration={currentTrack.duration}
+                        onHeartbeat={handleHeartbeat}
                     />
                 </div>
             )}
