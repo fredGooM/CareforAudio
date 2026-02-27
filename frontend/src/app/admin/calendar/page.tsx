@@ -2,7 +2,7 @@
 
 import 'temporal-polyfill/global';
 import { useSession } from 'next-auth/react';
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useMemo } from 'react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import { CalendarEvent, UserProfile } from '@/types';
@@ -17,6 +17,20 @@ function toZDT(d: Date): Temporal.ZonedDateTime {
         .toZonedDateTimeISO(Temporal.Now.timeZoneId());
 }
 
+/** Curated palette – works well on dark backgrounds */
+const ATHLETE_COLORS: { main: string; container: string; onContainer: string }[] = [
+    { main: '#7c5cfc', container: '#35285e', onContainer: '#d4c8ff' },  // violet
+    { main: '#2ec4b6', container: '#153b37', onContainer: '#9ef5ea' },  // teal
+    { main: '#e07a5f', container: '#4a281f', onContainer: '#ffc8b8' },  // salmon
+    { main: '#f2c14e', container: '#4a3b16', onContainer: '#ffe491' },  // gold
+    { main: '#4ea8de', container: '#1c3b4f', onContainer: '#b0dcf7' },  // sky
+    { main: '#e05697', container: '#4a1b35', onContainer: '#ffb7d6' },  // pink
+    { main: '#70c1b3', container: '#1e3f38', onContainer: '#a8e8da' },  // mint
+    { main: '#f77f00', container: '#4a2a00', onContainer: '#ffc480' },  // orange
+    { main: '#8ac926', container: '#2e400d', onContainer: '#c6ee7b' },  // lime
+    { main: '#b185db', container: '#382952', onContainer: '#dec5f7' },  // lavender
+];
+
 export default function AdminGlobalCalendarPage() {
     const { data: session } = useSession();
     const [events, setEvents] = useState<SxEvent[]>([]);
@@ -26,6 +40,32 @@ export default function AdminGlobalCalendarPage() {
     const [modalOpen, setModalOpen] = useState(false);
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [preselectedDate, setPreselectedDate] = useState<Date | null>(null);
+    const [rawEvents, setRawEvents] = useState<CalendarEvent[]>([]);
+
+    /** Build a stable userId → colorIndex map */
+    const athleteColorMap = useMemo(() => {
+        const map: Record<string, number> = {};
+        athletes.forEach((a, i) => {
+            map[a.id] = i % ATHLETE_COLORS.length;
+        });
+        return map;
+    }, [athletes]);
+
+    /** Schedule-X calendars config: one "calendar" per athlete for color coding */
+    const calendars = useMemo(() => {
+        const cals: Record<string, { colorName: string; label: string; darkColors: typeof ATHLETE_COLORS[0]; lightColors: typeof ATHLETE_COLORS[0] }> = {};
+        athletes.forEach((a, i) => {
+            const colors = ATHLETE_COLORS[i % ATHLETE_COLORS.length];
+            const calId = `athlete-${a.id}`;
+            cals[calId] = {
+                colorName: calId,
+                label: `${a.firstName} ${a.lastName}`,
+                darkColors: colors,
+                lightColors: colors,
+            };
+        });
+        return cals;
+    }, [athletes]);
 
     const loadData = useCallback(async () => {
         if (!session) return;
@@ -35,18 +75,27 @@ export default function AdminGlobalCalendarPage() {
                 apiClient.get<CalendarEvent[]>('/events/teacher'),
                 apiClient.get<UserProfile[]>('/users'),
             ]);
+            const athleteList = usersData.filter(u => u.role === 'ATHLETE');
+            setAthletes(athleteList);
+            setRawEvents(evData);
+
+            // Build color map right now (can't wait for useMemo on next render)
+            const colorMap: Record<string, number> = {};
+            athleteList.forEach((a, i) => { colorMap[a.id] = i % ATHLETE_COLORS.length; });
+
             setEvents(evData.map(ev => {
                 const start = new Date(ev.date);
                 const end = new Date(start.getTime() + 60 * 60 * 1000);
+                const athleteName = ev.user ? `${ev.user.firstName} ${ev.user.lastName}` : '';
                 return {
                     id: ev.id,
-                    title: `${ev.title} — ${ev.user?.firstName || ''} ${ev.user?.lastName || ''}`,
+                    title: athleteName ? `👤 ${athleteName} — ${ev.title}` : ev.title,
                     start: toZDT(start),
                     end: toZDT(end),
+                    calendarId: ev.userId ? `athlete-${ev.userId}` : undefined,
                     originalEvent: ev,
                 };
             }));
-            setAthletes(usersData.filter(u => u.role === 'ATHLETE'));
         } catch (err) {
             console.error(err);
         } finally {
@@ -99,6 +148,7 @@ export default function AdminGlobalCalendarPage() {
                     events={events}
                     onEventClick={handleEventClick}
                     onDateClick={handleDateClick}
+                    calendars={calendars}
                 />
             </div>
 

@@ -27,9 +27,10 @@ interface AppCalendarProps {
     events: SxEvent[];
     onEventClick?: (event: SxEvent) => void;
     onDateClick?: (date: Date) => void;
+    calendars?: Record<string, { colorName: string; label: string; darkColors: { main: string; container: string; onContainer: string }; lightColors: { main: string; container: string; onContainer: string } }>;
 }
 
-export default function AppCalendar({ events, onEventClick, onDateClick }: AppCalendarProps) {
+export default function AppCalendar({ events, onEventClick, onDateClick, calendars }: AppCalendarProps) {
     const [eventsService] = useState(() => createEventsServicePlugin());
     const wrapperRef = useRef<HTMLDivElement>(null);
     const rafRef = useRef<number>(0);
@@ -41,6 +42,8 @@ export default function AppCalendar({ events, onEventClick, onDateClick }: AppCa
             firstDayOfWeek: 1,
             isDark: true,
             dayBoundaries: { start: '07:00', end: '22:00' },
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
+            ...(calendars ? { calendars } as any : {}),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             events: events as any,
             callbacks: {

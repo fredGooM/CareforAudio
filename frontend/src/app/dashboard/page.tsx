@@ -4,13 +4,15 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import { CalendarHeart } from 'lucide-react';
-import type { Dashboard, DashboardUser, DashboardAdmin, Program } from '@/types';
+import { CalendarHeart, CalendarDays, Clock, ArrowRight } from 'lucide-react';
+import type { Dashboard, DashboardUser, DashboardAdmin, Program, CalendarEvent } from '@/types';
+import Link from 'next/link';
 
 export default function DashboardPage() {
     const { data: session } = useSession();
     const [dashboard, setDashboard] = useState<Dashboard | null>(null);
     const [programs, setPrograms] = useState<Program[]>([]);
+    const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -24,6 +26,21 @@ export default function DashboardPage() {
                 ]);
                 setDashboard(dashData);
                 setPrograms(progsData);
+
+                // Fetch upcoming events for athletes
+                if (dashData.role === 'ATHLETE') {
+                    try {
+                        const eventsData = await apiClient.get<CalendarEvent[]>('/events/me');
+                        const now = new Date();
+                        const upcoming = eventsData
+                            .filter(ev => new Date(ev.date) >= now)
+                            .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+                            .slice(0, 5);
+                        setUpcomingEvents(upcoming);
+                    } catch {
+                        // Events might not be available
+                    }
+                }
             } catch (err) {
                 console.error(err);
             } finally {
@@ -101,6 +118,26 @@ export default function DashboardPage() {
 
     // User dashboard
     const d = dashboard as DashboardUser;
+
+    /** Format relative date label */
+    function formatEventDate(dateStr: string): { day: string; time: string; relative: string } {
+        const date = new Date(dateStr);
+        const now = new Date();
+        const diffMs = date.getTime() - now.getTime();
+        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+        const day = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
+        const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+
+        let relative = '';
+        if (diffDays === 0) relative = "Aujourd'hui";
+        else if (diffDays === 1) relative = 'Demain';
+        else if (diffDays < 7) relative = `Dans ${diffDays} jours`;
+        else relative = `Dans ${Math.ceil(diffDays / 7)} sem.`;
+
+        return { day, time, relative };
+    }
+
     return (
         <div className="page-content">
             <h1>Mon Dashboard</h1>
@@ -122,6 +159,110 @@ export default function DashboardPage() {
                     <div className="stat-label">Série</div>
                 </div>
             </div>
+
+            {/* ── Upcoming Events Section ── */}
+            {upcomingEvents.length > 0 && (
+                <div className="section">
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <h2 style={{ margin: 0 }}>
+                            <CalendarDays size={22} style={{ marginRight: '0.5rem', verticalAlign: 'text-bottom' }} />
+                            Événements à venir
+                        </h2>
+                        <Link href="/calendar" className="text-primary" style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                            Voir tout <ArrowRight size={14} />
+                        </Link>
+                    </div>
+                    <div className="upcoming-events-list" style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                        {upcomingEvents.map(ev => {
+                            const { day, time, relative } = formatEventDate(ev.date);
+                            return (
+                                <div
+                                    key={ev.id}
+                                    className="upcoming-event-card"
+                                    style={{
+                                        background: 'var(--bg-card)',
+                                        border: '1px solid var(--border)',
+                                        borderRadius: '12px',
+                                        padding: '1rem 1.25rem',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: '1rem',
+                                        transition: 'var(--transition)',
+                                        boxShadow: 'var(--shadow-sm)',
+                                    }}
+                                >
+                                    {/* Left date badge */}
+                                    <div
+                                        style={{
+                                            background: 'linear-gradient(135deg, var(--primary), var(--primary-hover, #6041e0))',
+                                            borderRadius: '10px',
+                                            padding: '0.6rem 0.75rem',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            minWidth: '68px',
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        <span style={{ fontSize: '0.7rem', fontWeight: 600, color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                            {day.split(' ')[0]}
+                                        </span>
+                                        <span style={{ fontSize: '1.3rem', fontWeight: 700, color: '#fff', lineHeight: 1.1 }}>
+                                            {day.split(' ')[1]}
+                                        </span>
+                                        <span style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.7)', marginTop: '2px' }}>
+                                            {day.split(' ')[2]}
+                                        </span>
+                                    </div>
+
+                                    {/* Event details */}
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                        <div style={{ fontWeight: 600, fontSize: '1rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                            {ev.title}
+                                        </div>
+                                        {ev.description && (
+                                            <div className="text-muted" style={{ fontSize: '0.85rem', marginTop: '0.15rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                                {ev.description}
+                                            </div>
+                                        )}
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.3rem', fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                            <span style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                                                <Clock size={13} /> {time}
+                                            </span>
+                                            {ev.type && (
+                                                <span style={{
+                                                    background: 'rgba(124, 92, 252, 0.15)',
+                                                    color: 'var(--primary)',
+                                                    padding: '0.1rem 0.5rem',
+                                                    borderRadius: '6px',
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 500,
+                                                }}>
+                                                    {ev.type}
+                                                </span>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Relative badge */}
+                                    <div
+                                        style={{
+                                            fontSize: '0.78rem',
+                                            fontWeight: 500,
+                                            color: relative === "Aujourd'hui" ? '#2ec4b6' : relative === 'Demain' ? '#f2c14e' : 'var(--text-muted)',
+                                            whiteSpace: 'nowrap',
+                                            flexShrink: 0,
+                                        }}
+                                    >
+                                        {relative}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            )}
 
             <div className="section">
                 <h2>Mes Programmes ({programs.length})</h2>
