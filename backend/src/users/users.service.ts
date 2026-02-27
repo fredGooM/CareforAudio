@@ -42,6 +42,13 @@ export class UsersService {
         return this.userRepo.findOne({ where: { id } });
     }
 
+    async findByIdForProfile(id: string) {
+        const user = await this.userRepo.findOne({ where: { id } });
+        if (!user) throw new BadRequestException('User not found');
+        const { passwordHash, ...profile } = user;
+        return profile;
+    }
+
     async create(data: {
         email: string;
         firstName: string;

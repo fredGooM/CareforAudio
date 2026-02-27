@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { Providers } from '@/components/Providers';
 import AppLayout from '@/components/AppLayout';
+import '@schedule-x/theme-default/dist/index.css';
 import './globals.css';
 
 export const metadata: Metadata = {

@@ -89,3 +89,16 @@ export interface DashboardAdmin {
 }
 
 export type Dashboard = DashboardUser | DashboardAdmin;
+
+export interface CalendarEvent {
+    id: string;
+    title: string;
+    description?: string;
+    date: string;
+    type?: string;
+    userId: string;
+    user?: UserProfile;
+    createdById?: string;
+    createdAt?: string;
+    updatedAt?: string;
+}

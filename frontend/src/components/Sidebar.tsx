@@ -12,6 +12,7 @@ import {
     UsersRound, 
     CalendarCheck, 
     CalendarHeart,
+    Calendar,
     User, 
     LogOut 
 } from 'lucide-react';
@@ -27,6 +28,7 @@ const icons = {
     program: <CalendarCheck size={24} />,
     profile: <User size={24} />,
     logout: <LogOut size={24} />,
+    calendar: <Calendar size={24} />,
 };
 
 export default function Sidebar() {
@@ -40,11 +42,13 @@ export default function Sidebar() {
     const athleteLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
         { href: '/training', label: 'Programmes', icon: icons.training },
+        { href: '/calendar', label: 'Calendrier', icon: icons.calendar },
         { href: '/favorites', label: 'Favoris', icon: icons.favorites },
     ];
 
     const adminOrTeacherLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
+        { href: '/admin/calendar', label: 'Calendrier', icon: icons.calendar },
         { href: '/admin/library', label: 'Biblio', icon: icons.library },
         { href: '/admin/users', label: 'Users', icon: icons.users },
         { href: '/admin/programs', label: 'Programmes', icon: icons.program },

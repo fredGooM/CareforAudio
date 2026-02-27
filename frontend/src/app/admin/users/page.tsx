@@ -2,7 +2,8 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
-import { Edit, KeyRound, Mail, Check, X } from 'lucide-react';
+import { Edit, KeyRound, Mail, Check, X, Calendar as CalendarIcon } from 'lucide-react';
+import Link from 'next/link';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import type { UserProfile, Group } from '@/types';
@@ -255,6 +256,9 @@ export default function AdminUsersPage() {
                                         <button className="btn-secondary" onClick={() => handleSendWelcome(user.id)} title="Envoyer identifiants">
                                             <Mail size={16} />
                                         </button>
+                                        <Link href={`/admin/calendar/${user.id}`} className="btn-secondary" title="Gérer le calendrier" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <CalendarIcon size={16} />
+                                        </Link>
                                     </div>
                                 </td>
                             </tr>

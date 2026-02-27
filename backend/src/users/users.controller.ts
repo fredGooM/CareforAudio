@@ -27,6 +27,12 @@ export class UsersController {
         return this.usersService.findAll(req.user);
     }
 
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @Get(':id')
+    async findOne(@Param('id') id: string) {
+        return this.usersService.findByIdForProfile(id);
+    }
+
     @UseGuards(JwtAuthGuard)
     @Get('me/favorites')
     getFavorites(@Request() req: any) {

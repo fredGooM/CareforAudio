@@ -1,3 +1,5 @@
+
+
 /* ========================================
    Careformance Audio – Global Design System
    ======================================== */
@@ -60,6 +62,208 @@ body {
   padding: 2rem;
   background: linear-gradient(135deg, var(--bg-dark) 0%, #1a1e2e 100%);
 }
+
+/* ===== Schedule-X Calendar Theme ===== */
+
+.sx-wrapper {
+  /* Fill viewport minus the page chrome above the calendar.
+     The JS ResizeObserver in AppCalendar overrides the :root CSS vars
+     --sx-week-grid-height and --sx-week-grid-hour-height so all hours
+     fit without scrolling. */
+  height: calc(100vh - 160px);
+  margin-top: 1.5rem;
+  border-radius: var(--radius);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  font-family: var(--font);
+}
+
+/* ── Week / Day: prevent scroll, let CSS vars control sizing ── */
+
+/* ── Month: ensure height propagation so grid fills the view ── */
+
+.sx-wrapper .sx__calendar-wrapper,
+.sx-wrapper .sx__calendar {
+  height: 100% !important;
+}
+
+/* .sx__view-container already has flex:1 from schedule-x,
+   but needs overflow hidden + min-height:0 to let children shrink. */
+.sx-wrapper .sx__view-container {
+  overflow-y: hidden;
+  min-height: 0;
+}
+
+/* ── Scrollbar theme (list view etc.) ── */
+
+.sx-wrapper .sx__list-wrapper::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.sx-wrapper .sx__list-wrapper::-webkit-scrollbar-track {
+  background: var(--bg-dark);
+}
+
+.sx-wrapper .sx__list-wrapper::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+.sx-wrapper .sx__list-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--primary);
+}
+
+/* ── Dark theme colour overrides ── */
+
+.sx-wrapper .is-dark {
+  --sx-color-primary: var(--primary);
+  --sx-color-primary-container: rgba(108, 99, 255, 0.2);
+  --sx-color-on-primary: #fff;
+  --sx-color-on-primary-container: var(--primary-light, #a5b4fc);
+  --sx-color-secondary: var(--accent);
+  --sx-color-background: var(--bg-card);
+  --sx-color-surface: var(--bg-card);
+  --sx-color-surface-dim: var(--bg-dark);
+  --sx-color-surface-bright: #2a3349;
+  --sx-color-surface-container: rgba(0, 0, 0, 0.2);
+  --sx-color-surface-container-low: rgba(0, 0, 0, 0.1);
+  --sx-color-surface-container-high: rgba(0, 0, 0, 0.3);
+  --sx-color-on-background: var(--text);
+  --sx-color-on-surface: var(--text);
+  --sx-color-outline: var(--border);
+  --sx-color-outline-variant: var(--border);
+  --sx-internal-color-text: var(--text-muted);
+  --sx-border: 1px solid var(--border);
+}
+
+/* ── Calendar Container ── */
+
+.calendar-container {
+  margin-top: 1.5rem;
+}
+
+/* ── Event Modal ── */
+
+.event-modal {
+  max-width: 520px;
+}
+
+.event-modal-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  margin-bottom: 1.25rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.event-modal-header-left {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  min-width: 0;
+}
+
+.event-modal-header-left h2 {
+  font-size: 1.1rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.event-modal-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  flex-shrink: 0;
+}
+
+.event-modal-dot.accent {
+  background: linear-gradient(135deg, var(--accent), var(--accent-dark));
+}
+
+.event-modal-actions-top {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  flex-shrink: 0;
+}
+
+.event-modal-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: var(--transition);
+  font-family: var(--font);
+}
+
+.event-modal-icon-btn:hover {
+  background: rgba(108, 99, 255, 0.1);
+  color: var(--primary-light);
+  border-color: var(--primary);
+}
+
+.event-modal-icon-btn.danger:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: var(--danger);
+  border-color: var(--danger);
+}
+
+.event-modal-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.event-modal-detail-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.65rem 0.75rem;
+  background: rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  border: 1px solid rgba(51, 65, 85, 0.3);
+}
+
+.event-modal-detail-icon {
+  color: var(--primary-light);
+  flex-shrink: 0;
+  margin-top: 0.15rem;
+}
+
+.event-modal-detail-label {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--text-muted);
+  margin-bottom: 0.2rem;
+}
+
+.event-modal-detail-value {
+  display: block;
+  font-size: 0.9rem;
+  color: var(--text);
+  line-height: 1.4;
+}
+
+.event-modal-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
 
 /* ===== Utilities ===== */
 
@@ -1150,6 +1354,12 @@ tbody tr:last-child td {
 /* ===== Responsive ===== */
 
 @media (max-width: 768px) {
+
+  /* ── Calendar Mobile ── */
+  .sx-wrapper {
+    height: calc(100dvh - 140px);
+    margin-top: 1rem;
+  }
 
   /* Show mobile nav, hide desktop sidebar */
   .desktop-only {

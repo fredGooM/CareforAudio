@@ -10,6 +10,7 @@ import { AnalyticsModule } from './analytics/analytics.module';
 import { StorageModule } from './storage/storage.module';
 import { EmailModule } from './email/email.module';
 import { ProgramsModule } from './programs/programs.module';
+import { EventsModule } from './events/events.module';
 import {
   User,
   Group,
@@ -24,6 +25,7 @@ import {
   AppConfig,
   Program,
   ProgramShare,
+  CalendarEvent,
 } from './entities';
 
 @Module({
@@ -53,6 +55,7 @@ import {
           AppConfig,
           Program,
           ProgramShare,
+          CalendarEvent,
         ],
         synchronize: true, // Dev only — use migrations in production
       }),
@@ -66,6 +69,7 @@ import {
     GroupsModule,
     ProgramsModule,
     AnalyticsModule,
+    EventsModule,
   ],
 })
 export class AppModule { }
