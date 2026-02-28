@@ -58,11 +58,21 @@ export default function AudioPlayer({
     };
 
     const handlePause = (e: any) => {
+        // HTML5 audio fires 'pause' BEFORE 'ended' when track finishes.
+        // Skip flush here so handleEnded can send the completed heartbeat.
+        if (e.target.ended) return;
         flushSession(false, e.target.currentTime);
     };
 
     const handleEnded = (e: any) => {
-        flushSession(true, e.target.currentTime);
+        const currentTime = e.target.currentTime;
+        if (sessionStartRef.current > 0) {
+            flushSession(true, currentTime);
+        } else {
+            // Session already flushed (e.g. by pause) — still send completed heartbeat
+            const pos = Number.isFinite(currentTime) ? currentTime : 0;
+            if (onHeartbeat) onHeartbeat(pos, 0, true);
+        }
         onComplete?.();
     };
 

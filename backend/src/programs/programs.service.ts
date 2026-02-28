@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { Program, ProgramShare, User, AudioTrack } from '../entities';
+import { Program, ProgramShare, User, AudioTrack, UserProgress } from '../entities';
 import { StorageService } from '../storage/storage.service';
 
 @Injectable()
@@ -11,15 +11,28 @@ export class ProgramsService {
         @InjectRepository(ProgramShare) private shareRepo: Repository<ProgramShare>,
         @InjectRepository(User) private userRepo: Repository<User>,
         @InjectRepository(AudioTrack) private audioRepo: Repository<AudioTrack>,
+        @InjectRepository(UserProgress) private progressRepo: Repository<UserProgress>,
         private storageService: StorageService,
     ) {}
 
-    private async mapProgramAudios(program: Program) {
+    private async mapProgramAudios(program: Program, userId?: string) {
         if (!program.audios) return program;
+
+        // Fetch listen counts for this user
+        let listenMap = new Map<string, number>();
+        if (userId && program.audios.length > 0) {
+            const audioIds = program.audios.map(a => a.id);
+            const progressRecords = await this.progressRepo.find({
+                where: { userId, audioId: In(audioIds) },
+                select: ['audioId', 'timesListened'],
+            });
+            listenMap = new Map(progressRecords.map(p => [p.audioId, p.timesListened || 0]));
+        }
+
         const audiosWithUrls = await Promise.all(
             program.audios.map(async (a) => {
                 const url = a.storageKey ? await this.storageService.getSignedUrl(a.storageKey, 3600) : '';
-                return { ...a, url };
+                return { ...a, url, listenCount: listenMap.get(a.id) || 0 };
             })
         );
         return { ...program, audios: audiosWithUrls };
@@ -38,7 +51,7 @@ export class ProgramsService {
         });
 
         const saved = await this.programRepo.save(program);
-        return this.mapProgramAudios(saved);
+        return this.mapProgramAudios(saved, currentUser.id);
     }
 
     async findAll(currentUser: any) {
@@ -63,7 +76,7 @@ export class ProgramsService {
                 }
             }
         }
-        return Promise.all(programs.map(p => this.mapProgramAudios(p)));
+        return Promise.all(programs.map(p => this.mapProgramAudios(p, currentUser.id)));
     }
 
     async findOne(id: string, currentUser: any) {
@@ -72,7 +85,7 @@ export class ProgramsService {
             relations: ['audios', 'createdBy']
         });
         if (!program) throw new NotFoundException('Program not found');
-        return this.mapProgramAudios(program);
+        return this.mapProgramAudios(program, currentUser.id);
     }
 
     async update(id: string, data: { name?: string; description?: string; audioIds?: string[] }, currentUser: any) {
@@ -91,7 +104,7 @@ export class ProgramsService {
         }
 
         const saved = await this.programRepo.save(program);
-        return this.mapProgramAudios(saved);
+        return this.mapProgramAudios(saved, currentUser.id);
     }
 
     async remove(id: string, currentUser: any) {

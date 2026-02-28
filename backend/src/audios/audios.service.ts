@@ -92,6 +92,16 @@ export class AudiosService {
             audios = audios.filter(a => a.published);
         }
 
+        // Fetch progress for this user to get listenCount
+        const allAudioIds = audios.map(a => a.id);
+        const progressRecords = allAudioIds.length > 0
+            ? await this.progressRepo.find({
+                where: { userId, audioId: In(allAudioIds) },
+                select: ['audioId', 'timesListened'],
+            })
+            : [];
+        const listenMap = new Map(progressRecords.map(p => [p.audioId, p.timesListened || 0]));
+
         return Promise.all(
             audios.map(async (a: any) => {
                 const signedUrl = a.storageKey
@@ -115,7 +125,7 @@ export class AudiosService {
                         a.allowedGroups?.map((g: any) => g.groupId) || [],
                     allowedUserIds:
                         a.allowedUsers?.map((u: any) => u.userId) || [],
-                    listenCount: 0,
+                    listenCount: listenMap.get(a.id) || 0,
                 };
             }),
         );
@@ -142,6 +152,16 @@ export class AudiosService {
             });
         }
 
+        // Fetch progress for this user to get listenCount
+        const allFavIds = audios.map(a => a.id);
+        const favProgressRecords = allFavIds.length > 0
+            ? await this.progressRepo.find({
+                where: { userId, audioId: In(allFavIds) },
+                select: ['audioId', 'timesListened'],
+            })
+            : [];
+        const favListenMap = new Map(favProgressRecords.map(p => [p.audioId, p.timesListened || 0]));
+
         return Promise.all(
             audios.map(async (a: any) => {
                 const signedUrl = a.storageKey
@@ -163,7 +183,7 @@ export class AudiosService {
                     published: a.published,
                     allowedGroupIds: a.allowedGroups?.map((g: any) => g.groupId) || [],
                     allowedUserIds: a.allowedUsers?.map((u: any) => u.userId) || [],
-                    listenCount: 0,
+                    listenCount: favListenMap.get(a.id) || 0,
                 };
             }),
         );

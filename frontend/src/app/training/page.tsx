@@ -13,7 +13,7 @@ interface ProgramAudio {
     duration: number;
     categoryId: string;
     type: string;
-    timesListened?: number;
+    listenCount?: number;
     url: string;
     coverUrl?: string;
 }
@@ -157,7 +157,7 @@ export default function TrainingPage() {
                                                             </div>
                                                         </div>
                                                         <div className="training-stats" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{audio.timesListened || 0} écoutes</span>
+                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{audio.listenCount || 0} écoutes</span>
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();

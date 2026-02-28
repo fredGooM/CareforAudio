@@ -49,12 +49,13 @@ export class AnalyticsService {
         let isCompleted = existing?.isCompleted ?? false;
 
         // If the frontend explicitly passed completed: true, it means they hit the end of the track.
-        // We always increment timesListened when they organically finish it, plus mark it true.
+        // Increment timesListened each time the user finishes the track (including re-listens).
         if (completedNow) {
-            isCompleted = true;
-            if (data.completed || !existing?.isCompleted) {
+            if (!isCompleted || data.completed) {
+                // First completion OR explicit re-completion from frontend
                 timesListened += 1;
             }
+            isCompleted = true;
         }
 
         if (existing) {
