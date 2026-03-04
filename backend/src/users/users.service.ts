@@ -35,6 +35,12 @@ export class UsersService {
                 .map((g) => g.groupId),
             avatar: u.avatar,
             createdById: u.createdById,
+            gender: u.gender,
+            birthDate: u.birthDate,
+            preferredTrainingDays: u.preferredTrainingDays || [],
+            predominanceAnalytique: u.predominanceAnalytique,
+            predominanceAffectif: u.predominanceAffectif,
+            predominanceInstinctif: u.predominanceInstinctif,
         }));
     }
 
@@ -103,6 +109,12 @@ export class UsersService {
             role?: string;
             isActive?: boolean;
             groupIds?: string[];
+            gender?: string;
+            birthDate?: Date;
+            preferredTrainingDays?: string[];
+            predominanceAnalytique?: number;
+            predominanceAffectif?: number;
+            predominanceInstinctif?: number;
         },
         currentUser: any,
     ) {
@@ -121,6 +133,12 @@ export class UsersService {
             lastName: data.lastName,
             role: data.role as any,
             isActive: data.isActive,
+            gender: data.gender,
+            birthDate: data.birthDate,
+            preferredTrainingDays: data.preferredTrainingDays,
+            predominanceAnalytique: data.predominanceAnalytique,
+            predominanceAffectif: data.predominanceAffectif,
+            predominanceInstinctif: data.predominanceInstinctif,
         });
 
         if (Array.isArray(data.groupIds)) {
@@ -206,5 +224,26 @@ export class UsersService {
             });
         }
         return this.getFavorites(userId);
+    }
+
+    async updateProfile(userId: string, data: {
+        gender?: string;
+        birthDate?: string | Date;
+        preferredTrainingDays?: string[];
+        firstName?: string;
+        lastName?: string;
+    }) {
+        const targetUser = await this.findById(userId);
+        if (!targetUser) throw new BadRequestException('User not found');
+        
+        await this.userRepo.update(userId, {
+            gender: data.gender,
+            birthDate: data.birthDate ? new Date(data.birthDate) : undefined,
+            preferredTrainingDays: data.preferredTrainingDays,
+            firstName: data.firstName,
+            lastName: data.lastName,
+        });
+
+        return { success: true };
     }
 }

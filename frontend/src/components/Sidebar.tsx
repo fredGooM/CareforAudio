@@ -44,6 +44,7 @@ export default function Sidebar() {
         { href: '/training', label: 'Programmes', icon: icons.training },
         { href: '/calendar', label: 'Calendrier', icon: icons.calendar },
         { href: '/favorites', label: 'Favoris', icon: icons.favorites },
+        { href: '/profile', label: 'Profil', icon: icons.profile },
     ];
 
     const adminOrTeacherLinks = [
@@ -104,13 +105,6 @@ export default function Sidebar() {
                         <span className="tab-label">{link.label}</span>
                     </Link>
                 ))}
-                <Link
-                    href="/profile"
-                    className={`tab-item${isActive('/profile') ? ' active' : ''}`}
-                >
-                    <span className="tab-icon">{icons.profile}</span>
-                    <span className="tab-label">Profil</span>
-                </Link>
             </nav>
         </>
     );

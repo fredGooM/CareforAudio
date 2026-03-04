@@ -27,6 +27,9 @@ export default function AdminUsersPage() {
         lastName: '',
         role: 'ATHLETE',
         groupIds: [] as string[],
+        predominanceAnalytique: 0,
+        predominanceAffectif: 0,
+        predominanceInstinctif: 0,
     };
     const [form, setForm] = useState(emptyForm);
 
@@ -70,6 +73,9 @@ export default function AdminUsersPage() {
             lastName: user.lastName,
             role: user.role,
             groupIds: user.groupIds || [],
+            predominanceAnalytique: (user as any).predominanceAnalytique || 0,
+            predominanceAffectif: (user as any).predominanceAffectif || 0,
+            predominanceInstinctif: (user as any).predominanceInstinctif || 0,
         });
         setShowCreate(false);
     };
@@ -83,6 +89,9 @@ export default function AdminUsersPage() {
                 lastName: form.lastName,
                 role: form.role,
                 groupIds: form.groupIds,
+                predominanceAnalytique: form.predominanceAnalytique,
+                predominanceAffectif: form.predominanceAffectif,
+                predominanceInstinctif: form.predominanceInstinctif,
             });
             await reload();
             setEditingUser(null);
@@ -185,6 +194,25 @@ export default function AdminUsersPage() {
                             </select>
                         </div>
                     </div>
+                    {form.role === 'ATHLETE' && (
+                        <>
+                            <h3 style={{ fontSize: '1rem', marginTop: '0.5rem', marginBottom: '0.25rem' }}>Prédominances (%)</h3>
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Analytique</label>
+                                    <input type="number" min="0" max="100" value={form.predominanceAnalytique} onChange={(e) => setForm({ ...form, predominanceAnalytique: parseInt(e.target.value) || 0 })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Affectif</label>
+                                    <input type="number" min="0" max="100" value={form.predominanceAffectif} onChange={(e) => setForm({ ...form, predominanceAffectif: parseInt(e.target.value) || 0 })} />
+                                </div>
+                                <div className="form-group">
+                                    <label>Instinctif</label>
+                                    <input type="number" min="0" max="100" value={form.predominanceInstinctif} onChange={(e) => setForm({ ...form, predominanceInstinctif: parseInt(e.target.value) || 0 })} />
+                                </div>
+                            </div>
+                        </>
+                    )}
                     <div className="form-group">
                         <label>Groupes</label>
                         <div className="checkbox-group">

@@ -46,6 +46,18 @@ export class UsersController {
         return this.usersService.setFavorite(req.user.id, body.audioId, body.isFavorite);
     }
 
+    @UseGuards(JwtAuthGuard)
+    @Get('me/profile')
+    getProfile(@Request() req: any) {
+        return this.usersService.findByIdForProfile(req.user.id);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Put('me/profile')
+    updateProfile(@Request() req: any, @Body() body: any) {
+        return this.usersService.updateProfile(req.user.id, body);
+    }
+
     @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
     @Post()
     create(@Body() body: any, @Request() req: any) {

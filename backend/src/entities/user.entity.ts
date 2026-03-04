@@ -59,6 +59,24 @@ export class User {
   @Column({ nullable: true })
   avatar: string;
 
+  @Column({ nullable: true })
+  gender: string;
+
+  @Column({ type: 'date', nullable: true })
+  birthDate: Date;
+
+  @Column({ type: 'simple-array', nullable: true })
+  preferredTrainingDays: string[];
+
+  @Column({ type: 'int', nullable: true })
+  predominanceAnalytique: number;
+
+  @Column({ type: 'int', nullable: true })
+  predominanceAffectif: number;
+
+  @Column({ type: 'int', nullable: true })
+  predominanceInstinctif: number;
+
   @CreateDateColumn()
   createdAt: Date;
 
