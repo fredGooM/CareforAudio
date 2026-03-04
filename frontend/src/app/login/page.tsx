@@ -36,6 +36,7 @@ export default function LoginPage() {
         <div className="login-container">
             <div className="login-card">
                 <div className="login-header">
+                    <img src="/logo.svg" alt="CareforAudio Logo" width="60" height="60" style={{ marginBottom: '1rem', borderRadius: '12px', display: 'inline-block' }} />
                     <h1>Careformance Audio</h1>
                     <p>Connectez-vous à votre espace</p>
                 </div>

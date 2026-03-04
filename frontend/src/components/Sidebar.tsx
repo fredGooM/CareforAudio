@@ -63,7 +63,10 @@ export default function Sidebar() {
             {/* Desktop sidebar */}
             <aside className="sidebar desktop-only">
                 <div className="sidebar-header">
-                    <h2>CareforAudio</h2>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                        <img src="/logo.svg" alt="CareforAudio Logo" width="40" height="40" style={{ borderRadius: '8px' }} />
+                        <h2 style={{ marginBottom: 0 }}>Careformance</h2>
+                    </div>
                     <p className="sidebar-user">{userName}</p>
                     <span className="sidebar-role">{displayRole}</span>
                 </div>
