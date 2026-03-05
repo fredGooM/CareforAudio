@@ -5,8 +5,6 @@ import { AudiosController } from './audios.controller';
 import {
     AudioTrack,
     AudioAccess,
-    GroupAccess,
-    UserGroup,
     UserProgress,
     Program,
     ProgramShare,
@@ -17,8 +15,6 @@ import {
         TypeOrmModule.forFeature([
             AudioTrack,
             AudioAccess,
-            GroupAccess,
-            UserGroup,
             UserProgress,
             Program,
             ProgramShare,

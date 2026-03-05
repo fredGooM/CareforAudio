@@ -138,39 +138,41 @@ export default function ProfilePage() {
                         </div>
                     </div>
 
-                    <div className="form-group">
-                        <label>Jours d'entraînement préférés</label>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
-                            {['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(day => {
-                                const isSelected = form.preferredTrainingDays.includes(day);
-                                return (
-                                    <button
-                                        key={day}
-                                        type="button"
-                                        onClick={() => {
-                                            const days = isSelected
-                                                ? form.preferredTrainingDays.filter(d => d !== day)
-                                                : [...form.preferredTrainingDays, day];
-                                            setForm({ ...form, preferredTrainingDays: days });
-                                        }}
-                                        style={{
-                                            padding: '0.75rem 0',
-                                            borderRadius: 'var(--radius-sm)',
-                                            border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
-                                            background: isSelected ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
-                                            color: isSelected ? 'var(--primary)' : 'var(--text-muted)',
-                                            cursor: 'pointer',
-                                            transition: 'var(--transition)',
-                                            fontSize: '0.75rem',
-                                            fontWeight: isSelected ? 600 : 500,
-                                        }}
-                                    >
-                                        {day.substring(0, 3)}
-                                    </button>
-                                );
-                            })}
+                    {profile?.role === 'ATHLETE' && (
+                        <div className="form-group">
+                            <label>Jours d'entraînement préférés</label>
+                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '0.5rem', marginTop: '0.5rem' }}>
+                                {['Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi', 'Dimanche'].map(day => {
+                                    const isSelected = form.preferredTrainingDays.includes(day);
+                                    return (
+                                        <button
+                                            key={day}
+                                            type="button"
+                                            onClick={() => {
+                                                const days = isSelected
+                                                    ? form.preferredTrainingDays.filter(d => d !== day)
+                                                    : [...form.preferredTrainingDays, day];
+                                                setForm({ ...form, preferredTrainingDays: days });
+                                            }}
+                                            style={{
+                                                padding: '0.75rem 0',
+                                                borderRadius: 'var(--radius-sm)',
+                                                border: `1px solid ${isSelected ? 'var(--primary)' : 'var(--border)'}`,
+                                                background: isSelected ? 'rgba(239, 68, 68, 0.1)' : 'var(--bg-card)',
+                                                color: isSelected ? 'var(--primary)' : 'var(--text-muted)',
+                                                cursor: 'pointer',
+                                                transition: 'var(--transition)',
+                                                fontSize: '0.75rem',
+                                                fontWeight: isSelected ? 600 : 500,
+                                            }}
+                                        >
+                                            {day.substring(0, 3)}
+                                        </button>
+                                    );
+                                })}
+                            </div>
                         </div>
-                    </div>
+                    )}
 
                     <div className="form-actions">
                         <button type="submit" disabled={saving} className="btn-primary">

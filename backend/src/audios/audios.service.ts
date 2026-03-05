@@ -4,12 +4,16 @@ import { Repository, In } from 'typeorm';
 import {
     AudioTrack,
     AudioAccess,
-    GroupAccess,
-    UserGroup,
     UserProgress,
     Program,
     ProgramShare,
 } from '../entities';
+import {
+    AudioDominance,
+    AudioPhasing,
+    AudioLanguage,
+    AudioVoiceType
+} from '../entities/audio-track.entity';
 import { StorageService } from '../storage/storage.service';
 
 @Injectable()
@@ -19,10 +23,6 @@ export class AudiosService {
         private readonly audioRepo: Repository<AudioTrack>,
         @InjectRepository(AudioAccess)
         private readonly audioAccessRepo: Repository<AudioAccess>,
-        @InjectRepository(GroupAccess)
-        private readonly groupAccessRepo: Repository<GroupAccess>,
-        @InjectRepository(UserGroup)
-        private readonly userGroupRepo: Repository<UserGroup>,
         @InjectRepository(UserProgress)
         private readonly progressRepo: Repository<UserProgress>,
         @InjectRepository(Program)
@@ -35,28 +35,11 @@ export class AudiosService {
     async findAllForUser(userId: string, role: string) {
         let audios: AudioTrack[];
 
-        const userGroups = await this.userGroupRepo.find({
-            where: { userId },
-            select: ['groupId'],
-        });
-        const groupIds = userGroups.map((ug) => ug.groupId);
-
-        // Get audio IDs user has direct access to
         const directAccess = await this.audioAccessRepo.find({
             where: { userId },
             select: ['audioId'],
         });
         const directIds = directAccess.map((a) => a.audioId);
-
-        // Get audio IDs accessible via groups
-        let groupAudioIds: string[] = [];
-        if (groupIds.length > 0) {
-            const groupAccess = await this.groupAccessRepo.find({
-                where: { groupId: In(groupIds) },
-                select: ['audioId'],
-            });
-            groupAudioIds = groupAccess.map((g) => g.audioId);
-        }
 
         // Get audio IDs accessible via shared programs
         const sharedPrograms = await this.programShareRepo.find({
@@ -75,7 +58,7 @@ export class AudiosService {
             });
         }
 
-        const allIds = [...new Set([...directIds, ...groupAudioIds, ...programAudioIds])];
+        const allIds = [...new Set([...directIds, ...programAudioIds])];
         
         const whereConditions: any[] = [{ createdById: userId }];
         if (allIds.length > 0) {
@@ -84,7 +67,7 @@ export class AudiosService {
 
         audios = await this.audioRepo.find({
             where: whereConditions,
-            relations: ['allowedGroups', 'allowedUsers', 'categories'],
+            relations: ['allowedUsers'],
         });
 
         // For Athletes, filter out unpublished audios if they are somehow pulled
@@ -114,15 +97,18 @@ export class AudiosService {
                     duration: a.duration,
                     url: signedUrl,
                     coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
-                    categoryIds: a.categories?.map((c: any) => c.id) || [],
+
                     mimeType: a.mimeType || 'audio/mpeg',
                     type: a.type || 'Training',
                     orderToListen: a.orderToListen || 1,
                     tags: [],
                     createdAt: a.createdAt,
                     published: a.published,
-                    allowedGroupIds:
-                        a.allowedGroups?.map((g: any) => g.groupId) || [],
+                    dominance: a.dominance,
+                    phasing: a.phasing,
+                    language: a.language,
+                    voiceType: a.voiceType,
+
                     allowedUserIds:
                         a.allowedUsers?.map((u: any) => u.userId) || [],
                     listenCount: listenMap.get(a.id) || 0,
@@ -143,12 +129,12 @@ export class AudiosService {
         if (role === 'ADMIN') {
             audios = await this.audioRepo.find({
                 where: { id: In(favIds) },
-                relations: ['allowedGroups', 'allowedUsers', 'categories'],
+                relations: ['allowedUsers'],
             });
         } else {
             audios = await this.audioRepo.find({
                 where: { id: In(favIds), published: true },
-                relations: ['allowedGroups', 'allowedUsers', 'categories'],
+                relations: ['allowedUsers'],
             });
         }
 
@@ -174,14 +160,17 @@ export class AudiosService {
                     duration: a.duration,
                     url: signedUrl,
                     coverUrl: a.coverUrl || 'https://picsum.photos/400/400',
-                    categoryIds: a.categories?.map((c: any) => c.id) || [],
                     mimeType: a.mimeType || 'audio/mpeg',
                     type: a.type || 'Training',
                     orderToListen: a.orderToListen || 1,
                     tags: [],
                     createdAt: a.createdAt,
                     published: a.published,
-                    allowedGroupIds: a.allowedGroups?.map((g: any) => g.groupId) || [],
+                    dominance: a.dominance,
+                    phasing: a.phasing,
+                    language: a.language,
+                    voiceType: a.voiceType,
+
                     allowedUserIds: a.allowedUsers?.map((u: any) => u.userId) || [],
                     listenCount: favListenMap.get(a.id) || 0,
                 };
@@ -192,7 +181,7 @@ export class AudiosService {
     async getMyProgram(userId: string) {
         const records = await this.progressRepo.find({
             where: { userId, isMyProgram: true },
-            relations: ['audio', 'audio.categories'],
+            relations: ['audio'],
         });
         return records
             .filter((r) => r.audio)
@@ -200,7 +189,6 @@ export class AudiosService {
                 id: r.audio.id,
                 title: r.audio.title,
                 duration: r.audio.duration,
-                categoryIds: r.audio.categories?.map((c: any) => c.id) || [],
                 type: r.audio.type || 'Training',
                 timesListened: r.timesListened || 0,
             }));
@@ -231,15 +219,16 @@ export class AudiosService {
         data: {
             title: string;
             description?: string;
-            categoryId?: string;
-            categoryIds?: string;
             published?: string;
             duration?: string;
             type?: string;
             orderToListen?: string;
-            allowedGroupIds?: string;
             allowedUserIds?: string;
             myProgramUserIds?: string;
+            dominance?: AudioDominance;
+            phasing?: AudioPhasing;
+            language?: AudioLanguage;
+            voiceType?: AudioVoiceType;
         },
         file: Express.Multer.File,
         user: any,
@@ -255,63 +244,27 @@ export class AudiosService {
             'audios',
         );
 
-        let categories: { id: string }[] = [];
-        if (data.categoryIds) {
-            try {
-                const parsed = JSON.parse(data.categoryIds);
-                categories = parsed.map((id: string) => ({ id }));
-            } catch {}
-        } else if (data.categoryId) {
-            categories = [{ id: data.categoryId }];
-        }
-
         const newAudio = this.audioRepo.create({
             title: data.title,
             description: data.description,
             duration: parseInt(data.duration || '0') || 0,
-            categories: categories,
             published: data.published === 'true',
             type: data.type || 'Training',
             orderToListen: data.orderToListen ? parseInt(data.orderToListen) : 1,
             storageKey: uploadResult.objectName,
             mimeType: file.mimetype,
             size: uploadResult.size,
+            dominance: data.dominance,
+            phasing: data.phasing,
+            language: data.language || AudioLanguage.FRENCH,
+            voiceType: data.voiceType || AudioVoiceType.MALE,
             coverUrl: `https://picsum.photos/400/400?random=${Date.now()}`,
             createdById: user.id,
         });
 
         const saved = await this.audioRepo.save(newAudio);
 
-        // Handle group permissions
-        if (data.allowedGroupIds) {
-            try {
-                const groupIds = JSON.parse(data.allowedGroupIds);
-                if (Array.isArray(groupIds) && groupIds.length > 0) {
-                    await this.groupAccessRepo.save(
-                        groupIds.map((gid: string) => ({
-                            groupId: gid,
-                            audioId: saved.id,
-                        })),
-                    );
-                    // Auto-grant access to users in those groups
-                    const groupUsers = await this.userGroupRepo.find({
-                        where: { groupId: In(groupIds) },
-                        select: ['userId'],
-                    });
-                    const uniqueUserIds = [
-                        ...new Set(groupUsers.map((u) => u.userId)),
-                    ];
-                    if (uniqueUserIds.length > 0) {
-                        await this.audioAccessRepo.save(
-                            uniqueUserIds.map((uid) => ({
-                                userId: uid,
-                                audioId: saved.id,
-                            })),
-                        );
-                    }
-                }
-            } catch { }
-        }
+
 
         // Handle direct user permissions
         if (data.allowedUserIds) {
@@ -369,11 +322,12 @@ export class AudiosService {
             duration?: number;
             type?: string;
             orderToListen?: number;
-            categoryId?: string;
-            categoryIds?: string[];
-            allowedGroupIds?: string[];
             allowedUserIds?: string[];
             myProgramUserIds?: string[];
+            dominance?: AudioDominance;
+            phasing?: AudioPhasing;
+            language?: AudioLanguage;
+            voiceType?: AudioVoiceType;
         },
         user: any,
     ) {
@@ -392,25 +346,13 @@ export class AudiosService {
         if (data.duration !== undefined) updateData.duration = data.duration;
         if (data.type !== undefined) updateData.type = data.type;
         if (data.orderToListen !== undefined) updateData.orderToListen = data.orderToListen;
+        if (data.dominance !== undefined) updateData.dominance = data.dominance;
+        if (data.phasing !== undefined) updateData.phasing = data.phasing;
+        if (data.language !== undefined) updateData.language = data.language;
+        if (data.voiceType !== undefined) updateData.voiceType = data.voiceType;
         
-        if (data.categoryIds) {
-            updateData.categories = data.categoryIds.map(cid => ({ id: cid }));
-        } else if (data.categoryId !== undefined) {
-            updateData.categories = [{ id: data.categoryId }];
-        }
-
-        // Must update relations (categories) by using save instead of update
         Object.assign(audio, updateData);
         await this.audioRepo.save(audio);
-
-        if (Array.isArray(data.allowedGroupIds)) {
-            await this.groupAccessRepo.delete({ audioId: id });
-            if (data.allowedGroupIds.length > 0) {
-                await this.groupAccessRepo.save(
-                    data.allowedGroupIds.map((gid) => ({ groupId: gid, audioId: id })),
-                );
-            }
-        }
 
         if (Array.isArray(data.allowedUserIds)) {
             await this.audioAccessRepo.delete({ audioId: id });

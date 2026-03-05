@@ -7,7 +7,6 @@ import {
     OneToMany,
 } from 'typeorm';
 import { UserGroup } from './user-group.entity';
-import { GroupAccess } from './group-access.entity';
 
 @Entity('groups')
 export class Group {
@@ -25,7 +24,4 @@ export class Group {
 
     @OneToMany(() => UserGroup, (ug) => ug.group)
     users: UserGroup[];
-
-    @OneToMany(() => GroupAccess, (ga) => ga.group)
-    audios: GroupAccess[];
 }

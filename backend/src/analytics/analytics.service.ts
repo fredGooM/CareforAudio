@@ -252,7 +252,7 @@ export class AnalyticsService {
 
         const progressRecords = await this.progressRepo.find({
             where: { userId },
-            relations: ['audio', 'audio.categories'],
+            relations: ['audio'],
         });
         const completedCount = progressRecords.filter((r) => r.isCompleted).length;
         const completionPercent =
@@ -260,40 +260,7 @@ export class AnalyticsService {
                 ? Math.round((completedCount / progressRecords.length) * 100)
                 : 0;
 
-        // Category progress
-        const categoryMap = new Map<
-            string,
-            { total: number; completed: number }
-        >();
-        progressRecords.forEach((record) => {
-            const categories = record.audio?.categories || [];
-            if (categories.length === 0) {
-                const catId = 'autre';
-                const cur = categoryMap.get(catId) || { total: 0, completed: 0 };
-                cur.total += 1;
-                if (record.isCompleted) cur.completed += 1;
-                categoryMap.set(catId, cur);
-            } else {
-                categories.forEach((cat: any) => {
-                    const catId = cat.id;
-                    const cur = categoryMap.get(catId) || { total: 0, completed: 0 };
-                    // Avoid double counting total listenings per category for the same record?
-                    // actually if it's counting per category, it's fine.
-                    cur.total += 1;
-                    if (record.isCompleted) cur.completed += 1;
-                    categoryMap.set(catId, cur);
-                });
-            }
-        });
-        const categoryProgress = Array.from(categoryMap.entries()).map(
-            ([categoryId, stats]) => ({
-                categoryId,
-                percent:
-                    stats.total > 0
-                        ? Math.round((stats.completed / stats.total) * 100)
-                        : 0,
-            }),
-        );
+        const categoryProgress: { categoryId: string; percent: number }[] = [];
 
         // My program progress
         const myProgramTotal = await this.progressRepo.count({

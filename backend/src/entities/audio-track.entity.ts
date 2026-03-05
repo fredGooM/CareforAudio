@@ -5,17 +5,34 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     ManyToOne,
-    ManyToMany,
-    JoinTable,
     OneToMany,
     JoinColumn,
 } from 'typeorm';
-import { Category } from './category.entity';
 import { User } from './user.entity';
 import { AudioAccess } from './audio-access.entity';
-import { GroupAccess } from './group-access.entity';
 import { UserProgress } from './user-progress.entity';
 import { AudioLog } from './audio-log.entity';
+export enum AudioDominance {
+    MIND = 'MIND',
+    BODY = 'BODY',
+    EMOTION = 'EMOTION',
+}
+
+export enum AudioPhasing {
+    PRE_COMPETITION = 'PRE_COMPETITION',
+    DURING_COMPETITION = 'DURING_COMPETITION',
+    POST_COMPETITION = 'POST_COMPETITION',
+}
+
+export enum AudioVoiceType {
+    MALE = 'MALE',
+    FEMALE = 'FEMALE',
+}
+
+export enum AudioLanguage {
+    FRENCH = 'FRENCH',
+    ENGLISH = 'ENGLISH',
+}
 
 @Entity('audio_tracks')
 export class AudioTrack {
@@ -40,9 +57,7 @@ export class AudioTrack {
     @Column({ nullable: true })
     size: number;
 
-    @ManyToMany(() => Category, (c) => c.audios)
-    @JoinTable({ name: 'audio_categories' })
-    categories: Category[];
+
 
     @Column({ nullable: true })
     createdById: string;
@@ -63,6 +78,18 @@ export class AudioTrack {
     @Column({ nullable: true })
     coverUrl: string;
 
+    @Column({ type: 'enum', enum: AudioDominance, nullable: true })
+    dominance: AudioDominance;
+
+    @Column({ type: 'enum', enum: AudioPhasing, nullable: true })
+    phasing: AudioPhasing;
+
+    @Column({ type: 'enum', enum: AudioLanguage, default: AudioLanguage.FRENCH })
+    language: AudioLanguage;
+
+    @Column({ type: 'enum', enum: AudioVoiceType, default: AudioVoiceType.MALE })
+    voiceType: AudioVoiceType;
+
     @CreateDateColumn()
     createdAt: Date;
 
@@ -72,8 +99,7 @@ export class AudioTrack {
     @OneToMany(() => AudioAccess, (aa) => aa.audio)
     allowedUsers: AudioAccess[];
 
-    @OneToMany(() => GroupAccess, (ga) => ga.audio)
-    allowedGroups: GroupAccess[];
+
 
     @OneToMany(() => UserProgress, (up) => up.audio)
     progressRecords: UserProgress[];

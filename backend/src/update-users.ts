@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
 import * as dotenv from 'dotenv';
-import { User, Group, UserGroup, AudioTrack, Category, GroupAccess, AudioAccess, RefreshToken, UserProgress, AudioLog, AppConfig, Program, ProgramShare } from './entities';
+import { User, Group, UserGroup, AudioTrack, AudioAccess, RefreshToken, UserProgress, AudioLog, AppConfig, Program, ProgramShare } from './entities';
 
 dotenv.config();
 
@@ -12,7 +12,7 @@ const AppDataSource = new DataSource({
     password: process.env.DATABASE_PASSWORD || 'root',
     database: process.env.DATABASE_NAME || 'careformance',
     entities: [
-        User, Group, UserGroup, AudioTrack, Category, GroupAccess, AudioAccess,
+        User, Group, UserGroup, AudioTrack, AudioAccess,
         RefreshToken, UserProgress, AudioLog, AppConfig, Program, ProgramShare
     ],
 });

@@ -5,15 +5,14 @@ import { useState, useEffect, useRef, FormEvent } from 'react';
 import { Check, X, Play, Edit, Trash2, Mic, Square } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import type { AudioTrack, Category, Group, UserProfile } from '@/types';
+import type { AudioTrack, UserProfile } from '@/types';
+import { AudioDominance, AudioPhasing, AudioLanguage, AudioVoiceType } from '@/types';
 import AudioPlayer from '@/components/AudioPlayer';
 import fixWebmDuration from 'webm-duration-fix';
 
 export default function AdminLibraryPage() {
     const { data: session } = useSession();
     const [audios, setAudios] = useState<AudioTrack[]>([]);
-    const [categories, setCategories] = useState<Category[]>([]);
-    const [groups, setGroups] = useState<Group[]>([]);
     const [users, setUsers] = useState<UserProfile[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [editingAudio, setEditingAudio] = useState<AudioTrack | null>(null);
@@ -36,12 +35,14 @@ export default function AdminLibraryPage() {
     const initialForm = {
         title: '',
         description: '',
-        categoryIds: [] as string[],
         published: 'true',
         type: 'Training',
         orderToListen: '1',
-        allowedGroupIds: [] as string[],
         allowedUserIds: [] as string[],
+        dominance: AudioDominance.MIND,
+        phasing: AudioPhasing.DURING_COMPETITION,
+        language: AudioLanguage.FRENCH,
+        voiceType: AudioVoiceType.MALE,
     };
     const [form, setForm] = useState(initialForm);
 
@@ -50,13 +51,9 @@ export default function AdminLibraryPage() {
         apiClient.setToken((session as any).accessToken);
         Promise.all([
             apiClient.get<AudioTrack[]>('/audios'),
-            apiClient.get<Category[]>('/categories'),
-            apiClient.get<Group[]>('/groups'),
             apiClient.get<UserProfile[]>('/users'),
-        ]).then(([a, c, g, u]) => {
+        ]).then(([a, u]) => {
             setAudios(a);
-            setCategories(c);
-            setGroups(g);
             setUsers(u);
             setLoading(false);
         }).catch(() => setLoading(false));
@@ -75,12 +72,14 @@ export default function AdminLibraryPage() {
         setForm({
             title: audio.title,
             description: audio.description || '',
-            categoryIds: audio.categoryIds || [],
             published: String(audio.published),
             type: audio.type,
             orderToListen: String(audio.orderToListen || 1),
-            allowedGroupIds: audio.allowedGroupIds || [],
             allowedUserIds: audio.allowedUserIds || [],
+            dominance: audio.dominance || AudioDominance.MIND,
+            phasing: audio.phasing || AudioPhasing.DURING_COMPETITION,
+            language: audio.language || AudioLanguage.FRENCH,
+            voiceType: audio.voiceType || AudioVoiceType.MALE,
         });
         setShowModal(true);
     };
@@ -154,12 +153,14 @@ export default function AdminLibraryPage() {
                 await apiClient.put(`/audios/${editingAudio.id}`, {
                     title: form.title,
                     description: form.description,
-                    categoryIds: form.categoryIds,
                     published: form.published === 'true',
                     type: form.type,
                     orderToListen: parseInt(form.orderToListen),
-                    allowedGroupIds: form.allowedGroupIds,
                     allowedUserIds: form.allowedUserIds,
+                    dominance: form.dominance,
+                    phasing: form.phasing,
+                    language: form.language,
+                    voiceType: form.voiceType,
                 });
 
                 // Update local list
@@ -174,12 +175,14 @@ export default function AdminLibraryPage() {
                 const formData = new FormData();
                 formData.append('title', form.title);
                 formData.append('description', form.description);
-                formData.append('categoryIds', JSON.stringify(form.categoryIds));
                 formData.append('published', form.published);
                 formData.append('type', form.type);
                 formData.append('orderToListen', form.orderToListen);
-                formData.append('allowedGroupIds', JSON.stringify(form.allowedGroupIds));
                 formData.append('allowedUserIds', JSON.stringify(form.allowedUserIds));
+                formData.append('dominance', form.dominance);
+                formData.append('phasing', form.phasing);
+                formData.append('language', form.language);
+                formData.append('voiceType', form.voiceType);
 
                 if (uploadMode === 'FILE') {
                     const file = fileRef.current?.files?.[0];
@@ -302,31 +305,9 @@ export default function AdminLibraryPage() {
                                     )}
                                 </div>
                             )}
-                            <div className="form-row">
-                                <div className="form-group">
-                                    <label>Titre</label>
-                                    <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder="Titre de la piste audio" />
-                                </div>
-                                <div className="form-group">
-                                    <label>Catégories</label>
-                                    <div className="checkbox-group" style={{ maxHeight: '150px', overflowY: 'auto', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
-                                        {categories.map((c) => (
-                                            <label key={c.id} className="checkbox-label" style={{ width: '100%', padding: '0.2rem 0' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={form.categoryIds.includes(c.id)}
-                                                    onChange={(e) => {
-                                                        const ids = e.target.checked
-                                                            ? [...form.categoryIds, c.id]
-                                                            : form.categoryIds.filter((id) => id !== c.id);
-                                                        setForm({ ...form, categoryIds: ids });
-                                                    }}
-                                                />
-                                                {c.name}
-                                            </label>
-                                        ))}
-                                    </div>
-                                </div>
+                            <div className="form-group">
+                                <label>Titre</label>
+                                <input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required placeholder="Titre de la piste audio" />
                             </div>
                             <div className="form-group">
                                 <label>Description</label>
@@ -349,25 +330,40 @@ export default function AdminLibraryPage() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label>Groupes autorisés</label>
-                                <div className="checkbox-group" style={{ padding: '0.6rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
-                                    {groups.map((g) => (
-                                        <label key={g.id} className="checkbox-label" style={{ width: '100%', padding: '0.2rem 0' }}>
-                                            <input
-                                                type="checkbox"
-                                                checked={form.allowedGroupIds.includes(g.id)}
-                                                onChange={(e) => {
-                                                    const ids = e.target.checked
-                                                        ? [...form.allowedGroupIds, g.id]
-                                                        : form.allowedGroupIds.filter((id) => id !== g.id);
-                                                    setForm({ ...form, allowedGroupIds: ids });
-                                                }}
-                                            />
-                                            {g.name}
-                                        </label>
-                                    ))}
-                                    {groups.length === 0 && <span className="text-muted text-sm">Aucun groupe</span>}
+                            
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Dominance</label>
+                                    <select value={form.dominance} onChange={(e) => setForm({ ...form, dominance: e.target.value as AudioDominance })}>
+                                        <option value={AudioDominance.MIND}>Pensée</option>
+                                        <option value={AudioDominance.BODY}>Corps</option>
+                                        <option value={AudioDominance.EMOTION}>Émotion</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Phasing</label>
+                                    <select value={form.phasing} onChange={(e) => setForm({ ...form, phasing: e.target.value as AudioPhasing })}>
+                                        <option value={AudioPhasing.PRE_COMPETITION}>Précompétition</option>
+                                        <option value={AudioPhasing.DURING_COMPETITION}>Pendant compétition</option>
+                                        <option value={AudioPhasing.POST_COMPETITION}>Post compétition</option>
+                                    </select>
+                                </div>
+                            </div>
+
+                            <div className="form-row">
+                                <div className="form-group">
+                                    <label>Langue</label>
+                                    <select value={form.language} onChange={(e) => setForm({ ...form, language: e.target.value as AudioLanguage })}>
+                                        <option value={AudioLanguage.FRENCH}>Français</option>
+                                        <option value={AudioLanguage.ENGLISH}>Anglais</option>
+                                    </select>
+                                </div>
+                                <div className="form-group">
+                                    <label>Voix (Type)</label>
+                                    <select value={form.voiceType} onChange={(e) => setForm({ ...form, voiceType: e.target.value as AudioVoiceType })}>
+                                        <option value={AudioVoiceType.MALE}>Masculin</option>
+                                        <option value={AudioVoiceType.FEMALE}>Féminin</option>
+                                    </select>
                                 </div>
                             </div>
                             <div className="form-group">
@@ -414,7 +410,6 @@ export default function AdminLibraryPage() {
                         <tr>
                             <th>Titre</th>
                             <th>Durée</th>
-                            <th>Catégories</th>
                             <th>Type</th>
                             <th>Publié</th>
                             <th>Actions</th>
@@ -425,12 +420,6 @@ export default function AdminLibraryPage() {
                             <tr key={audio.id}>
                                 <td>{audio.title}</td>
                                 <td>{Math.round(audio.duration / 60)} min</td>
-                                <td>
-                                    {audio.categoryIds?.map(cid => {
-                                        const c = categories.find(cat => cat.id === cid);
-                                        return c ? c.name : '';
-                                    }).filter(Boolean).join(', ') || '—'}
-                                </td>
                                 <td>{audio.type}</td>
                                 <td>
                                     {audio.published ? (

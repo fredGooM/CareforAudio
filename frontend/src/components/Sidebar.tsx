@@ -53,6 +53,7 @@ export default function Sidebar() {
         { href: '/admin/library', label: 'Biblio', icon: icons.library },
         { href: '/admin/users', label: 'Users', icon: icons.users },
         { href: '/admin/programs', label: 'Programmes', icon: icons.program },
+        { href: '/profile', label: 'Profil', icon: icons.profile },
     ];
 
     const links = (role === 'ADMIN' || role === 'TEACHER') ? adminOrTeacherLinks : athleteLinks;

@@ -4,7 +4,6 @@ import { TypeOrmModule, TypeOrmModuleOptions } from '@nestjs/typeorm';
 import { AuthModule } from './auth/auth.module';
 import { UsersModule } from './users/users.module';
 import { AudiosModule } from './audios/audios.module';
-import { CategoriesModule } from './categories/categories.module';
 import { GroupsModule } from './groups/groups.module';
 import { AnalyticsModule } from './analytics/analytics.module';
 import { StorageModule } from './storage/storage.module';
@@ -16,8 +15,6 @@ import {
   Group,
   UserGroup,
   AudioTrack,
-  Category,
-  GroupAccess,
   AudioAccess,
   RefreshToken,
   UserProgress,
@@ -46,8 +43,6 @@ import {
           Group,
           UserGroup,
           AudioTrack,
-          Category,
-          GroupAccess,
           AudioAccess,
           RefreshToken,
           UserProgress,
@@ -65,7 +60,6 @@ import {
     AuthModule,
     UsersModule,
     AudiosModule,
-    CategoriesModule,
     GroupsModule,
     ProgramsModule,
     AnalyticsModule,

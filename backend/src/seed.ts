@@ -6,8 +6,6 @@ import {
     Group,
     UserGroup,
     AudioTrack,
-    Category,
-    GroupAccess,
     AudioAccess,
     UserProgress,
     AudioLog,
@@ -27,8 +25,8 @@ const AppDataSource = new DataSource({
     password: process.env.DATABASE_PASSWORD || 'root',
     database: process.env.DATABASE_NAME || 'careformance',
     entities: [
-        User, Group, UserGroup, AudioTrack, Category,
-        GroupAccess, AudioAccess, RefreshToken, UserProgress, AudioLog, AppConfig,
+        User, Group, UserGroup, AudioTrack,
+        AudioAccess, RefreshToken, UserProgress, AudioLog, AppConfig,
         Program, ProgramShare
     ],
     synchronize: true,
@@ -40,13 +38,6 @@ const groupSeeds = [
     { id: 'g2', name: 'Tennis & padel' },
     { id: 'g3', name: 'Aviron' },
     { id: 'g4', name: 'Rugby' },
-];
-
-const categorySeeds = [
-    { id: undefined as any, name: 'Pré-compétition', color: 'bg-blue-100 text-blue-800', image: '/images/pre_competition.png' },
-    { id: undefined as any, name: 'Récupération', color: 'bg-green-100 text-green-800', image: '/images/recuperation.png' },
-    { id: undefined as any, name: 'Sommeil', color: 'bg-indigo-100 text-indigo-800', image: '/images/sommeil.png' },
-    { id: undefined as any, name: 'Concentration', color: 'bg-purple-100 text-purple-800', image: '/images/concentration.png' },
 ];
 
 const athleteSeeds = [
@@ -67,11 +58,9 @@ async function seed() {
     console.log('🌱 Seeding database...');
 
     const groupRepo = AppDataSource.getRepository(Group);
-    const categoryRepo = AppDataSource.getRepository(Category);
     const userRepo = AppDataSource.getRepository(User);
     const userGroupRepo = AppDataSource.getRepository(UserGroup);
     const audioRepo = AppDataSource.getRepository(AudioTrack);
-    const groupAccessRepo = AppDataSource.getRepository(GroupAccess);
     const audioLogRepo = AppDataSource.getRepository(AudioLog);
     const progressRepo = AppDataSource.getRepository(UserProgress);
 
@@ -83,23 +72,6 @@ async function seed() {
             await groupRepo.save(existing);
         } else {
             await groupRepo.save(g);
-        }
-    }
-
-    // Categories
-    const categoryIds: string[] = [];
-    for (const c of categorySeeds) {
-        const existing = await categoryRepo.findOne({ where: { name: c.name } });
-        if (existing) {
-            existing.color = c.color;
-            existing.image = c.image;
-            await categoryRepo.save(existing);
-            categoryIds.push(existing.id);
-        } else {
-            const saved = await categoryRepo.save(categoryRepo.create({
-                name: c.name, color: c.color, image: c.image,
-            }));
-            categoryIds.push(saved.id);
         }
     }
 
@@ -185,10 +157,10 @@ async function seed() {
 
     // Audio tracks
     const audioSeeds = [
-        { title: 'Bienvenue sur Careformance', description: 'Introduction à la plateforme.', duration: 600, categoryIds: [categoryIds[0]], coverUrl: 'https://picsum.photos/400/400?random=10', groups: ['g1', 'g2', 'g3'] },
-        { title: 'Pré-compétition – Visualisation', description: 'Prépare ton esprit avant la compétition.', duration: 900, categoryIds: [categoryIds[0]], coverUrl: 'https://picsum.photos/400/400?random=11', groups: ['g1'] },
-        { title: 'Sommeil profond', description: 'Routine audio pour optimiser le sommeil.', duration: 1200, categoryIds: [categoryIds[2]], coverUrl: 'https://picsum.photos/400/400?random=12', groups: ['g2', 'g3'] },
-        { title: 'Récupération active', description: 'Ramène le calme après un entrainement intense.', duration: 780, categoryIds: [categoryIds[1]], coverUrl: 'https://picsum.photos/400/400?random=13', groups: ['g1', 'g2'] },
+        { title: 'Bienvenue sur Careformance', description: 'Introduction à la plateforme.', duration: 600, coverUrl: 'https://picsum.photos/400/400?random=10' },
+        { title: 'Pré-compétition – Visualisation', description: 'Prépare ton esprit avant la compétition.', duration: 900, coverUrl: 'https://picsum.photos/400/400?random=11' },
+        { title: 'Sommeil profond', description: 'Routine audio pour optimiser le sommeil.', duration: 1200, coverUrl: 'https://picsum.photos/400/400?random=12' },
+        { title: 'Récupération active', description: 'Ramène le calme après un entrainement intense.', duration: 780, coverUrl: 'https://picsum.photos/400/400?random=13' },
     ];
 
     const savedAudioIds: string[] = [];
@@ -199,7 +171,6 @@ async function seed() {
             audio.title = a.title;
             audio.description = a.description;
             audio.duration = a.duration;
-            audio.categories = a.categoryIds.map(id => ({ id } as Category));
             audio.coverUrl = a.coverUrl;
             audio.published = true;
             await audioRepo.save(audio);
@@ -211,21 +182,11 @@ async function seed() {
                 storageKey: `seed-a${i + 1}.mp3`,
                 mimeType: 'audio/mpeg',
                 size: 1024,
-                categories: a.categoryIds.map(id => ({ id } as Category)),
                 published: true,
                 coverUrl: a.coverUrl,
             }));
         }
         savedAudioIds.push(audio.id);
-
-        for (const groupId of a.groups) {
-            const existing = await groupAccessRepo.findOne({
-                where: { groupId, audioId: audio.id },
-            });
-            if (!existing) {
-                await groupAccessRepo.save({ groupId, audioId: audio.id });
-            }
-        }
     }
 
     // Analytics data

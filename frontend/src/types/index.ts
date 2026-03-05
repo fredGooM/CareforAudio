@@ -11,6 +11,28 @@ export interface UserProfile {
     createdById?: string;
 }
 
+export enum AudioDominance {
+    MIND = 'MIND',
+    BODY = 'BODY',
+    EMOTION = 'EMOTION',
+}
+
+export enum AudioPhasing {
+    PRE_COMPETITION = 'PRE_COMPETITION',
+    DURING_COMPETITION = 'DURING_COMPETITION',
+    POST_COMPETITION = 'POST_COMPETITION',
+}
+
+export enum AudioLanguage {
+    FRENCH = 'FRENCH',
+    ENGLISH = 'ENGLISH',
+}
+
+export enum AudioVoiceType {
+    MALE = 'MALE',
+    FEMALE = 'FEMALE',
+}
+
 export interface AudioTrack {
     id: string;
     title: string;
@@ -18,23 +40,18 @@ export interface AudioTrack {
     duration: number;
     url: string;
     coverUrl: string;
-    categoryIds: string[];
     mimeType: string;
     type: string;
     orderToListen: number;
     tags: string[];
+    dominance?: AudioDominance;
+    phasing?: AudioPhasing;
+    language?: AudioLanguage;
+    voiceType?: AudioVoiceType;
     createdAt: string;
     published: boolean;
-    allowedGroupIds?: string[];
     allowedUserIds?: string[];
     listenCount?: number;
-}
-
-export interface Category {
-    id: string;
-    name: string;
-    color: string;
-    image: string;
 }
 
 export interface Group {

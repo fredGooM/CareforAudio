@@ -1,9 +1,7 @@
 export { User, Role } from './user.entity';
 export { Group } from './group.entity';
 export { UserGroup } from './user-group.entity';
-export { AudioTrack } from './audio-track.entity';
-export { Category } from './category.entity';
-export { GroupAccess } from './group-access.entity';
+export { AudioTrack, AudioDominance, AudioPhasing, AudioLanguage, AudioVoiceType } from './audio-track.entity';
 export { AudioAccess } from './audio-access.entity';
 export { RefreshToken } from './refresh-token.entity';
 export { UserProgress } from './user-progress.entity';
