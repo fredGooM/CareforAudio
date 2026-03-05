@@ -21,6 +21,7 @@ import {
   AudioLog,
   AppConfig,
   Program,
+  ProgramAudio,
   ProgramShare,
   CalendarEvent,
 } from './entities';
@@ -49,6 +50,7 @@ import {
           AudioLog,
           AppConfig,
           Program,
+          ProgramAudio,
           ProgramShare,
           CalendarEvent,
         ],

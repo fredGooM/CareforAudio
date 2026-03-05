@@ -1,13 +1,20 @@
-import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { Program, ProgramShare, User, AudioTrack, UserProgress } from '../entities';
+import { Program, ProgramAudio, ProgramShare, User, AudioTrack, UserProgress } from '../entities';
 import { StorageService } from '../storage/storage.service';
+
+interface AudioItemDto {
+    audioId: string;
+    order: number;
+    requiredListens: number;
+}
 
 @Injectable()
 export class ProgramsService {
     constructor(
         @InjectRepository(Program) private programRepo: Repository<Program>,
+        @InjectRepository(ProgramAudio) private programAudioRepo: Repository<ProgramAudio>,
         @InjectRepository(ProgramShare) private shareRepo: Repository<ProgramShare>,
         @InjectRepository(User) private userRepo: Repository<User>,
         @InjectRepository(AudioTrack) private audioRepo: Repository<AudioTrack>,
@@ -15,13 +22,13 @@ export class ProgramsService {
         private storageService: StorageService,
     ) {}
 
-    private async mapProgramAudios(program: Program, userId?: string) {
-        if (!program.audios) return program;
+    private async mapProgram(program: Program, userId?: string) {
+        const pas = program.programAudios || [];
+        const sorted = [...pas].sort((a, b) => a.order - b.order);
 
-        // Fetch listen counts for this user
         let listenMap = new Map<string, number>();
-        if (userId && program.audios.length > 0) {
-            const audioIds = program.audios.map(a => a.id);
+        if (userId && sorted.length > 0) {
+            const audioIds = sorted.map(pa => pa.audioId);
             const progressRecords = await this.progressRepo.find({
                 where: { userId, audioId: In(audioIds) },
                 select: ['audioId', 'timesListened'],
@@ -29,67 +36,120 @@ export class ProgramsService {
             listenMap = new Map(progressRecords.map(p => [p.audioId, p.timesListened || 0]));
         }
 
-        const audiosWithUrls = await Promise.all(
-            program.audios.map(async (a) => {
-                const url = a.storageKey ? await this.storageService.getSignedUrl(a.storageKey, 3600) : '';
-                return { ...a, url, listenCount: listenMap.get(a.id) || 0 };
+        let totalRequired = 0;
+        let totalDone = 0;
+
+        const audios = await Promise.all(
+            sorted.map(async (pa) => {
+                const audio = pa.audio;
+                if (!audio) return null;
+                const url = audio.storageKey ? await this.storageService.getSignedUrl(audio.storageKey, 3600) : '';
+                const listenCount = listenMap.get(pa.audioId) || 0;
+
+                totalRequired += pa.requiredListens;
+                totalDone += Math.min(listenCount, pa.requiredListens);
+
+                return {
+                    id: audio.id,
+                    title: audio.title,
+                    description: audio.description,
+                    duration: audio.duration,
+                    url,
+                    coverUrl: audio.coverUrl,
+                    mimeType: audio.mimeType,
+                    type: audio.type,
+                    dominance: audio.dominance,
+                    phasing: audio.phasing,
+                    language: audio.language,
+                    voiceType: audio.voiceType,
+                    order: pa.order,
+                    requiredListens: pa.requiredListens,
+                    listenCount,
+                };
             })
         );
-        return { ...program, audios: audiosWithUrls };
+
+        const completionPercent = totalRequired > 0 ? Math.round((totalDone / totalRequired) * 100) : 0;
+
+        return {
+            id: program.id,
+            name: program.name,
+            description: program.description,
+            createdById: program.createdById,
+            createdBy: program.createdBy,
+            audios: audios.filter(Boolean),
+            completionPercent,
+            createdAt: program.createdAt,
+            updatedAt: program.updatedAt,
+        };
     }
 
-    async create(data: { name: string; description?: string; audioIds: string[] }, currentUser: any) {
+    async create(data: { name: string; description?: string; audioItems?: AudioItemDto[] }, currentUser: any) {
         if (currentUser.role === 'ATHLETE') throw new ForbiddenException('Athletes cannot create programs');
-
-        const audios = data.audioIds?.length ? await this.audioRepo.find({ where: { id: In(data.audioIds) } }) : [];
 
         const program = this.programRepo.create({
             name: data.name,
             description: data.description,
             createdById: currentUser.id,
-            audios,
         });
-
         const saved = await this.programRepo.save(program);
-        return this.mapProgramAudios(saved, currentUser.id);
+
+        if (data.audioItems?.length) {
+            const entities = data.audioItems.map(item =>
+                this.programAudioRepo.create({
+                    programId: saved.id,
+                    audioId: item.audioId,
+                    order: item.order,
+                    requiredListens: item.requiredListens || 1,
+                })
+            );
+            await this.programAudioRepo.save(entities);
+        }
+
+        const full = await this.programRepo.findOne({
+            where: { id: saved.id },
+            relations: ['programAudios', 'programAudios.audio', 'createdBy'],
+        });
+        return this.mapProgram(full!, currentUser.id);
     }
 
     async findAll(currentUser: any) {
         let programs: Program[] = [];
+        const relations = ['programAudios', 'programAudios.audio', 'createdBy'];
+
         if (currentUser.role === 'ADMIN') {
-            programs = await this.programRepo.find({ relations: ['audios', 'createdBy'] });
+            programs = await this.programRepo.find({ relations });
         } else {
             const shared = await this.shareRepo.find({ where: { userId: currentUser.id }, select: ['programId'] });
             const sharedIds = shared.map(s => s.programId);
 
             if (currentUser.role === 'TEACHER') {
-                programs = await this.programRepo.find({
-                    where: [{ createdById: currentUser.id }, { id: In(sharedIds) }],
-                    relations: ['audios', 'createdBy']
-                });
+                const where: any[] = [{ createdById: currentUser.id }];
+                if (sharedIds.length > 0) where.push({ id: In(sharedIds) });
+                programs = await this.programRepo.find({ where, relations });
             } else {
                 if (sharedIds.length > 0) {
                     programs = await this.programRepo.find({
                         where: { id: In(sharedIds) },
-                        relations: ['audios']
+                        relations,
                     });
                 }
             }
         }
-        return Promise.all(programs.map(p => this.mapProgramAudios(p, currentUser.id)));
+        return Promise.all(programs.map(p => this.mapProgram(p, currentUser.id)));
     }
 
     async findOne(id: string, currentUser: any) {
         const program = await this.programRepo.findOne({
             where: { id },
-            relations: ['audios', 'createdBy']
+            relations: ['programAudios', 'programAudios.audio', 'createdBy'],
         });
         if (!program) throw new NotFoundException('Program not found');
-        return this.mapProgramAudios(program, currentUser.id);
+        return this.mapProgram(program, currentUser.id);
     }
 
-    async update(id: string, data: { name?: string; description?: string; audioIds?: string[] }, currentUser: any) {
-        const program = await this.programRepo.findOne({ where: { id }, relations: ['audios'] });
+    async update(id: string, data: { name?: string; description?: string; audioItems?: AudioItemDto[] }, currentUser: any) {
+        const program = await this.programRepo.findOne({ where: { id }, relations: ['programAudios'] });
         if (!program) throw new NotFoundException('Program not found');
 
         if (currentUser.role === 'TEACHER' && program.createdById !== currentUser.id) {
@@ -98,13 +158,28 @@ export class ProgramsService {
 
         if (data.name) program.name = data.name;
         if (data.description !== undefined) program.description = data.description;
-        
-        if (data.audioIds) {
-            program.audios = await this.audioRepo.find({ where: { id: In(data.audioIds) } });
+        await this.programRepo.save(program);
+
+        if (data.audioItems) {
+            await this.programAudioRepo.delete({ programId: id });
+            if (data.audioItems.length > 0) {
+                const entities = data.audioItems.map(item =>
+                    this.programAudioRepo.create({
+                        programId: id,
+                        audioId: item.audioId,
+                        order: item.order,
+                        requiredListens: item.requiredListens || 1,
+                    })
+                );
+                await this.programAudioRepo.save(entities);
+            }
         }
 
-        const saved = await this.programRepo.save(program);
-        return this.mapProgramAudios(saved, currentUser.id);
+        const full = await this.programRepo.findOne({
+            where: { id },
+            relations: ['programAudios', 'programAudios.audio', 'createdBy'],
+        });
+        return this.mapProgram(full!, currentUser.id);
     }
 
     async remove(id: string, currentUser: any) {
@@ -116,6 +191,7 @@ export class ProgramsService {
         }
 
         await this.shareRepo.delete({ programId: id });
+        await this.programAudioRepo.delete({ programId: id });
         await this.programRepo.delete(id);
         return { success: true };
     }
@@ -131,7 +207,7 @@ export class ProgramsService {
             if (targetUser.createdById !== currentUser.id) {
                 throw new ForbiddenException('You can only share with your own athletes');
             }
-            const hasAccess = program.createdById === currentUser.id || 
+            const hasAccess = program.createdById === currentUser.id ||
                 await this.shareRepo.findOne({ where: { programId, userId: currentUser.id }});
             if (!hasAccess) throw new ForbiddenException('You do not have access to this program');
         }
@@ -154,7 +230,7 @@ export class ProgramsService {
 
     async removeShare(programId: string, userId: string, currentUser: any) {
         if (currentUser.role === 'ATHLETE') throw new ForbiddenException();
-        
+
         if (currentUser.role === 'TEACHER') {
             const share = await this.shareRepo.findOne({ where: { programId, userId }, relations: ['user'] });
             if (!share || share.user.createdById !== currentUser.id) {

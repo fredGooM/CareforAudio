@@ -51,10 +51,10 @@ export class AudiosService {
         if (sharedProgramIds.length > 0) {
             const programsWithAudios = await this.programRepo.find({
                 where: { id: In(sharedProgramIds) },
-                relations: ['audios'],
+                relations: ['programAudios'],
             });
             programsWithAudios.forEach(p => {
-                p.audios?.forEach(a => programAudioIds.push(a.id));
+                p.programAudios?.forEach(pa => programAudioIds.push(pa.audioId));
             });
         }
 

@@ -59,13 +59,19 @@ export interface Group {
     name: string;
 }
 
+export interface ProgramAudioItem extends AudioTrack {
+    order: number;
+    requiredListens: number;
+}
+
 export interface Program {
     id: string;
     name: string;
     description?: string;
     createdById?: string;
     createdBy?: UserProfile;
-    audios?: AudioTrack[];
+    audios?: ProgramAudioItem[];
+    completionPercent?: number;
     createdAt: string;
     updatedAt: string;
 }

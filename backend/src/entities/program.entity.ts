@@ -5,12 +5,11 @@ import {
     CreateDateColumn,
     UpdateDateColumn,
     ManyToOne,
-    ManyToMany,
-    JoinTable,
+    OneToMany,
     JoinColumn
 } from 'typeorm';
 import { User } from './user.entity';
-import { AudioTrack } from './audio-track.entity';
+import { ProgramAudio } from './program-audio.entity';
 
 @Entity('programs')
 export class Program {
@@ -30,9 +29,8 @@ export class Program {
     @JoinColumn({ name: 'createdById' })
     createdBy: User;
 
-    @ManyToMany(() => AudioTrack)
-    @JoinTable({ name: 'program_audios' })
-    audios: AudioTrack[];
+    @OneToMany(() => ProgramAudio, (pa) => pa.program, { cascade: true })
+    programAudios: ProgramAudio[];
 
     @CreateDateColumn()
     createdAt: Date;

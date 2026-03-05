@@ -8,5 +8,6 @@ export { UserProgress } from './user-progress.entity';
 export { AudioLog } from './audio-log.entity';
 export { AppConfig } from './app-config.entity';
 export { Program } from './program.entity';
+export { ProgramAudio } from './program-audio.entity';
 export { ProgramShare } from './program-share.entity';
 export { CalendarEvent, EventType } from './event.entity';

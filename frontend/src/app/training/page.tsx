@@ -11,9 +11,10 @@ interface ProgramAudio {
     id: string;
     title: string;
     duration: number;
-    categoryId: string;
     type: string;
     listenCount?: number;
+    requiredListens?: number;
+    order?: number;
     url: string;
     coverUrl?: string;
 }
@@ -23,6 +24,7 @@ interface ProgramDTO {
     name: string;
     description: string;
     audios: ProgramAudio[];
+    completionPercent?: number;
 }
 
 export default function TrainingPage() {
@@ -113,13 +115,26 @@ export default function TrainingPage() {
                                             <PlayCircle size={24} className="text-primary" style={{ flexShrink: 0 }} />
                                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{prog.name}</span>
                                         </h2>
-                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', gap: '0.5rem 1rem' }}>
+                                        <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 1rem' }}>
                                             <span>{prog.audios?.length || 0} audios</span>
                                             {prog.description && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>• {prog.description}</span>}
                                         </div>
                                     </div>
-                                    <div style={{ color: 'var(--text-muted)', flexShrink: 0 }}>
-                                        {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                            <div style={{ width: '50px', height: '6px', borderRadius: '3px', background: 'var(--border)', overflow: 'hidden' }}>
+                                                <div style={{
+                                                    width: `${prog.completionPercent || 0}%`, height: '100%', borderRadius: '3px',
+                                                    background: (prog.completionPercent || 0) === 100 ? 'var(--success)' : 'var(--primary)',
+                                                }} />
+                                            </div>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 600, color: (prog.completionPercent || 0) === 100 ? 'var(--success)' : 'var(--text-muted)' }}>
+                                                {prog.completionPercent || 0}%
+                                            </span>
+                                        </div>
+                                        <div style={{ color: 'var(--text-muted)' }}>
+                                            {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+                                        </div>
                                     </div>
                                 </div>
                                 
@@ -129,7 +144,7 @@ export default function TrainingPage() {
                                             <p className="text-muted" style={{ marginTop: '1.25rem' }}>Aucun audio dans ce programme.</p>
                                         ) : (
                                             <div className="training-list" style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                                {prog.audios.map((audio) => (
+                                                {prog.audios.map((audio, idx) => (
                                                     <div 
                                                         key={audio.id} 
                                                         className={`training-item${currentAudio?.id === audio.id ? ' playing' : ''}`}
@@ -148,6 +163,9 @@ export default function TrainingPage() {
                                                         }}
                                                     >
                                                         <div className="training-info" style={{ display: 'flex', alignItems: 'center', gap: '1rem', flex: 1, minWidth: 0 }}>
+                                                            <span style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-muted)', minWidth: '1.5rem', textAlign: 'center', flexShrink: 0 }}>
+                                                                {(audio.order ?? idx) + 1}
+                                                            </span>
                                                             {audio.coverUrl && (
                                                                 <img src={audio.coverUrl} alt={audio.title} style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px', flexShrink: 0 }} />
                                                             )}
@@ -157,7 +175,12 @@ export default function TrainingPage() {
                                                             </div>
                                                         </div>
                                                         <div className="training-stats" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
-                                                            <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{audio.listenCount || 0} écoutes</span>
+                                                            <span style={{
+                                                                fontSize: '0.8rem', fontWeight: 600,
+                                                                color: (audio.listenCount || 0) >= (audio.requiredListens || 1) ? 'var(--success)' : 'var(--text-muted)',
+                                                            }}>
+                                                                {audio.listenCount || 0}/{audio.requiredListens || 1} écoutes
+                                                            </span>
                                                             <button
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
