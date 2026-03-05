@@ -6,19 +6,14 @@ import { Edit, KeyRound, Mail, Check, X, Calendar as CalendarIcon, Activity } fr
 import Link from 'next/link';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import type { UserProfile, Group } from '@/types';
-
-interface UserDTO extends UserProfile {
-    groupIds: string[];
-}
+import type { UserProfile } from '@/types';
 
 export default function AdminUsersPage() {
     const { data: session } = useSession();
-    const [users, setUsers] = useState<UserDTO[]>([]);
-    const [groups, setGroups] = useState<Group[]>([]);
+    const [users, setUsers] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [showCreate, setShowCreate] = useState(false);
-    const [editingUser, setEditingUser] = useState<UserDTO | null>(null);
+    const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
     const [actionMsg, setActionMsg] = useState('');
 
     const emptyForm = {
@@ -26,7 +21,6 @@ export default function AdminUsersPage() {
         firstName: '',
         lastName: '',
         role: 'ATHLETE',
-        groupIds: [] as string[],
         predominanceAnalytique: 0,
         predominanceAffectif: 0,
         predominanceInstinctif: 0,
@@ -36,18 +30,14 @@ export default function AdminUsersPage() {
     useEffect(() => {
         if (!session) return;
         apiClient.setToken((session as any).accessToken);
-        Promise.all([
-            apiClient.get<UserDTO[]>('/users'),
-            apiClient.get<Group[]>('/groups'),
-        ]).then(([u, g]) => {
+        apiClient.get<UserProfile[]>('/users').then((u) => {
             setUsers(u);
-            setGroups(g);
             setLoading(false);
         }).catch(() => setLoading(false));
     }, [session]);
 
     const reload = async () => {
-        const u = await apiClient.get<UserDTO[]>('/users');
+        const u = await apiClient.get<UserProfile[]>('/users');
         setUsers(u);
     };
 
@@ -65,14 +55,13 @@ export default function AdminUsersPage() {
     };
 
     /* ── Edit ── */
-    const openEdit = (user: UserDTO) => {
+    const openEdit = (user: UserProfile) => {
         setEditingUser(user);
         setForm({
             email: user.email,
             firstName: user.firstName,
             lastName: user.lastName,
             role: user.role,
-            groupIds: user.groupIds || [],
             predominanceAnalytique: (user as any).predominanceAnalytique || 0,
             predominanceAffectif: (user as any).predominanceAffectif || 0,
             predominanceInstinctif: (user as any).predominanceInstinctif || 0,
@@ -88,7 +77,6 @@ export default function AdminUsersPage() {
                 firstName: form.firstName,
                 lastName: form.lastName,
                 role: form.role,
-                groupIds: form.groupIds,
                 predominanceAnalytique: form.predominanceAnalytique,
                 predominanceAffectif: form.predominanceAffectif,
                 predominanceInstinctif: form.predominanceInstinctif,
@@ -123,7 +111,7 @@ export default function AdminUsersPage() {
         }
     };
 
-    const toggleActive = async (user: UserDTO) => {
+    const toggleActive = async (user: UserProfile) => {
         await apiClient.put(`/users/${user.id}`, { isActive: !user.isActive });
         await reload();
     };
@@ -131,15 +119,6 @@ export default function AdminUsersPage() {
     const showMsg = (msg: string) => {
         setActionMsg(msg);
         setTimeout(() => setActionMsg(''), 4000);
-    };
-
-    const toggleGroup = (gid: string) => {
-        setForm((f) => ({
-            ...f,
-            groupIds: f.groupIds.includes(gid)
-                ? f.groupIds.filter((id) => id !== gid)
-                : [...f.groupIds, gid],
-        }));
     };
 
     if (loading) return <Loader />;
@@ -213,22 +192,6 @@ export default function AdminUsersPage() {
                             </div>
                         </>
                     )}
-                    <div className="form-group">
-                        <label>Groupes</label>
-                        <div className="checkbox-group">
-                            {groups.map((g) => (
-                                <label key={g.id} className="checkbox-label">
-                                    <input
-                                        type="checkbox"
-                                        checked={form.groupIds.includes(g.id)}
-                                        onChange={() => toggleGroup(g.id)}
-                                    />
-                                    {g.name}
-                                </label>
-                            ))}
-                            {groups.length === 0 && <span className="text-muted">Aucun groupe créé</span>}
-                        </div>
-                    </div>
                     <div className="form-actions">
                         <button type="submit" className="btn-primary">{isEditing ? 'Enregistrer' : 'Créer'}</button>
                         <button type="button" className="btn-secondary" onClick={isEditing ? cancelEdit : () => setShowCreate(false)}>Annuler</button>
@@ -244,7 +207,6 @@ export default function AdminUsersPage() {
                             <th>Nom</th>
                             <th>Email</th>
                             <th>Rôle</th>
-                            <th>Groupes</th>
                             <th>Actif</th>
                             <th>Actions</th>
                         </tr>
@@ -255,15 +217,6 @@ export default function AdminUsersPage() {
                                 <td>{user.firstName} {user.lastName}</td>
                                 <td>{user.email}</td>
                                 <td>{user.role === 'ADMIN' ? 'Admin' : user.role === 'TEACHER' ? 'Professeur' : 'Athlète'}</td>
-                                <td>
-                                    {user.groupIds?.length
-                                        ? user.groupIds.map((gid) => {
-                                            const g = groups.find((gr) => gr.id === gid);
-                                            return g ? g.name : gid;
-                                        }).join(', ')
-                                        : '—'
-                                    }
-                                </td>
                                 <td>
                                     <button className="btn-toggle" onClick={() => toggleActive(user)} title={user.isActive ? 'Désactiver' : 'Activer'}>
                                         {user.isActive ? (
