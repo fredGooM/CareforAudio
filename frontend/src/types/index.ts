@@ -140,3 +140,43 @@ export interface CalendarEvent {
     createdAt?: string;
     updatedAt?: string;
 }
+
+export enum StateType {
+    GENERAL = 'GENERAL',
+    SLEEP = 'SLEEP',
+    POST_COMPETITION = 'POST_COMPETITION',
+}
+
+export const STATE_TYPE_LABELS: Record<StateType, string> = {
+    [StateType.GENERAL]: 'État général',
+    [StateType.SLEEP]: 'Sommeil',
+    [StateType.POST_COMPETITION]: 'Après compétition',
+};
+
+export const STATE_FIELD_LABELS: Record<StateType, Record<string, string>> = {
+    [StateType.GENERAL]: {
+        repose: 'Reposé',
+        physiquementDetendu: 'Physiquement détendu',
+        confiantSerein: 'Confiant / Serein',
+        mentalementDetendu: 'Mentalement détendu',
+    },
+    [StateType.SLEEP]: {
+        endormissement: "Je m'endors facilement",
+        dormirDunTrait: "Je dors d'un trait",
+        reveilRepose: 'Je me réveille reposé',
+    },
+    [StateType.POST_COMPETITION]: {
+        plaisirConfiance: 'Plaisir / Confiance',
+        etatEmotionnel: 'État émotionnel',
+        etatPhysique: 'État physique',
+        pensees: 'Mes pensées',
+    },
+};
+
+export interface UserStateEntry {
+    id: string;
+    userId: string;
+    type: StateType;
+    data: Record<string, number>;
+    createdAt: string;
+}

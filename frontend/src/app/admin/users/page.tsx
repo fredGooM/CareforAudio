@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState, FormEvent } from 'react';
-import { Edit, KeyRound, Mail, Check, X, Calendar as CalendarIcon } from 'lucide-react';
+import { Edit, KeyRound, Mail, Check, X, Calendar as CalendarIcon, Activity } from 'lucide-react';
 import Link from 'next/link';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
@@ -287,6 +287,11 @@ export default function AdminUsersPage() {
                                         <Link href={`/admin/calendar/${user.id}`} className="btn-secondary" title="Gérer le calendrier" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <CalendarIcon size={16} />
                                         </Link>
+                                        {user.role === 'ATHLETE' && (
+                                            <Link href={`/admin/users/${user.id}/states`} className="btn-secondary" title="Voir les états" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                                <Activity size={16} />
+                                            </Link>
+                                        )}
                                     </div>
                                 </td>
                             </tr>

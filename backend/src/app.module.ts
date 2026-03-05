@@ -10,6 +10,7 @@ import { StorageModule } from './storage/storage.module';
 import { EmailModule } from './email/email.module';
 import { ProgramsModule } from './programs/programs.module';
 import { EventsModule } from './events/events.module';
+import { UserStatesModule } from './user-states/user-states.module';
 import {
   User,
   Group,
@@ -24,6 +25,7 @@ import {
   ProgramAudio,
   ProgramShare,
   CalendarEvent,
+  UserState,
 } from './entities';
 
 @Module({
@@ -53,6 +55,7 @@ import {
           ProgramAudio,
           ProgramShare,
           CalendarEvent,
+          UserState,
         ],
         synchronize: true, // Dev only — use migrations in production
       }),
@@ -66,6 +69,7 @@ import {
     ProgramsModule,
     AnalyticsModule,
     EventsModule,
+    UserStatesModule,
   ],
 })
 export class AppModule { }

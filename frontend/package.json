@@ -21,6 +21,7 @@
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-h5-audio-player": "^3.10.1",
+    "recharts": "^3.7.0",
     "temporal-polyfill": "^0.3.0",
     "webm-duration-fix": "^1.0.4"
   },
