@@ -107,12 +107,27 @@ export interface DashboardAdmin {
 
 export type Dashboard = DashboardUser | DashboardAdmin;
 
+export enum EventType {
+    EVENEMENT = 'EVENEMENT',
+    COMPETITION = 'COMPETITION',
+    RDV_LIVE_COACH = 'RDV_LIVE_COACH',
+    RDV_TRAINING = 'RDV_TRAINING',
+}
+
+export const EVENT_TYPE_LABELS: Record<EventType, string> = {
+    [EventType.EVENEMENT]: 'Événement',
+    [EventType.COMPETITION]: 'Compétition',
+    [EventType.RDV_LIVE_COACH]: 'Rendez-vous live coach',
+    [EventType.RDV_TRAINING]: 'Rendez-vous training',
+};
+
 export interface CalendarEvent {
     id: string;
     title: string;
     description?: string;
     date: string;
-    type?: string;
+    type?: EventType;
+    duration?: number;
     userId: string;
     user?: UserProfile;
     createdById?: string;

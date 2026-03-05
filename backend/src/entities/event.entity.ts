@@ -9,6 +9,13 @@ import {
 } from 'typeorm';
 import { User } from './user.entity';
 
+export enum EventType {
+  EVENEMENT = 'EVENEMENT',
+  COMPETITION = 'COMPETITION',
+  RDV_LIVE_COACH = 'RDV_LIVE_COACH',
+  RDV_TRAINING = 'RDV_TRAINING',
+}
+
 @Entity('events')
 export class CalendarEvent {
   @PrimaryGeneratedColumn('uuid')
@@ -23,8 +30,11 @@ export class CalendarEvent {
   @Column({ type: 'timestamp' })
   date: Date;
 
-  @Column({ nullable: true })
-  type: string; // e.g., 'TRAINING', 'REHAB', 'MEETING', etc.
+  @Column({ type: 'enum', enum: EventType, default: EventType.EVENEMENT })
+  type: EventType;
+
+  @Column({ type: 'int', default: 60 })
+  duration: number;
 
   @Column()
   userId: string; // The athlete for whom the event is scheduled

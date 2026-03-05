@@ -9,4 +9,4 @@ export { AudioLog } from './audio-log.entity';
 export { AppConfig } from './app-config.entity';
 export { Program } from './program.entity';
 export { ProgramShare } from './program-share.entity';
-export { CalendarEvent } from './event.entity';
+export { CalendarEvent, EventType } from './event.entity';

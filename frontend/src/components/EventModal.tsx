@@ -3,6 +3,7 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { X, Edit3, Trash2, Clock, Tag, FileText, User, Save } from 'lucide-react';
 import type { CalendarEvent } from '@/types';
+import { EventType, EVENT_TYPE_LABELS } from '@/types';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -17,7 +18,7 @@ interface EventModalProps {
 
 export default function EventModal({ event, isOpen, onClose, isTeacher, onUpdate, onDelete }: EventModalProps) {
     const [isEditing, setIsEditing] = useState(false);
-    const [form, setForm] = useState({ title: '', description: '', date: '', type: '' });
+    const [form, setForm] = useState({ title: '', description: '', date: '', type: EventType.EVENEMENT as string, duration: 60 });
     const [saving, setSaving] = useState(false);
 
     useEffect(() => {
@@ -26,7 +27,8 @@ export default function EventModal({ event, isOpen, onClose, isTeacher, onUpdate
                 title: event.title || '',
                 description: event.description || '',
                 date: event.date ? format(new Date(event.date), "yyyy-MM-dd'T'HH:mm") : '',
-                type: event.type || '',
+                type: event.type || EventType.EVENEMENT,
+                duration: event.duration ?? 60,
             });
         }
         setIsEditing(false);
@@ -43,7 +45,8 @@ export default function EventModal({ event, isOpen, onClose, isTeacher, onUpdate
                 title: form.title,
                 description: form.description,
                 date: new Date(form.date).toISOString(),
-                type: form.type,
+                type: form.type as EventType,
+                duration: Number(form.duration),
             });
             setIsEditing(false);
         } catch (err: any) {
@@ -122,13 +125,29 @@ export default function EventModal({ event, isOpen, onClose, isTeacher, onUpdate
                                 required
                             />
                         </div>
-                        <div className="form-group">
-                            <label>Type</label>
-                            <input
-                                value={form.type}
-                                onChange={e => setForm({ ...form, type: e.target.value })}
-                                placeholder="ex: Rendez-vous, Entraînement..."
-                            />
+                        <div className="form-row">
+                            <div className="form-group">
+                                <label>Type</label>
+                                <select
+                                    value={form.type}
+                                    onChange={e => setForm({ ...form, type: e.target.value })}
+                                >
+                                    {Object.values(EventType).map(t => (
+                                        <option key={t} value={t}>{EVENT_TYPE_LABELS[t]}</option>
+                                    ))}
+                                </select>
+                            </div>
+                            <div className="form-group">
+                                <label>Durée (min)</label>
+                                <input
+                                    type="number"
+                                    min={5}
+                                    step={5}
+                                    value={form.duration}
+                                    onChange={e => setForm({ ...form, duration: Number(e.target.value) })}
+                                    required
+                                />
+                            </div>
                         </div>
                         <div className="form-group">
                             <label>Description</label>
@@ -164,7 +183,18 @@ export default function EventModal({ event, isOpen, onClose, isTeacher, onUpdate
                                 <Tag size={16} className="event-modal-detail-icon" />
                                 <div>
                                     <span className="event-modal-detail-label">Type</span>
-                                    <span className="event-modal-detail-value">{event.type}</span>
+                                    <span className="event-modal-detail-value">
+                                        {EVENT_TYPE_LABELS[event.type as EventType] || event.type}
+                                    </span>
+                                </div>
+                            </div>
+                        )}
+                        {event.duration && (
+                            <div className="event-modal-detail-row">
+                                <Clock size={16} className="event-modal-detail-icon" />
+                                <div>
+                                    <span className="event-modal-detail-label">Durée</span>
+                                    <span className="event-modal-detail-value">{event.duration} min</span>
                                 </div>
                             </div>
                         )}

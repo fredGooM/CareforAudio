@@ -85,7 +85,8 @@ export default function AdminGlobalCalendarPage() {
 
             setEvents(evData.map(ev => {
                 const start = new Date(ev.date);
-                const end = new Date(start.getTime() + 60 * 60 * 1000);
+                const durationMs = (ev.duration ?? 60) * 60 * 1000;
+                const end = new Date(start.getTime() + durationMs);
                 const athleteName = ev.user ? `${ev.user.firstName} ${ev.user.lastName}` : '';
                 return {
                     id: ev.id,
@@ -127,7 +128,7 @@ export default function AdminGlobalCalendarPage() {
         await loadData();
     };
 
-    const handleCreateEvent = async (data: { title: string; description: string; date: string; type: string; userId: string }) => {
+    const handleCreateEvent = async (data: { title: string; description: string; date: string; type: string; duration: number; userId: string }) => {
         await apiClient.post('/events', data);
         await loadData();
     };

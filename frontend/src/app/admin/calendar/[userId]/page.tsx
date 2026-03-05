@@ -7,6 +7,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import type { CalendarEvent, UserProfile } from '@/types';
+import { EventType, EVENT_TYPE_LABELS } from '@/types';
 import Link from 'next/link';
 import AppCalendar, { type SxEvent } from '@/components/AppCalendar';
 import EventModal from '@/components/EventModal';
@@ -40,7 +41,8 @@ export default function AdminUserCalendarPage({ params }: { params: Promise<{ us
             setUser(u);
             setCalendarEvents(evs.map(ev => {
                 const start = new Date(ev.date);
-                const end = new Date(start.getTime() + 60 * 60 * 1000);
+                const durationMs = (ev.duration ?? 60) * 60 * 1000;
+                const end = new Date(start.getTime() + durationMs);
                 return {
                     id: ev.id,
                     title: ev.title + (ev.type ? ` (${ev.type})` : ''),
@@ -83,7 +85,7 @@ export default function AdminUserCalendarPage({ params }: { params: Promise<{ us
         await loadData();
     };
 
-    const handleCreateEvent = async (data: { title: string; description: string; date: string; type: string; userId: string }) => {
+    const handleCreateEvent = async (data: { title: string; description: string; date: string; type: string; duration: number; userId: string }) => {
         await apiClient.post('/events', data);
         await loadData();
     };
@@ -129,7 +131,7 @@ export default function AdminUserCalendarPage({ params }: { params: Promise<{ us
                                         <strong>{ev.title}</strong>
                                         {ev.description && <div className="text-muted" style={{ fontSize: '0.85rem' }}>{ev.description}</div>}
                                     </td>
-                                    <td>{ev.type || '-'}</td>
+                                    <td>{ev.type ? (EVENT_TYPE_LABELS[ev.type as EventType] || ev.type) : '-'}</td>
                                     <td>
                                         <button className="btn-secondary" onClick={() => handleDeleteEvent(ev.id)} title="Supprimer">
                                             <Trash2 size={16} className="text-danger" />

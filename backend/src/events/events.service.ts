@@ -1,13 +1,14 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CalendarEvent, User } from '../entities';
+import { CalendarEvent, User, EventType } from '../entities';
 
 export class CreateEventDto {
   title: string;
   description?: string;
   date: Date;
-  type?: string;
+  type?: EventType;
+  duration?: number;
   userId: string;
 }
 
@@ -15,7 +16,8 @@ export class UpdateEventDto {
   title?: string;
   description?: string;
   date?: Date;
-  type?: string;
+  type?: EventType;
+  duration?: number;
 }
 
 @Injectable()

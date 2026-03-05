@@ -3,13 +3,14 @@
 import { useState, FormEvent, useEffect } from 'react';
 import { X, Plus, Calendar, User } from 'lucide-react';
 import type { UserProfile } from '@/types';
+import { EventType, EVENT_TYPE_LABELS } from '@/types';
 import { format } from 'date-fns';
 
 interface QuickCreateModalProps {
     isOpen: boolean;
     onClose: () => void;
     athletes: UserProfile[];
-    onSubmit: (data: { title: string; description: string; date: string; type: string; userId: string }) => Promise<void>;
+    onSubmit: (data: { title: string; description: string; date: string; type: string; duration: number; userId: string }) => Promise<void>;
     preselectedDate?: Date | null;
     preselectedUserId?: string | null;
 }
@@ -26,29 +27,30 @@ export default function QuickCreateModal({
         title: '',
         description: '',
         date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : '',
-        type: '',
+        type: EventType.EVENEMENT as string,
+        duration: 60,
         userId: preselectedUserId || '',
     });
     const [saving, setSaving] = useState(false);
 
-    // Reset form when modal opens with new preselected values
     useEffect(() => {
         setForm({
             title: '',
             description: '',
             date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : '',
-            type: '',
+            type: EventType.EVENEMENT,
+            duration: 60,
             userId: preselectedUserId || '',
         });
     }, [isOpen, preselectedDate, preselectedUserId]);
 
-    // Reset form when modal opens with new preselected values
     const resetForm = () => {
         setForm({
             title: '',
             description: '',
             date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : '',
-            type: '',
+            type: EventType.EVENEMENT,
+            duration: 60,
             userId: preselectedUserId || '',
         });
     };
@@ -64,6 +66,7 @@ export default function QuickCreateModal({
             await onSubmit({
                 ...form,
                 date: new Date(form.date).toISOString(),
+                duration: Number(form.duration),
             });
             resetForm();
             onClose();
@@ -135,13 +138,27 @@ export default function QuickCreateModal({
                             />
                         </div>
                         <div className="form-group">
-                            <label>Type</label>
+                            <label>Durée (min)</label>
                             <input
-                                value={form.type}
-                                onChange={e => setForm({ ...form, type: e.target.value })}
-                                placeholder="ex: Rendez-vous"
+                                type="number"
+                                min={5}
+                                step={5}
+                                value={form.duration}
+                                onChange={e => setForm({ ...form, duration: Number(e.target.value) })}
+                                required
                             />
                         </div>
+                    </div>
+                    <div className="form-group">
+                        <label>Type</label>
+                        <select
+                            value={form.type}
+                            onChange={e => setForm({ ...form, type: e.target.value })}
+                        >
+                            {Object.values(EventType).map(t => (
+                                <option key={t} value={t}>{EVENT_TYPE_LABELS[t]}</option>
+                            ))}
+                        </select>
                     </div>
                     <div className="form-group">
                         <label>Description</label>
