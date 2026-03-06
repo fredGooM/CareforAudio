@@ -26,7 +26,7 @@ import {
   ProgramShare,
   CalendarEvent,
   UserState,
-  ProgramUserProgress,
+  AudioListenRecord,
 } from './entities';
 
 @Module({
@@ -57,7 +57,7 @@ import {
           ProgramShare,
           CalendarEvent,
           UserState,
-          ProgramUserProgress,
+          AudioListenRecord,
         ],
         synchronize: true, // Dev only — use migrations in production
       }),

@@ -7,8 +7,6 @@ import Loader from '@/components/Loader';
 import { CalendarHeart, CalendarDays, Clock, ArrowRight, BarChart2, AlertTriangle } from 'lucide-react';
 import type { Dashboard, DashboardUser, DashboardAdmin, Program, CalendarEvent } from '@/types';
 import Link from 'next/link';
-import UserProgramsPanel from '@/components/UserProgramsPanel';
-import UserStatesPanel from '@/components/UserStatesPanel';
 import TeacherDashboard from '@/components/TeacherDashboard';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
@@ -241,7 +239,7 @@ export default function DashboardPage() {
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} interval={4} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} unit="m" axisLine={false} tickLine={false} />
                                 <Tooltip formatter={(v: number) => [`${v} min`, 'Écoute']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem' }} cursor={{ fill: 'rgba(124,92,252,0.06)' }} />
-                                <Bar dataKey="minutes" fill="var(--primary)" radius={[3, 3, 0, 0]} maxBarSize={18} />
+                                <Bar dataKey="minutes" fill="var(--primary)" radius={[3, 3, 0, 0]} maxBarSize={18} minPointSize={3} />
                             </BarChart>
                         </ResponsiveContainer>
                     )}

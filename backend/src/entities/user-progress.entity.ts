@@ -31,14 +31,8 @@ export class UserProgress {
     @Column({ default: false })
     isFavorite: boolean;
 
-    @Column({ default: false })
-    isMyProgram: boolean;
-
     @Column({ default: 0 })
     timesListened: number;
-
-    @Column({ default: 1 })
-    timesToListened: number;
 
     @UpdateDateColumn()
     updatedAt: Date;

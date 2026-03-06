@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp, PlayCircle, Heart } from 'lucide-react';
+import { ChevronDown, ChevronUp, PlayCircle, Heart, RefreshCw } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import AudioPlayer from '@/components/AudioPlayer';
@@ -23,6 +23,7 @@ interface ProgramDTO {
     id: string;
     name: string;
     description: string;
+    recurrenceDays?: number | null;
     audios: ProgramAudio[];
     completionPercent?: number;
 }
@@ -142,6 +143,12 @@ export default function TrainingPage() {
                                         <div style={{ color: 'var(--text-muted)', fontSize: '0.85rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.5rem 1rem' }}>
                                             <span>{prog.audios?.length || 0} audios</span>
                                             {prog.description && <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>• {prog.description}</span>}
+                                            {prog.recurrenceDays && (
+                                                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem', background: 'rgba(124,92,252,0.12)', color: 'var(--primary)', borderRadius: '6px', padding: '0.1rem 0.5rem', fontSize: '0.75rem', fontWeight: 500, flexShrink: 0 }}>
+                                                    <RefreshCw size={11} />
+                                                    {prog.recurrenceDays % 30 === 0 ? `/${prog.recurrenceDays / 30} mois` : prog.recurrenceDays % 7 === 0 ? `/${prog.recurrenceDays / 7} sem.` : `/${prog.recurrenceDays}j`}
+                                                </span>
+                                            )}
                                         </div>
                                     </div>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexShrink: 0 }}>

@@ -6,7 +6,6 @@ export interface UserProfile {
     role: 'ADMIN' | 'TEACHER' | 'ATHLETE';
     isActive: boolean;
     mustChangePassword: boolean;
-    groupIds: string[];
     avatar?: string;
     createdById?: string;
 }
@@ -68,6 +67,7 @@ export interface Program {
     id: string;
     name: string;
     description?: string;
+    recurrenceDays?: number | null;
     createdById?: string;
     createdBy?: UserProfile;
     audios?: ProgramAudioItem[];
@@ -92,10 +92,7 @@ export interface DashboardUser {
     totalMinutes: number;
     last7DaysMinutes: number;
     completionPercent: number;
-    streakDays: number;
     completedCount: number;
-    categoryProgress: { categoryId: string; percent: number }[];
-    myProgramProgress: { percent: number; total: number; completed: number };
     continueListening: { audioId: string; title: string; progressPercent: number }[];
     lastListenedAt: string | null;
 }

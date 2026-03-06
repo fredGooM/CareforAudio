@@ -12,4 +12,4 @@ export { ProgramAudio } from './program-audio.entity';
 export { ProgramShare } from './program-share.entity';
 export { CalendarEvent, EventType } from './event.entity';
 export { UserState, StateType } from './user-state.entity';
-export { ProgramUserProgress } from './program-user-progress.entity';
+export { AudioListenRecord } from './audio-listen-record.entity';

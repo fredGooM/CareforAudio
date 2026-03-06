@@ -22,6 +22,9 @@ export class Program {
     @Column({ nullable: true })
     description: string;
 
+    @Column({ nullable: true, type: 'int' })
+    recurrenceDays: number | null;
+
     @Column({ nullable: true })
     createdById: string;
 

@@ -27,8 +27,14 @@ export default function AdminProgramsPage() {
     const [editingProgram, setEditingProgram] = useState<Program | null>(null);
     const [sharingProgram, setSharingProgram] = useState<Program | null>(null);
 
-    const initialForm = { name: '', description: '', audioItems: [] as AudioItemForm[] };
+    const initialForm = { name: '', description: '', recurrenceDays: null as number | null, audioItems: [] as AudioItemForm[] };
     const [form, setForm] = useState(initialForm);
+    const [recurrenceEnabled, setRecurrenceEnabled] = useState(false);
+    const [recurrenceValue, setRecurrenceValue] = useState(1);
+    const [recurrenceUnit, setRecurrenceUnit] = useState<'days' | 'weeks' | 'months'>('weeks');
+
+    const unitMultiplier = { days: 1, weeks: 7, months: 30 };
+    const computedRecurrenceDays = recurrenceEnabled ? recurrenceValue * unitMultiplier[recurrenceUnit] : null;
     const [shareUserId, setShareUserId] = useState('');
 
     // Audio picker filters
@@ -73,6 +79,9 @@ export default function AdminProgramsPage() {
     const openCreate = () => {
         setEditingProgram(null);
         setForm(initialForm);
+        setRecurrenceEnabled(false);
+        setRecurrenceValue(1);
+        setRecurrenceUnit('weeks');
         resetPicker();
         setShowModal(true);
     };
@@ -80,9 +89,21 @@ export default function AdminProgramsPage() {
     const openEdit = (program: Program) => {
         setEditingProgram(program);
         resetPicker();
+        const days = program.recurrenceDays ?? null;
+        if (days) {
+            setRecurrenceEnabled(true);
+            if (days % 30 === 0) { setRecurrenceValue(days / 30); setRecurrenceUnit('months'); }
+            else if (days % 7 === 0) { setRecurrenceValue(days / 7); setRecurrenceUnit('weeks'); }
+            else { setRecurrenceValue(days); setRecurrenceUnit('days'); }
+        } else {
+            setRecurrenceEnabled(false);
+            setRecurrenceValue(1);
+            setRecurrenceUnit('weeks');
+        }
         setForm({
             name: program.name,
             description: program.description || '',
+            recurrenceDays: days,
             audioItems: (program.audios || []).map(a => ({
                 audioId: a.id,
                 order: a.order,
@@ -130,11 +151,12 @@ export default function AdminProgramsPage() {
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
+        const payload = { ...form, recurrenceDays: computedRecurrenceDays };
         try {
             if (editingProgram) {
-                await apiClient.put(`/programs/${editingProgram.id}`, form);
+                await apiClient.put(`/programs/${editingProgram.id}`, payload);
             } else {
-                await apiClient.post('/programs', form);
+                await apiClient.post('/programs', payload);
             }
             await fetchData();
             setShowModal(false);
@@ -224,6 +246,41 @@ export default function AdminProgramsPage() {
                             <div className="form-group">
                                 <label>Description</label>
                                 <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Détails du programme..." />
+                            </div>
+                            <div className="form-group">
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={recurrenceEnabled}
+                                        onChange={e => setRecurrenceEnabled(e.target.checked)}
+                                        style={{ width: 'auto', cursor: 'pointer' }}
+                                    />
+                                    Programme récurrent
+                                </label>
+                                {recurrenceEnabled && (
+                                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>Tous les</span>
+                                        <input
+                                            type="number"
+                                            min={1}
+                                            value={recurrenceValue}
+                                            onChange={e => setRecurrenceValue(Math.max(1, Number(e.target.value)))}
+                                            style={{ width: '70px' }}
+                                        />
+                                        <select
+                                            value={recurrenceUnit}
+                                            onChange={e => setRecurrenceUnit(e.target.value as 'days' | 'weeks' | 'months')}
+                                            style={{ flex: 1 }}
+                                        >
+                                            <option value="days">jour(s)</option>
+                                            <option value="weeks">semaine(s)</option>
+                                            <option value="months">mois</option>
+                                        </select>
+                                        <span style={{ color: 'var(--text-muted)', fontSize: '0.8rem', whiteSpace: 'nowrap' }}>
+                                            = {computedRecurrenceDays}j
+                                        </span>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Audio picker */}

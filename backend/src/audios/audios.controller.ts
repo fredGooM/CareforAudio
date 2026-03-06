@@ -6,7 +6,6 @@ import {
     Delete,
     Body,
     Param,
-    Query,
     UseGuards,
     UseInterceptors,
     UploadedFile,
@@ -14,7 +13,7 @@ import {
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
-import { AdminGuard, AdminOrTeacherGuard } from '../auth/roles.guard';
+import { AdminOrTeacherGuard } from '../auth/roles.guard';
 import { AudiosService } from './audios.service';
 import { memoryStorage } from 'multer';
 
@@ -45,30 +44,6 @@ export class AudiosController {
     @Get('favorites')
     getFavoriteAudios(@Request() req: any) {
         return this.audiosService.getFavoriteAudios(req.user.id, req.user.role);
-    }
-
-    @UseGuards(JwtAuthGuard)
-    @Get('my-program')
-    getMyProgram(@Request() req: any) {
-        return this.audiosService.getMyProgram(req.user.id);
-    }
-
-    @UseGuards(JwtAuthGuard, AdminGuard)
-    @Get('my-program/admin')
-    getMyProgramAdmin(@Query('userId') userId: string) {
-        return this.audiosService.getMyProgramAdmin(userId);
-    }
-
-    @UseGuards(JwtAuthGuard, AdminGuard)
-    @Post('my-program/admin')
-    setMyProgramAdmin(
-        @Body() body: { userId: string; audioId: string; isMyProgram: boolean },
-    ) {
-        return this.audiosService.setMyProgramAdmin(
-            body.userId,
-            body.audioId,
-            body.isMyProgram,
-        );
     }
 
     @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)

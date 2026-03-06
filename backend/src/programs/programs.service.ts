@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
-import { Program, ProgramAudio, ProgramShare, User, AudioTrack, UserProgress, ProgramUserProgress } from '../entities';
+import { Repository, In, MoreThanOrEqual } from 'typeorm';
+import { Program, ProgramAudio, ProgramShare, User, AudioTrack, UserProgress, AudioListenRecord } from '../entities';
 import { StorageService } from '../storage/storage.service';
 
 interface AudioItemDto {
@@ -19,7 +19,7 @@ export class ProgramsService {
         @InjectRepository(User) private userRepo: Repository<User>,
         @InjectRepository(AudioTrack) private audioRepo: Repository<AudioTrack>,
         @InjectRepository(UserProgress) private progressRepo: Repository<UserProgress>,
-        @InjectRepository(ProgramUserProgress) private programProgressRepo: Repository<ProgramUserProgress>,
+        @InjectRepository(AudioListenRecord) private listenRecordRepo: Repository<AudioListenRecord>,
         private storageService: StorageService,
     ) {}
 
@@ -30,11 +30,19 @@ export class ProgramsService {
         let listenMap = new Map<string, number>();
         if (userId && sorted.length > 0) {
             const audioIds = sorted.map(pa => pa.audioId);
-            const progressRecords = await this.programProgressRepo.find({
-                where: { userId, audioId: In(audioIds), programId: program.id },
-                select: ['audioId', 'timesListened'],
+            const since = program.recurrenceDays
+                ? new Date(Date.now() - program.recurrenceDays * 24 * 60 * 60 * 1000)
+                : null;
+            const records = await this.listenRecordRepo.find({
+                where: {
+                    userId,
+                    audioId: In(audioIds),
+                    programId: program.id,
+                    ...(since ? { listenedAt: MoreThanOrEqual(since) } : {}),
+                },
+                select: ['audioId'],
             });
-            listenMap = new Map(progressRecords.map(p => [p.audioId, p.timesListened || 0]));
+            records.forEach(r => listenMap.set(r.audioId, (listenMap.get(r.audioId) || 0) + 1));
         }
 
         let totalRequired = 0;
@@ -76,6 +84,7 @@ export class ProgramsService {
             id: program.id,
             name: program.name,
             description: program.description,
+            recurrenceDays: program.recurrenceDays ?? null,
             createdById: program.createdById,
             createdBy: program.createdBy,
             audios: audios.filter(Boolean),
@@ -85,12 +94,13 @@ export class ProgramsService {
         };
     }
 
-    async create(data: { name: string; description?: string; audioItems?: AudioItemDto[] }, currentUser: any) {
+    async create(data: { name: string; description?: string; recurrenceDays?: number | null; audioItems?: AudioItemDto[] }, currentUser: any) {
         if (currentUser.role === 'ATHLETE') throw new ForbiddenException('Athletes cannot create programs');
 
         const program = this.programRepo.create({
             name: data.name,
             description: data.description,
+            recurrenceDays: data.recurrenceDays ?? null,
             createdById: currentUser.id,
         });
         const saved = await this.programRepo.save(program);
@@ -149,7 +159,7 @@ export class ProgramsService {
         return this.mapProgram(program, currentUser.id);
     }
 
-    async update(id: string, data: { name?: string; description?: string; audioItems?: AudioItemDto[] }, currentUser: any) {
+    async update(id: string, data: { name?: string; description?: string; recurrenceDays?: number | null; audioItems?: AudioItemDto[] }, currentUser: any) {
         const program = await this.programRepo.findOne({ where: { id }, relations: ['programAudios'] });
         if (!program) throw new NotFoundException('Program not found');
 
@@ -159,6 +169,7 @@ export class ProgramsService {
 
         if (data.name) program.name = data.name;
         if (data.description !== undefined) program.description = data.description;
+        if (data.recurrenceDays !== undefined) program.recurrenceDays = data.recurrenceDays;
         await this.programRepo.save(program);
 
         if (data.audioItems) {

@@ -177,43 +177,6 @@ export class AudiosService {
         );
     }
 
-    async getMyProgram(userId: string) {
-        const records = await this.progressRepo.find({
-            where: { userId, isMyProgram: true },
-            relations: ['audio'],
-        });
-        return records
-            .filter((r) => r.audio)
-            .map((r: any) => ({
-                id: r.audio.id,
-                title: r.audio.title,
-                duration: r.audio.duration,
-                type: r.audio.type || 'Training',
-                timesListened: r.timesListened || 0,
-            }));
-    }
-
-    async getMyProgramAdmin(userId: string) {
-        return this.getMyProgram(userId);
-    }
-
-    async setMyProgramAdmin(
-        userId: string,
-        audioId: string,
-        isMyProgram: boolean,
-    ) {
-        const existing = await this.progressRepo.findOne({
-            where: { userId, audioId },
-        });
-        if (existing) {
-            existing.isMyProgram = isMyProgram;
-            await this.progressRepo.save(existing);
-        } else {
-            await this.progressRepo.save({ userId, audioId, isMyProgram });
-        }
-        return { success: true };
-    }
-
     async create(
         data: {
             title: string;
@@ -223,7 +186,6 @@ export class AudiosService {
             type?: string;
             orderToListen?: string;
             allowedUserIds?: string;
-            myProgramUserIds?: string;
             dominance?: AudioDominance;
             phasing?: string;
             language?: AudioLanguage;
@@ -280,30 +242,6 @@ export class AudiosService {
             } catch { }
         }
 
-        // Handle my-program assignments
-        if (data.myProgramUserIds) {
-            try {
-                const myProgramUserIds = JSON.parse(data.myProgramUserIds);
-                if (Array.isArray(myProgramUserIds)) {
-                    for (const uid of myProgramUserIds) {
-                        const existing = await this.progressRepo.findOne({
-                            where: { userId: uid, audioId: saved.id },
-                        });
-                        if (existing) {
-                            existing.isMyProgram = true;
-                            await this.progressRepo.save(existing);
-                        } else {
-                            await this.progressRepo.save({
-                                userId: uid,
-                                audioId: saved.id,
-                                isMyProgram: true,
-                            });
-                        }
-                    }
-                }
-            } catch { }
-        }
-
         const signedUrl = await this.storageService.getSignedUrl(
             uploadResult.objectName,
             3600,
@@ -322,7 +260,6 @@ export class AudiosService {
             type?: string;
             orderToListen?: number;
             allowedUserIds?: string[];
-            myProgramUserIds?: string[];
             dominance?: AudioDominance;
             phasing?: string[];
             language?: AudioLanguage;
@@ -359,25 +296,6 @@ export class AudiosService {
                 await this.audioAccessRepo.save(
                     data.allowedUserIds.map((uid) => ({ userId: uid, audioId: id })),
                 );
-            }
-        }
-
-        if (Array.isArray(data.myProgramUserIds)) {
-            await this.progressRepo.update({ audioId: id }, { isMyProgram: false });
-            for (const uid of data.myProgramUserIds) {
-                const existing = await this.progressRepo.findOne({
-                    where: { userId: uid, audioId: id },
-                });
-                if (existing) {
-                    existing.isMyProgram = true;
-                    await this.progressRepo.save(existing);
-                } else {
-                    await this.progressRepo.save({
-                        userId: uid,
-                        audioId: id,
-                        isMyProgram: true,
-                    });
-                }
             }
         }
 

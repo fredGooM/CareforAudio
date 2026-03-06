@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, In } from 'typeorm';
-import { AudioLog, UserProgress, AudioTrack, User, UserGroup, ProgramShare, ProgramAudio, ProgramUserProgress } from '../entities';
+import { AudioLog, UserProgress, AudioTrack, User, ProgramShare, ProgramAudio, AudioListenRecord, Program } from '../entities';
 
 @Injectable()
 export class AnalyticsService {
@@ -14,14 +14,14 @@ export class AnalyticsService {
         private readonly audioRepo: Repository<AudioTrack>,
         @InjectRepository(User)
         private readonly userRepo: Repository<User>,
-        @InjectRepository(UserGroup)
-        private readonly userGroupRepo: Repository<UserGroup>,
         @InjectRepository(ProgramShare)
         private readonly programShareRepo: Repository<ProgramShare>,
         @InjectRepository(ProgramAudio)
         private readonly programAudioRepo: Repository<ProgramAudio>,
-        @InjectRepository(ProgramUserProgress)
-        private readonly programProgressRepo: Repository<ProgramUserProgress>,
+        @InjectRepository(AudioListenRecord)
+        private readonly listenRecordRepo: Repository<AudioListenRecord>,
+        @InjectRepository(Program)
+        private readonly programRepo: Repository<Program>,
     ) { }
 
     async heartbeat(
@@ -88,24 +88,13 @@ export class AnalyticsService {
             });
         }
 
-        // Update per-program progress when a programId is provided
-        if (completedNow && data.programId) {
-            const prog = await this.programProgressRepo.findOne({
-                where: { userId, audioId: data.audioId, programId: data.programId },
+        // Insert a new listen record per completion (programId optional)
+        if (completedNow) {
+            await this.listenRecordRepo.save({
+                userId,
+                audioId: data.audioId,
+                programId: data.programId ?? null,
             });
-            if (prog) {
-                if (!prog.isCompleted || data.completed) prog.timesListened += 1;
-                prog.isCompleted = true;
-                await this.programProgressRepo.save(prog);
-            } else {
-                await this.programProgressRepo.save({
-                    userId,
-                    audioId: data.audioId,
-                    programId: data.programId,
-                    timesListened: 1,
-                    isCompleted: true,
-                });
-            }
         }
 
         return { success: true };
@@ -122,25 +111,15 @@ export class AnalyticsService {
 
         let dropoffs: { userId: string; name: string; daysSince: number | null }[] = [];
         if (athleteIds.length > 0) {
-            const logs = await this.logRepo.find({
+            const listenRecords = await this.listenRecordRepo.find({
                 where: { userId: In(athleteIds) },
-                select: ['userId', 'createdAt'],
+                select: ['userId', 'listenedAt'],
             });
 
             const lastActivityByUser = new Map<string, Date>();
-            logs.forEach(log => {
-                const current = lastActivityByUser.get(log.userId);
-                if (!current || log.createdAt > current) lastActivityByUser.set(log.userId, log.createdAt);
-            });
-
-            // Also check ProgramUserProgress for more recent activity
-            const progProgress = await this.programProgressRepo.find({
-                where: { userId: In(athleteIds) },
-                select: ['userId', 'updatedAt'],
-            });
-            progProgress.forEach(prog => {
-                const current = lastActivityByUser.get(prog.userId);
-                if (!current || prog.updatedAt > current) lastActivityByUser.set(prog.userId, prog.updatedAt);
+            listenRecords.forEach(r => {
+                const current = lastActivityByUser.get(r.userId);
+                if (!current || r.listenedAt > current) lastActivityByUser.set(r.userId, r.listenedAt);
             });
 
             dropoffs = athletes
@@ -175,26 +154,26 @@ export class AnalyticsService {
             trendMap.set(date.toISOString().slice(0, 10), 0);
         }
 
-        const progProgress = await this.programProgressRepo.find({
-            where: { userId: targetUserId, updatedAt: MoreThanOrEqual(thirtyDaysAgo) },
+        const listenRecords = await this.listenRecordRepo.find({
+            where: { userId: targetUserId, listenedAt: MoreThanOrEqual(thirtyDaysAgo) },
         });
 
-        if (progProgress.length > 0) {
-            const audioIds = [...new Set(progProgress.map(p => p.audioId))];
+        if (listenRecords.length > 0) {
+            const audioIds = [...new Set(listenRecords.map(r => r.audioId))];
             const audios = await this.audioRepo.find({ where: { id: In(audioIds) }, select: ['id', 'duration'] });
             const durationMap = new Map(audios.map(a => [a.id, a.duration || 0]));
 
-            progProgress.forEach(prog => {
-                const key = prog.updatedAt.toISOString().slice(0, 10);
+            listenRecords.forEach(r => {
+                const key = r.listenedAt.toISOString().slice(0, 10);
                 if (trendMap.has(key)) {
-                    trendMap.set(key, (trendMap.get(key) || 0) + (durationMap.get(prog.audioId) || 0));
+                    trendMap.set(key, (trendMap.get(key) || 0) + (durationMap.get(r.audioId) || 0));
                 }
             });
         }
 
         return Array.from(trendMap.entries()).map(([key, seconds]) => ({
             date: new Date(key).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
-            minutes: parseFloat((seconds / 60).toFixed(1)),
+            minutes: parseFloat((seconds / 60).toFixed(2)),
         }));
     }
 
@@ -370,64 +349,42 @@ export class AnalyticsService {
         });
         const completedCount = progressRecords.filter((r) => r.isCompleted).length;
 
-        // Average completion rate across assigned programs
+        // Average completion rate across assigned programs (using AudioListenRecord + recurrenceDays)
         const shares = await this.programShareRepo.find({ where: { userId }, select: ['programId'] });
         let completionPercent = 0;
         if (shares.length > 0) {
             const programIds = shares.map(s => s.programId);
-            const programAudios = await this.programAudioRepo.find({
-                where: { programId: In(programIds) },
-                select: ['programId', 'audioId', 'requiredListens'],
+            const programs = await this.programRepo.find({
+                where: { id: In(programIds) },
+                relations: ['programAudios'],
             });
-            const listenMap = new Map(progressRecords.map(r => [r.audioId, r.timesListened || 0]));
 
-            const programTotals = new Map<string, { required: number; done: number }>();
-            for (const pa of programAudios) {
-                const entry = programTotals.get(pa.programId) ?? { required: 0, done: 0 };
-                entry.required += pa.requiredListens;
-                entry.done += Math.min(listenMap.get(pa.audioId) ?? 0, pa.requiredListens);
-                programTotals.set(pa.programId, entry);
-            }
+            const perProgramPercents = await Promise.all(programs.map(async prog => {
+                const since = prog.recurrenceDays
+                    ? new Date(Date.now() - prog.recurrenceDays * 24 * 60 * 60 * 1000)
+                    : null;
+                const records = await this.listenRecordRepo.find({
+                    where: {
+                        userId,
+                        programId: prog.id,
+                        ...(since ? { listenedAt: MoreThanOrEqual(since) } : {}),
+                    },
+                    select: ['audioId'],
+                });
+                const listenMap = new Map<string, number>();
+                records.forEach(r => listenMap.set(r.audioId, (listenMap.get(r.audioId) || 0) + 1));
 
-            const perProgramPercents = programIds.map(id => {
-                const t = programTotals.get(id);
-                return t && t.required > 0 ? (t.done / t.required) * 100 : 0;
-            });
+                let required = 0, done = 0;
+                for (const pa of (prog.programAudios || [])) {
+                    required += pa.requiredListens;
+                    done += Math.min(listenMap.get(pa.audioId) ?? 0, pa.requiredListens);
+                }
+                return required > 0 ? (done / required) * 100 : 0;
+            }));
+
             completionPercent = Math.round(
                 perProgramPercents.reduce((sum, p) => sum + p, 0) / perProgramPercents.length,
             );
-        }
-
-        const categoryProgress: { categoryId: string; percent: number }[] = [];
-
-        // My program progress
-        const myProgramTotal = await this.progressRepo.count({
-            where: { userId, isMyProgram: true },
-        });
-        const myProgramCompleted = await this.progressRepo.count({
-            where: { userId, isMyProgram: true, isCompleted: true },
-        });
-        const myProgramPercent =
-            myProgramTotal > 0
-                ? Math.round((myProgramCompleted / myProgramTotal) * 100)
-                : 0;
-
-        // Streak
-        const daySet = new Set(
-            allLogs.map((log) => log.createdAt.toISOString().slice(0, 10)),
-        );
-        let streak = 0;
-        const today = new Date();
-        for (let i = 0; i < 365; i++) {
-            const date = new Date(today.getTime() - i * 24 * 60 * 60 * 1000);
-            const key = date.toISOString().slice(0, 10);
-            if (daySet.has(key)) {
-                streak += 1;
-            } else if (i > 0) {
-                break;
-            } else {
-                break;
-            }
         }
 
         // Continue listening
@@ -455,18 +412,11 @@ export class AnalyticsService {
             totalMinutes,
             last7DaysMinutes,
             completionPercent,
-            streakDays: streak,
             completedCount,
-            categoryProgress,
-            myProgramProgress: {
-                percent: myProgramPercent,
-                total: myProgramTotal,
-                completed: myProgramCompleted,
-            },
             continueListening,
-            lastListenedAt: await this.programProgressRepo
-                .findOne({ where: { userId }, order: { updatedAt: 'DESC' }, select: ['updatedAt'] })
-                .then(r => r?.updatedAt?.toISOString() ?? null),
+            lastListenedAt: await this.listenRecordRepo
+                .findOne({ where: { userId }, order: { listenedAt: 'DESC' }, select: ['listenedAt'] })
+                .then(r => r?.listenedAt?.toISOString() ?? null),
         };
     }
 }
