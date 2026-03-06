@@ -1,11 +1,12 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useState, useEffect, FormEvent } from 'react';
+import { useState, useEffect, useMemo, FormEvent } from 'react';
 import { Edit, Trash2, Share2, Plus, Users, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import type { Program, AudioTrack, UserProfile, ProgramShare } from '@/types';
+import { AudioDominance, AudioPhasing } from '@/types';
 
 interface AudioItemForm {
     audioId: string;
@@ -29,6 +30,13 @@ export default function AdminProgramsPage() {
     const initialForm = { name: '', description: '', audioItems: [] as AudioItemForm[] };
     const [form, setForm] = useState(initialForm);
     const [shareUserId, setShareUserId] = useState('');
+
+    // Audio picker filters
+    const [pickerSearch, setPickerSearch] = useState('');
+    const [pickerType, setPickerType] = useState('');
+    const [pickerDominance, setPickerDominance] = useState('');
+    const [pickerPhasing, setPickerPhasing] = useState('');
+    const [pickerSort, setPickerSort] = useState<'title-asc' | 'title-desc' | 'dur-asc' | 'dur-desc'>('title-asc');
 
     useEffect(() => {
         if (!session) return;
@@ -60,14 +68,18 @@ export default function AdminProgramsPage() {
         }
     };
 
+    const resetPicker = () => { setPickerSearch(''); setPickerType(''); setPickerDominance(''); setPickerPhasing(''); setPickerSort('title-asc'); };
+
     const openCreate = () => {
         setEditingProgram(null);
         setForm(initialForm);
+        resetPicker();
         setShowModal(true);
     };
 
     const openEdit = (program: Program) => {
         setEditingProgram(program);
+        resetPicker();
         setForm({
             name: program.name,
             description: program.description || '',
@@ -165,9 +177,27 @@ export default function AdminProgramsPage() {
     const getAudioTitle = (audioId: string) => audios.find(a => a.id === audioId)?.title || 'Audio inconnu';
     const getAudioDuration = (audioId: string) => {
         const a = audios.find(a => a.id === audioId);
-        return a ? Math.round(a.duration / 60) : 0;
+        if (!a) return '—';
+        const h = Math.floor(a.duration / 3600);
+        const m = Math.floor((a.duration % 3600) / 60);
+        const s = a.duration % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     };
-    const availableAudios = audios.filter(a => !form.audioItems.find(i => i.audioId === a.id));
+
+    const availableAudios = useMemo(() => {
+        let list = audios.filter(a => !form.audioItems.find(i => i.audioId === a.id));
+        if (pickerSearch) list = list.filter(a => a.title.toLowerCase().includes(pickerSearch.toLowerCase()));
+        if (pickerType) list = list.filter(a => a.type === pickerType);
+        if (pickerDominance) list = list.filter(a => a.dominance === pickerDominance);
+        if (pickerPhasing) list = list.filter(a => Array.isArray(a.phasing) && a.phasing.includes(pickerPhasing));
+        list.sort((a, b) => {
+            if (pickerSort === 'title-asc') return a.title.localeCompare(b.title);
+            if (pickerSort === 'title-desc') return b.title.localeCompare(a.title);
+            if (pickerSort === 'dur-asc') return a.duration - b.duration;
+            return b.duration - a.duration;
+        });
+        return list;
+    }, [audios, form.audioItems, pickerSearch, pickerType, pickerDominance, pickerPhasing, pickerSort]);
 
     if (loading) return <Loader />;
 
@@ -196,19 +226,68 @@ export default function AdminProgramsPage() {
                                 <textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} placeholder="Détails du programme..." />
                             </div>
 
-                            {/* Audio selection */}
+                            {/* Audio picker */}
                             <div className="form-group">
                                 <label>Ajouter un audio</label>
-                                <select
-                                    value=""
-                                    onChange={(e) => { if (e.target.value) addAudio(e.target.value); }}
-                                    style={{ width: '100%' }}
-                                >
-                                    <option value="">Sélectionner un audio à ajouter...</option>
-                                    {availableAudios.map(a => (
-                                        <option key={a.id} value={a.id}>{a.title} ({Math.round(a.duration / 60)} min)</option>
-                                    ))}
-                                </select>
+                                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                                    <input
+                                        placeholder="Rechercher..."
+                                        value={pickerSearch}
+                                        onChange={e => setPickerSearch(e.target.value)}
+                                        style={{ flex: '1 1 120px', minWidth: '100px', fontSize: '0.82rem' }}
+                                    />
+                                    <select value={pickerType} onChange={e => setPickerType(e.target.value)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
+                                        <option value="">Catégorie</option>
+                                        <option value="Training">Training</option>
+                                        <option value="Recovery">Recovery</option>
+                                        <option value="Performance">Performance</option>
+                                    </select>
+                                    <select value={pickerDominance} onChange={e => setPickerDominance(e.target.value)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
+                                        <option value="">Dominance</option>
+                                        <option value={AudioDominance.MIND}>Pensée</option>
+                                        <option value={AudioDominance.BODY}>Corps</option>
+                                        <option value={AudioDominance.EMOTION}>Émotion</option>
+                                    </select>
+                                    <select value={pickerPhasing} onChange={e => setPickerPhasing(e.target.value)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
+                                        <option value="">Phasing</option>
+                                        <option value={AudioPhasing.PRE_COMPETITION}>Pré-compétition</option>
+                                        <option value={AudioPhasing.DURING_COMPETITION}>Pendant</option>
+                                        <option value={AudioPhasing.POST_COMPETITION}>Post</option>
+                                    </select>
+                                    <select value={pickerSort} onChange={e => setPickerSort(e.target.value as any)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
+                                        <option value="title-asc">A→Z</option>
+                                        <option value="title-desc">Z→A</option>
+                                        <option value="dur-asc">Durée ↑</option>
+                                        <option value="dur-desc">Durée ↓</option>
+                                    </select>
+                                </div>
+                                <div style={{ maxHeight: '200px', overflowY: 'auto', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
+                                    {availableAudios.length === 0 ? (
+                                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem' }}>Aucun audio disponible</div>
+                                    ) : (
+                                        availableAudios.map(a => (
+                                            <div key={a.id} onClick={() => addAudio(a.id)} style={{
+                                                display: 'flex', alignItems: 'center', gap: '0.75rem',
+                                                padding: '0.5rem 0.75rem', cursor: 'pointer',
+                                                borderBottom: '1px solid rgba(51,65,85,0.3)',
+                                                transition: 'var(--transition)',
+                                            }}
+                                                onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.07)')}
+                                                onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                                            >
+                                                <Plus size={14} style={{ color: 'var(--primary)', flexShrink: 0 }} />
+                                                <div style={{ flex: 1, minWidth: 0 }}>
+                                                    <div style={{ fontWeight: 500, fontSize: '0.85rem', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{a.title}</div>
+                                                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                                                        {getAudioDuration(a.id)}
+                                                        {a.type && ` · ${a.type}`}
+                                                        {a.dominance && ` · ${{ MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion' }[a.dominance] ?? a.dominance}`}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
                             </div>
 
                             {/* Ordered audio list */}

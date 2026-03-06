@@ -45,7 +45,7 @@ export interface AudioTrack {
     orderToListen: number;
     tags: string[];
     dominance?: AudioDominance;
-    phasing?: AudioPhasing;
+    phasing?: AudioPhasing[];
     language?: AudioLanguage;
     voiceType?: AudioVoiceType;
     createdAt: string;

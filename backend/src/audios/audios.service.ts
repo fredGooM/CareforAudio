@@ -10,7 +10,6 @@ import {
 } from '../entities';
 import {
     AudioDominance,
-    AudioPhasing,
     AudioLanguage,
     AudioVoiceType
 } from '../entities/audio-track.entity';
@@ -226,7 +225,7 @@ export class AudiosService {
             allowedUserIds?: string;
             myProgramUserIds?: string;
             dominance?: AudioDominance;
-            phasing?: AudioPhasing;
+            phasing?: string;
             language?: AudioLanguage;
             voiceType?: AudioVoiceType;
         },
@@ -255,7 +254,7 @@ export class AudiosService {
             mimeType: file.mimetype,
             size: uploadResult.size,
             dominance: data.dominance,
-            phasing: data.phasing,
+            phasing: data.phasing ? (() => { try { return JSON.parse(data.phasing); } catch { return []; } })() : null,
             language: data.language || AudioLanguage.FRENCH,
             voiceType: data.voiceType || AudioVoiceType.MALE,
             coverUrl: `https://picsum.photos/400/400?random=${Date.now()}`,
@@ -325,7 +324,7 @@ export class AudiosService {
             allowedUserIds?: string[];
             myProgramUserIds?: string[];
             dominance?: AudioDominance;
-            phasing?: AudioPhasing;
+            phasing?: string[];
             language?: AudioLanguage;
             voiceType?: AudioVoiceType;
         },

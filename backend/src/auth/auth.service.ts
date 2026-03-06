@@ -68,6 +68,7 @@ export class AuthService {
                 mustChangePassword: user.mustChangePassword,
                 groupIds,
                 avatar: user.avatar,
+                gender: user.gender,
             },
         };
     }

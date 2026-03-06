@@ -8,6 +8,7 @@ declare module 'next-auth' {
             role: string;
             mustChangePassword: boolean;
             accessToken: string;
+            gender?: string;
         } & DefaultSession['user'];
         accessToken: string;
     }
@@ -18,6 +19,7 @@ declare module 'next-auth' {
         refreshToken: string;
         firstName?: string;
         lastName?: string;
+        gender?: string;
     }
 }
 
@@ -27,6 +29,7 @@ declare module 'next-auth' {
         mustChangePassword?: boolean;
         accessToken?: string;
         refreshToken?: string;
+        gender?: string;
     }
 }
 
@@ -63,6 +66,7 @@ export const authConfig: NextAuthConfig = {
                         refreshToken: data.refreshToken,
                         firstName: data.user.firstName,
                         lastName: data.user.lastName,
+                        gender: data.user.gender,
                     };
                 } catch {
                     return null;
@@ -78,6 +82,7 @@ export const authConfig: NextAuthConfig = {
                 token.accessToken = user.accessToken;
                 token.refreshToken = user.refreshToken;
                 token.id = user.id;
+                token.gender = user.gender;
             }
             if (trigger === 'update' && session?.mustChangePassword !== undefined) {
                 token.mustChangePassword = session.mustChangePassword;
@@ -89,6 +94,7 @@ export const authConfig: NextAuthConfig = {
             session.user.role = token.role as string;
             session.user.mustChangePassword = token.mustChangePassword as boolean;
             session.accessToken = token.accessToken as string;
+            session.user.gender = token.gender as string | undefined;
             return session;
         },
     },

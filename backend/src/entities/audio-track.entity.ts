@@ -81,8 +81,8 @@ export class AudioTrack {
     @Column({ type: 'enum', enum: AudioDominance, nullable: true })
     dominance: AudioDominance;
 
-    @Column({ type: 'enum', enum: AudioPhasing, nullable: true })
-    phasing: AudioPhasing;
+    @Column({ type: 'simple-array', nullable: true })
+    phasing: string[];
 
     @Column({ type: 'enum', enum: AudioLanguage, default: AudioLanguage.FRENCH })
     language: AudioLanguage;
