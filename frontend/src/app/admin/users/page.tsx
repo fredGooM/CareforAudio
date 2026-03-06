@@ -1,8 +1,8 @@
 'use client';
 
 import { useSession } from 'next-auth/react';
-import { useEffect, useState, FormEvent } from 'react';
-import { Edit, KeyRound, Mail, Check, X, Calendar as CalendarIcon, Activity } from 'lucide-react';
+import { useEffect, useRef, useState, FormEvent } from 'react';
+import { Edit, KeyRound, Mail, Check, X, Calendar as CalendarIcon, LayoutDashboard, MoreHorizontal } from 'lucide-react';
 import Link from 'next/link';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
@@ -15,6 +15,16 @@ export default function AdminUsersPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
     const [actionMsg, setActionMsg] = useState('');
+    const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const menuRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        const h = (e: MouseEvent) => {
+            if (menuRef.current && !menuRef.current.contains(e.target as Node)) setOpenMenuId(null);
+        };
+        document.addEventListener('mousedown', h);
+        return () => document.removeEventListener('mousedown', h);
+    }, []);
 
     const emptyForm = {
         email: '',
@@ -227,24 +237,60 @@ export default function AdminUsersPage() {
                                     </button>
                                 </td>
                                 <td>
-                                    <div className="action-btns">
-                                        <button className="btn-secondary" onClick={() => openEdit(user)} title="Modifier">
-                                            <Edit size={16} />
-                                        </button>
-                                        <button className="btn-secondary" onClick={() => handleResetPassword(user.id)} title="Reset MDP">
-                                            <KeyRound size={16} />
-                                        </button>
-                                        <button className="btn-secondary" onClick={() => handleSendWelcome(user.id)} title="Envoyer identifiants">
-                                            <Mail size={16} />
-                                        </button>
+                                    <div className="action-btns" ref={openMenuId === user.id ? menuRef : undefined}>
+
+                                        {/* Calendrier */}
                                         <Link href={`/admin/calendar/${user.id}`} className="btn-secondary" title="Gérer le calendrier" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                                             <CalendarIcon size={16} />
                                         </Link>
+
+                                        {/* Indicateurs */}
                                         {user.role === 'ATHLETE' && (
                                             <Link href={`/admin/users/${user.id}/states`} className="btn-secondary" title="Voir les indicateurs" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
-                                                <Activity size={16} />
+                                                <LayoutDashboard size={16} />
                                             </Link>
                                         )}
+
+                                        {/* ··· menu */}
+                                        <div style={{ position: 'relative' }}>
+                                            <button
+                                                className="btn-secondary"
+                                                title="Plus d'actions"
+                                                onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
+                                            >
+                                                <MoreHorizontal size={16} />
+                                            </button>
+                                            {openMenuId === user.id && (
+                                                <div style={{
+                                                    position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+                                                    background: 'var(--bg-card)', border: '1px solid var(--border)',
+                                                    borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow)',
+                                                    zIndex: 50, minWidth: '170px', overflow: 'hidden',
+                                                    animation: 'fadeIn 0.12s ease',
+                                                }}>
+                                                    {[
+                                                        { icon: <Edit size={14} />, label: 'Modifier', onClick: () => { openEdit(user); setOpenMenuId(null); } },
+                                                        { icon: <KeyRound size={14} />, label: 'Reset mot de passe', onClick: () => { handleResetPassword(user.id); setOpenMenuId(null); } },
+                                                        { icon: <Mail size={14} />, label: 'Envoyer identifiants', onClick: () => { handleSendWelcome(user.id); setOpenMenuId(null); } },
+                                                    ].map((item, i, arr) => (
+                                                        <button key={item.label} onClick={item.onClick} style={{
+                                                            width: '100%', display: 'flex', alignItems: 'center', gap: '0.6rem',
+                                                            padding: '0.6rem 0.875rem', background: 'none', border: 'none',
+                                                            borderBottom: i < arr.length - 1 ? '1px solid rgba(51,65,85,0.4)' : 'none',
+                                                            color: 'var(--text)', cursor: 'pointer',
+                                                            fontFamily: 'var(--font)', fontSize: '0.825rem', textAlign: 'left',
+                                                            transition: 'var(--transition)',
+                                                        }}
+                                                            onMouseEnter={e => (e.currentTarget.style.background = 'rgba(239,68,68,0.08)')}
+                                                            onMouseLeave={e => (e.currentTarget.style.background = 'none')}
+                                                        >
+                                                            <span style={{ color: 'var(--text-muted)' }}>{item.icon}</span>
+                                                            {item.label}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
                                     </div>
                                 </td>
                             </tr>
