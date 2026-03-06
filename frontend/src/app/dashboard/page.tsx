@@ -4,18 +4,24 @@ import { useSession } from 'next-auth/react';
 import { useEffect, useState } from 'react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import { CalendarHeart, CalendarDays, Clock, ArrowRight } from 'lucide-react';
+import { CalendarHeart, CalendarDays, Clock, ArrowRight, BarChart2, AlertTriangle } from 'lucide-react';
 import type { Dashboard, DashboardUser, DashboardAdmin, Program, CalendarEvent } from '@/types';
 import Link from 'next/link';
 import UserProgramsPanel from '@/components/UserProgramsPanel';
 import UserStatesPanel from '@/components/UserStatesPanel';
 import TeacherDashboard from '@/components/TeacherDashboard';
+import {
+    BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+} from 'recharts';
+
+interface EngagementDay { date: string; minutes: number; }
 
 export default function DashboardPage() {
     const { data: session } = useSession();
     const [dashboard, setDashboard] = useState<Dashboard | null>(null);
     const [programs, setPrograms] = useState<Program[]>([]);
     const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
+    const [engagement, setEngagement] = useState<EngagementDay[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -30,7 +36,7 @@ export default function DashboardPage() {
                 setDashboard(dashData);
                 setPrograms(progsData);
 
-                // Fetch upcoming events for athletes
+                // Fetch upcoming events and engagement for athletes
                 if (dashData.role === 'ATHLETE') {
                     try {
                         const eventsData = await apiClient.get<CalendarEvent[]>('/events/me');
@@ -42,6 +48,15 @@ export default function DashboardPage() {
                         setUpcomingEvents(upcoming);
                     } catch {
                         // Events might not be available
+                    }
+                    try {
+                        const userId = (session.user as any)?.id;
+                        if (userId) {
+                            const engData = await apiClient.get<EngagementDay[]>(`/analytics/engagement/${userId}`);
+                            setEngagement(engData);
+                        }
+                    } catch {
+                        // engagement not available
                     }
                 }
             } catch (err) {
@@ -130,6 +145,13 @@ export default function DashboardPage() {
     // User dashboard
     const d = dashboard as DashboardUser;
 
+    const hasEngagement = engagement.some(day => day.minutes > 0);
+    const lastListenedAt = d.lastListenedAt ? new Date(d.lastListenedAt) : null;
+    const daysSinceLastListen = lastListenedAt
+        ? Math.floor((Date.now() - lastListenedAt.getTime()) / (1000 * 60 * 60 * 24))
+        : null;
+    const isInactive = daysSinceLastListen === null || daysSinceLastListen >= 7;
+
     /** Format relative date label */
     function formatEventDate(dateStr: string): { day: string; time: string; relative: string } {
         const date = new Date(dateStr);
@@ -166,9 +188,63 @@ export default function DashboardPage() {
                     <div className="stat-value">{d.completionPercent}%</div>
                     <div className="stat-label">Complétion programmes</div>
                 </div>
-                <div className="stat-card">
-                    <div className="stat-value">{d.streakDays}j</div>
-                    <div className="stat-label">Série</div>
+
+            </div>
+
+            {/* ── Last listen + inactivity alert ── */}
+            <div style={{
+                background: isInactive ? 'rgba(234, 179, 8, 0.08)' : 'var(--bg-card)',
+                border: `1px solid ${isInactive ? 'rgba(234, 179, 8, 0.4)' : 'var(--border)'}`,
+                borderRadius: '12px',
+                padding: '1rem 1.25rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                marginBottom: '2rem',
+            }}>
+                {isInactive
+                    ? <AlertTriangle size={20} style={{ flexShrink: 0, color: '#ca8a04' }} />
+                    : <Clock size={20} style={{ flexShrink: 0, color: 'var(--primary)' }} />
+                }
+                <div>
+                    <strong style={{ fontSize: '0.95rem', color: isInactive ? '#ca8a04' : 'inherit' }}>
+                        {isInactive ? 'Alerte décrochage' : 'Dernière écoute'}
+                    </strong>
+                    <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        {lastListenedAt
+                            ? `${lastListenedAt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}${isInactive ? ` — ${daysSinceLastListen} jour${daysSinceLastListen! > 1 ? 's' : ''} sans écoute` : ''}`
+                            : 'Aucune écoute enregistrée dans vos programmes.'
+                        }
+                    </p>
+                </div>
+            </div>
+
+            {/* ── Daily Engagement Chart ── */}
+            <div className="section">
+                <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
+                    <BarChart2 size={20} />
+                    Engagement quotidien — 30 jours
+                </h2>
+                <div style={{
+                    background: 'var(--bg-card)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '12px',
+                    padding: '1.25rem',
+                    boxShadow: 'var(--shadow-sm)',
+                }}>
+                    {!hasEngagement ? (
+                        <p className="text-muted" style={{ margin: 0 }}>Aucune écoute sur les 30 derniers jours.</p>
+                    ) : (
+                        <ResponsiveContainer width="100%" height={170}>
+                            <BarChart data={engagement} margin={{ top: 4, right: 4, left: -22, bottom: 0 }}>
+                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.5)" vertical={false} />
+                                <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} interval={4} axisLine={false} tickLine={false} />
+                                <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} unit="m" axisLine={false} tickLine={false} />
+                                <Tooltip formatter={(v: number) => [`${v} min`, 'Écoute']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem' }} cursor={{ fill: 'rgba(124,92,252,0.06)' }} />
+                                <Bar dataKey="minutes" fill="var(--primary)" radius={[3, 3, 0, 0]} maxBarSize={18} />
+                            </BarChart>
+                        </ResponsiveContainer>
+                    )}
                 </div>
             </div>
 

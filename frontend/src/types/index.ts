@@ -97,6 +97,7 @@ export interface DashboardUser {
     categoryProgress: { categoryId: string; percent: number }[];
     myProgramProgress: { percent: number; total: number; completed: number };
     continueListening: { audioId: string; title: string; progressPercent: number }[];
+    lastListenedAt: string | null;
 }
 
 export interface DashboardAdmin {

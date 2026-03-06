@@ -8,6 +8,7 @@ import {
     UseGuards,
     Request,
     BadRequestException,
+    ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminOrTeacherGuard } from '../auth/roles.guard';
@@ -42,9 +43,12 @@ export class AnalyticsController {
         return this.analyticsService.getTeacherOverview(req.user.id);
     }
 
-    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @UseGuards(JwtAuthGuard)
     @Get('engagement/:userId')
     engagement(@Param('userId') userId: string, @Request() req: any) {
+        if (req.user.role === 'ATHLETE' && req.user.id !== userId) {
+            throw new ForbiddenException();
+        }
         return this.analyticsService.getEngagement(userId, req.user);
     }
 

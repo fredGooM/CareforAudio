@@ -127,15 +127,25 @@ export class AnalyticsService {
                 select: ['userId', 'createdAt'],
             });
 
-            const lastLogByUser = new Map<string, Date>();
+            const lastActivityByUser = new Map<string, Date>();
             logs.forEach(log => {
-                const current = lastLogByUser.get(log.userId);
-                if (!current || log.createdAt > current) lastLogByUser.set(log.userId, log.createdAt);
+                const current = lastActivityByUser.get(log.userId);
+                if (!current || log.createdAt > current) lastActivityByUser.set(log.userId, log.createdAt);
+            });
+
+            // Also check ProgramUserProgress for more recent activity
+            const progProgress = await this.programProgressRepo.find({
+                where: { userId: In(athleteIds) },
+                select: ['userId', 'updatedAt'],
+            });
+            progProgress.forEach(prog => {
+                const current = lastActivityByUser.get(prog.userId);
+                if (!current || prog.updatedAt > current) lastActivityByUser.set(prog.userId, prog.updatedAt);
             });
 
             dropoffs = athletes
                 .map(a => {
-                    const lastDate = lastLogByUser.get(a.id);
+                    const lastDate = lastActivityByUser.get(a.id);
                     const daysSince = lastDate
                         ? Math.floor((now.getTime() - lastDate.getTime()) / (24 * 60 * 60 * 1000))
                         : null;
@@ -157,23 +167,34 @@ export class AnalyticsService {
         }
 
         const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000);
-        const logs = await this.logRepo.find({
-            where: { userId: targetUserId, createdAt: MoreThanOrEqual(thirtyDaysAgo) },
-        });
 
+        // Accumulate in seconds to avoid losing short audios when rounding to minutes
         const trendMap = new Map<string, number>();
         for (let i = 0; i < 30; i++) {
             const date = new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
             trendMap.set(date.toISOString().slice(0, 10), 0);
         }
-        logs.forEach(log => {
-            const key = log.createdAt.toISOString().slice(0, 10);
-            trendMap.set(key, (trendMap.get(key) || 0) + Math.round(log.duration / 60));
+
+        const progProgress = await this.programProgressRepo.find({
+            where: { userId: targetUserId, updatedAt: MoreThanOrEqual(thirtyDaysAgo) },
         });
 
-        return Array.from(trendMap.entries()).map(([key, minutes]) => ({
+        if (progProgress.length > 0) {
+            const audioIds = [...new Set(progProgress.map(p => p.audioId))];
+            const audios = await this.audioRepo.find({ where: { id: In(audioIds) }, select: ['id', 'duration'] });
+            const durationMap = new Map(audios.map(a => [a.id, a.duration || 0]));
+
+            progProgress.forEach(prog => {
+                const key = prog.updatedAt.toISOString().slice(0, 10);
+                if (trendMap.has(key)) {
+                    trendMap.set(key, (trendMap.get(key) || 0) + (durationMap.get(prog.audioId) || 0));
+                }
+            });
+        }
+
+        return Array.from(trendMap.entries()).map(([key, seconds]) => ({
             date: new Date(key).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
-            minutes,
+            minutes: parseFloat((seconds / 60).toFixed(1)),
         }));
     }
 
@@ -443,6 +464,9 @@ export class AnalyticsService {
                 completed: myProgramCompleted,
             },
             continueListening,
+            lastListenedAt: await this.programProgressRepo
+                .findOne({ where: { userId }, order: { updatedAt: 'DESC' }, select: ['updatedAt'] })
+                .then(r => r?.updatedAt?.toISOString() ?? null),
         };
     }
 }
