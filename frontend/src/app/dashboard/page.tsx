@@ -134,8 +134,9 @@ export default function DashboardPage() {
     function formatEventDate(dateStr: string): { day: string; time: string; relative: string } {
         const date = new Date(dateStr);
         const now = new Date();
-        const diffMs = date.getTime() - now.getTime();
-        const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const eventDay = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        const diffDays = Math.round((eventDay.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
         const day = date.toLocaleDateString('fr-FR', { weekday: 'short', day: 'numeric', month: 'short' });
         const time = date.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
