@@ -152,7 +152,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="stat-card">
                     <div className="stat-value">{d.completionPercent}%</div>
-                    <div className="stat-label">Complétion</div>
+                    <div className="stat-label">Complétion programmes</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-value">{d.streakDays}j</div>

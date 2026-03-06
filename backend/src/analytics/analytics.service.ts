@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, In } from 'typeorm';
-import { AudioLog, UserProgress, AudioTrack, User, UserGroup } from '../entities';
+import { AudioLog, UserProgress, AudioTrack, User, UserGroup, ProgramShare, ProgramAudio } from '../entities';
 
 @Injectable()
 export class AnalyticsService {
@@ -16,6 +16,10 @@ export class AnalyticsService {
         private readonly userRepo: Repository<User>,
         @InjectRepository(UserGroup)
         private readonly userGroupRepo: Repository<UserGroup>,
+        @InjectRepository(ProgramShare)
+        private readonly programShareRepo: Repository<ProgramShare>,
+        @InjectRepository(ProgramAudio)
+        private readonly programAudioRepo: Repository<ProgramAudio>,
     ) { }
 
     async heartbeat(
@@ -255,10 +259,34 @@ export class AnalyticsService {
             relations: ['audio'],
         });
         const completedCount = progressRecords.filter((r) => r.isCompleted).length;
-        const completionPercent =
-            progressRecords.length > 0
-                ? Math.round((completedCount / progressRecords.length) * 100)
-                : 0;
+
+        // Average completion rate across assigned programs
+        const shares = await this.programShareRepo.find({ where: { userId }, select: ['programId'] });
+        let completionPercent = 0;
+        if (shares.length > 0) {
+            const programIds = shares.map(s => s.programId);
+            const programAudios = await this.programAudioRepo.find({
+                where: { programId: In(programIds) },
+                select: ['programId', 'audioId', 'requiredListens'],
+            });
+            const listenMap = new Map(progressRecords.map(r => [r.audioId, r.timesListened || 0]));
+
+            const programTotals = new Map<string, { required: number; done: number }>();
+            for (const pa of programAudios) {
+                const entry = programTotals.get(pa.programId) ?? { required: 0, done: 0 };
+                entry.required += pa.requiredListens;
+                entry.done += Math.min(listenMap.get(pa.audioId) ?? 0, pa.requiredListens);
+                programTotals.set(pa.programId, entry);
+            }
+
+            const perProgramPercents = programIds.map(id => {
+                const t = programTotals.get(id);
+                return t && t.required > 0 ? (t.done / t.required) * 100 : 0;
+            });
+            completionPercent = Math.round(
+                perProgramPercents.reduce((sum, p) => sum + p, 0) / perProgramPercents.length,
+            );
+        }
 
         const categoryProgress: { categoryId: string; percent: number }[] = [];
 
