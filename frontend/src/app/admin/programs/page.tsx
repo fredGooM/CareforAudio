@@ -422,7 +422,6 @@ export default function AdminProgramsPage() {
                             <th>Description</th>
                             <th>Auteur</th>
                             <th>Audios</th>
-                            <th>Complétion</th>
                             <th>Partages</th>
                             <th>Actions</th>
                         </tr>
@@ -447,21 +446,6 @@ export default function AdminProgramsPage() {
                                 <td>{prog.description || '—'}</td>
                                 <td>{prog.createdBy?.firstName} {prog.createdBy?.lastName}</td>
                                 <td>{prog.audios?.length || 0}</td>
-                                <td>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                        <div style={{
-                                            width: '60px', height: '6px', borderRadius: '3px',
-                                            background: 'var(--border)', overflow: 'hidden',
-                                        }}>
-                                            <div style={{
-                                                width: `${prog.completionPercent || 0}%`, height: '100%',
-                                                borderRadius: '3px',
-                                                background: (prog.completionPercent || 0) === 100 ? 'var(--success)' : 'var(--primary)',
-                                            }} />
-                                        </div>
-                                        <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>{prog.completionPercent || 0}%</span>
-                                    </div>
-                                </td>
                                 <td>
                                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                         <Users size={16} />
