@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import UserStatesPanel from '@/components/UserStatesPanel';
+import UserProgramsPanel from '@/components/UserProgramsPanel';
 import type { UserProfile } from '@/types';
 
 export default function AdminUserStatesPage() {
@@ -45,11 +46,13 @@ export default function AdminUserStatesPage() {
             </div>
 
             <h1 style={{ marginBottom: '0.25rem' }}>
-                États de {user?.firstName} {user?.lastName}
+                Indicateurs de {user?.firstName} {user?.lastName}
             </h1>
             <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
                 {user?.email}
             </p>
+
+            <UserProgramsPanel userId={userId} />
 
             <UserStatesPanel userId={userId} readonly />
         </div>

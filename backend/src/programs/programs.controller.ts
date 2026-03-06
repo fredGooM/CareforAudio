@@ -13,6 +13,12 @@ export class ProgramsController {
         return this.programsService.findAll(req.user);
     }
 
+    @UseGuards(AdminOrTeacherGuard)
+    @Get('user/:userId')
+    findForUser(@Param('userId') userId: string, @Request() req: any) {
+        return this.programsService.findForUser(userId, req.user);
+    }
+
     @Get(':id')
     findOne(@Param('id') id: string, @Request() req: any) {
         return this.programsService.findOne(id, req.user);

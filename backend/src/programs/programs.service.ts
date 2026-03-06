@@ -182,6 +182,29 @@ export class ProgramsService {
         return this.mapProgram(full!, currentUser.id);
     }
 
+    async findForUser(targetUserId: string, currentUser: any) {
+        if (currentUser.role === 'ATHLETE') throw new ForbiddenException();
+
+        if (currentUser.role === 'TEACHER') {
+            const targetUser = await this.userRepo.findOne({ where: { id: targetUserId } });
+            if (!targetUser || targetUser.createdById !== currentUser.id) {
+                throw new ForbiddenException('You can only view your own athletes');
+            }
+        }
+
+        const shared = await this.shareRepo.find({ where: { userId: targetUserId }, select: ['programId'] });
+        const sharedIds = shared.map(s => s.programId);
+
+        if (sharedIds.length === 0) return [];
+
+        const programs = await this.programRepo.find({
+            where: { id: In(sharedIds) },
+            relations: ['programAudios', 'programAudios.audio', 'createdBy'],
+        });
+
+        return Promise.all(programs.map(p => this.mapProgram(p, targetUserId)));
+    }
+
     async remove(id: string, currentUser: any) {
         const program = await this.programRepo.findOne({ where: { id } });
         if (!program) throw new NotFoundException('Program not found');

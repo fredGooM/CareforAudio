@@ -241,7 +241,7 @@ export default function AdminUsersPage() {
                                             <CalendarIcon size={16} />
                                         </Link>
                                         {user.role === 'ATHLETE' && (
-                                            <Link href={`/admin/users/${user.id}/states`} className="btn-secondary" title="Voir les états" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
+                                            <Link href={`/admin/users/${user.id}/states`} className="btn-secondary" title="Voir les indicateurs" style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <Activity size={16} />
                                             </Link>
                                         )}
