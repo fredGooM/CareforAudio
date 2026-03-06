@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { Program, ProgramAudio, ProgramShare, User, AudioTrack, UserProgress } from '../entities';
+import { Program, ProgramAudio, ProgramShare, User, AudioTrack, UserProgress, ProgramUserProgress } from '../entities';
 import { StorageService } from '../storage/storage.service';
 
 interface AudioItemDto {
@@ -19,6 +19,7 @@ export class ProgramsService {
         @InjectRepository(User) private userRepo: Repository<User>,
         @InjectRepository(AudioTrack) private audioRepo: Repository<AudioTrack>,
         @InjectRepository(UserProgress) private progressRepo: Repository<UserProgress>,
+        @InjectRepository(ProgramUserProgress) private programProgressRepo: Repository<ProgramUserProgress>,
         private storageService: StorageService,
     ) {}
 
@@ -29,8 +30,8 @@ export class ProgramsService {
         let listenMap = new Map<string, number>();
         if (userId && sorted.length > 0) {
             const audioIds = sorted.map(pa => pa.audioId);
-            const progressRecords = await this.progressRepo.find({
-                where: { userId, audioId: In(audioIds) },
+            const progressRecords = await this.programProgressRepo.find({
+                where: { userId, audioId: In(audioIds), programId: program.id },
                 select: ['audioId', 'timesListened'],
             });
             listenMap = new Map(progressRecords.map(p => [p.audioId, p.timesListened || 0]));

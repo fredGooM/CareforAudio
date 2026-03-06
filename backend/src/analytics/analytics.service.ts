@@ -1,7 +1,7 @@
 import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, In } from 'typeorm';
-import { AudioLog, UserProgress, AudioTrack, User, UserGroup, ProgramShare, ProgramAudio } from '../entities';
+import { AudioLog, UserProgress, AudioTrack, User, UserGroup, ProgramShare, ProgramAudio, ProgramUserProgress } from '../entities';
 
 @Injectable()
 export class AnalyticsService {
@@ -20,6 +20,8 @@ export class AnalyticsService {
         private readonly programShareRepo: Repository<ProgramShare>,
         @InjectRepository(ProgramAudio)
         private readonly programAudioRepo: Repository<ProgramAudio>,
+        @InjectRepository(ProgramUserProgress)
+        private readonly programProgressRepo: Repository<ProgramUserProgress>,
     ) { }
 
     async heartbeat(
@@ -29,6 +31,7 @@ export class AnalyticsService {
             position: number;
             sessionDuration?: number;
             completed?: boolean;
+            programId?: string;
         },
     ) {
         const audio = await this.audioRepo.findOne({
@@ -83,6 +86,26 @@ export class AnalyticsService {
                 audioId: data.audioId,
                 duration: Math.round(data.sessionDuration),
             });
+        }
+
+        // Update per-program progress when a programId is provided
+        if (completedNow && data.programId) {
+            const prog = await this.programProgressRepo.findOne({
+                where: { userId, audioId: data.audioId, programId: data.programId },
+            });
+            if (prog) {
+                if (!prog.isCompleted || data.completed) prog.timesListened += 1;
+                prog.isCompleted = true;
+                await this.programProgressRepo.save(prog);
+            } else {
+                await this.programProgressRepo.save({
+                    userId,
+                    audioId: data.audioId,
+                    programId: data.programId,
+                    timesListened: 1,
+                    isCompleted: true,
+                });
+            }
         }
 
         return { success: true };

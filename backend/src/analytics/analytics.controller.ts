@@ -27,6 +27,7 @@ export class AnalyticsController {
             position: number;
             sessionDuration?: number;
             completed?: boolean;
+            programId?: string;
         },
     ) {
         if (!body.audioId || typeof body.position !== 'number') {

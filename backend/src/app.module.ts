@@ -26,6 +26,7 @@ import {
   ProgramShare,
   CalendarEvent,
   UserState,
+  ProgramUserProgress,
 } from './entities';
 
 @Module({
@@ -56,6 +57,7 @@ import {
           ProgramShare,
           CalendarEvent,
           UserState,
+          ProgramUserProgress,
         ],
         synchronize: true, // Dev only — use migrations in production
       }),

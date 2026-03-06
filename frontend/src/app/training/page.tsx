@@ -33,6 +33,7 @@ export default function TrainingPage() {
     const [loading, setLoading] = useState(true);
     const [expandedProgramId, setExpandedProgramId] = useState<string | null>(null);
     const [currentAudio, setCurrentAudio] = useState<ProgramAudio | null>(null);
+    const [currentProgramId, setCurrentProgramId] = useState<string | null>(null);
     const [favorites, setFavorites] = useState<string[]>([]);
 
     useEffect(() => {
@@ -63,14 +64,37 @@ export default function TrainingPage() {
         setExpandedProgramId(prev => prev === id ? null : id);
     };
 
+    const formatDuration = (seconds: number) => {
+        const h = Math.floor(seconds / 3600);
+        const m = Math.floor((seconds % 3600) / 60);
+        const s = seconds % 60;
+        return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+    };
+
     const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean) => {
-        if (currentAudio) {
-            apiClient.post('/analytics/heartbeat', {
-                audioId: currentAudio.id,
-                position,
-                sessionDuration,
-                completed,
-            });
+        if (!currentAudio) return;
+        apiClient.post('/analytics/heartbeat', {
+            audioId: currentAudio.id,
+            position,
+            sessionDuration,
+            completed,
+            programId: currentProgramId ?? undefined,
+        });
+
+        // Optimistic update on completion
+        if (completed && currentProgramId) {
+            setPrograms(prev => prev.map(prog => {
+                if (prog.id !== currentProgramId) return prog;
+                const updatedAudios = prog.audios.map(a => {
+                    if (a.id !== currentAudio.id) return a;
+                    const newCount = (a.listenCount || 0) + 1;
+                    return { ...a, listenCount: newCount };
+                });
+                const totalRequired = updatedAudios.reduce((s, a) => s + (a.requiredListens || 1), 0);
+                const totalDone = updatedAudios.reduce((s, a) => s + Math.min(a.listenCount || 0, a.requiredListens || 1), 0);
+                const completionPercent = totalRequired > 0 ? Math.round((totalDone / totalRequired) * 100) : 0;
+                return { ...prog, audios: updatedAudios, completionPercent };
+            }));
         }
     };
 
@@ -148,7 +172,7 @@ export default function TrainingPage() {
                                                     <div 
                                                         key={audio.id} 
                                                         className={`training-item${currentAudio?.id === audio.id ? ' playing' : ''}`}
-                                                        onClick={() => setCurrentAudio(audio)}
+                                                        onClick={() => { setCurrentAudio(audio); setCurrentProgramId(prog.id); }}
                                                         style={{ 
                                                             cursor: 'pointer', 
                                                             background: currentAudio?.id === audio.id ? 'var(--bg-input)' : 'transparent',
@@ -171,7 +195,7 @@ export default function TrainingPage() {
                                                             )}
                                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                                 <h3 style={{ fontSize: '0.95rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{audio.title}</h3>
-                                                                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)' }}>{Math.round(audio.duration / 60)} min • {audio.type}</p>
+                                                                <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>{formatDuration(audio.duration)} • {audio.type}</p>
                                                             </div>
                                                         </div>
                                                         <div className="training-stats" style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexShrink: 0 }}>
