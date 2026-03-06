@@ -6,8 +6,7 @@ import { useEffect, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import UserStatesPanel from '@/components/UserStatesPanel';
-import UserProgramsPanel from '@/components/UserProgramsPanel';
+import AthleteView from '@/components/AthleteView';
 import type { UserProfile } from '@/types';
 
 export default function AdminUserStatesPage() {
@@ -24,10 +23,7 @@ export default function AdminUserStatesPage() {
         apiClient.setToken((session as any).accessToken);
         apiClient
             .get<UserProfile>(`/users/${userId}`)
-            .then((u) => {
-                setUser(u);
-                setLoading(false);
-            })
+            .then((u) => { setUser(u); setLoading(false); })
             .catch(() => setLoading(false));
     }, [session, userId]);
 
@@ -45,16 +41,10 @@ export default function AdminUserStatesPage() {
                 </button>
             </div>
 
-            <h1 style={{ marginBottom: '0.25rem' }}>
-                Indicateurs de {user?.firstName} {user?.lastName}
-            </h1>
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', marginBottom: '1.5rem' }}>
-                {user?.email}
-            </p>
-
-            <UserProgramsPanel userId={userId} />
-
-            <UserStatesPanel userId={userId} readonly />
+            <AthleteView
+                userId={userId}
+                athleteName={user ? `${user.firstName} ${user.lastName}` : ''}
+            />
         </div>
     );
 }

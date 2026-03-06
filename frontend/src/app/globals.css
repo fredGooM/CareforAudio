@@ -46,6 +46,30 @@ body {
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-dim);
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
 }
 
 /* ===== Layout ===== */
@@ -379,6 +403,9 @@ body {
   cursor: pointer;
   transition: var(--transition);
   font-family: var(--font);
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 .sidebar-logout:hover {

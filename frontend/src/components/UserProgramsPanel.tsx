@@ -6,9 +6,10 @@ import type { Program } from '@/types';
 
 interface Props {
     userId: string;
+    standalone?: boolean; // true = affiche le titre + margin (page indicateurs)
 }
 
-export default function UserProgramsPanel({ userId }: Props) {
+export default function UserProgramsPanel({ userId, standalone = true }: Props) {
     const [programs, setPrograms] = useState<Program[]>([]);
     const [loading, setLoading] = useState(true);
 
@@ -25,8 +26,8 @@ export default function UserProgramsPanel({ userId }: Props) {
     if (loading) return null;
 
     return (
-        <div style={{ marginTop: '2rem' }}>
-            <h2 style={{ marginBottom: '1rem' }}>Programmes en cours</h2>
+        <div style={standalone ? { marginTop: '2rem' } : {}}>
+            {standalone && <h2 style={{ marginBottom: '1rem' }}>Programmes en cours</h2>}
 
             {programs.length === 0 ? (
                 <div

@@ -7,6 +7,9 @@ import Loader from '@/components/Loader';
 import { CalendarHeart, CalendarDays, Clock, ArrowRight } from 'lucide-react';
 import type { Dashboard, DashboardUser, DashboardAdmin, Program, CalendarEvent } from '@/types';
 import Link from 'next/link';
+import UserProgramsPanel from '@/components/UserProgramsPanel';
+import UserStatesPanel from '@/components/UserStatesPanel';
+import TeacherDashboard from '@/components/TeacherDashboard';
 
 export default function DashboardPage() {
     const { data: session } = useSession();
@@ -49,6 +52,13 @@ export default function DashboardPage() {
         };
         init();
     }, [session]);
+
+    const sessionRole = (session?.user as any)?.role;
+
+    if (sessionRole === 'TEACHER') {
+        if (!session) return <Loader />;
+        return <TeacherDashboard accessToken={(session as any).accessToken} />;
+    }
 
     if (loading) return <Loader />;
     if (!dashboard) return <div className="page-error">Erreur de chargement</div>;
@@ -112,6 +122,7 @@ export default function DashboardPage() {
                         </div>
                     </div>
                 )}
+
             </div>
         );
     }

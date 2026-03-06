@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, MoreThanOrEqual, In } from 'typeorm';
 import { AudioLog, UserProgress, AudioTrack, User, UserGroup, ProgramShare, ProgramAudio } from '../entities';
@@ -86,6 +86,72 @@ export class AnalyticsService {
         }
 
         return { success: true };
+    }
+
+    async getTeacherOverview(teacherId: string) {
+        const athletes = await this.userRepo.find({
+            where: { createdById: teacherId, role: 'ATHLETE' as any },
+            select: ['id', 'firstName', 'lastName'],
+        });
+
+        const athleteIds = athletes.map(a => a.id);
+        const now = new Date();
+
+        let dropoffs: { userId: string; name: string; daysSince: number | null }[] = [];
+        if (athleteIds.length > 0) {
+            const logs = await this.logRepo.find({
+                where: { userId: In(athleteIds) },
+                select: ['userId', 'createdAt'],
+            });
+
+            const lastLogByUser = new Map<string, Date>();
+            logs.forEach(log => {
+                const current = lastLogByUser.get(log.userId);
+                if (!current || log.createdAt > current) lastLogByUser.set(log.userId, log.createdAt);
+            });
+
+            dropoffs = athletes
+                .map(a => {
+                    const lastDate = lastLogByUser.get(a.id);
+                    const daysSince = lastDate
+                        ? Math.floor((now.getTime() - lastDate.getTime()) / (24 * 60 * 60 * 1000))
+                        : null;
+                    return { userId: a.id, name: `${a.firstName} ${a.lastName}`, daysSince };
+                })
+                .sort((a, b) => (b.daysSince ?? Infinity) - (a.daysSince ?? Infinity));
+        }
+
+        return {
+            athletes: athletes.map(a => ({ id: a.id, name: `${a.firstName} ${a.lastName}` })),
+            dropoffs,
+        };
+    }
+
+    async getEngagement(targetUserId: string, currentUser: any) {
+        if (currentUser.role === 'TEACHER') {
+            const target = await this.userRepo.findOne({ where: { id: targetUserId } });
+            if (!target || target.createdById !== currentUser.id) throw new ForbiddenException();
+        }
+
+        const thirtyDaysAgo = new Date(Date.now() - 29 * 24 * 60 * 60 * 1000);
+        const logs = await this.logRepo.find({
+            where: { userId: targetUserId, createdAt: MoreThanOrEqual(thirtyDaysAgo) },
+        });
+
+        const trendMap = new Map<string, number>();
+        for (let i = 0; i < 30; i++) {
+            const date = new Date(thirtyDaysAgo.getTime() + i * 24 * 60 * 60 * 1000);
+            trendMap.set(date.toISOString().slice(0, 10), 0);
+        }
+        logs.forEach(log => {
+            const key = log.createdAt.toISOString().slice(0, 10);
+            trendMap.set(key, (trendMap.get(key) || 0) + Math.round(log.duration / 60));
+        });
+
+        return Array.from(trendMap.entries()).map(([key, minutes]) => ({
+            date: new Date(key).toLocaleDateString('fr-FR', { month: 'short', day: 'numeric' }),
+            minutes,
+        }));
     }
 
     async getDashboard(role: string, userId: string, filterUserId?: string) {
