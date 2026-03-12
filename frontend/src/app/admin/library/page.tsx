@@ -49,6 +49,7 @@ export default function AdminLibraryPage() {
     const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
     const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
     const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
+    const [submitting, setSubmitting] = useState(false);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordingChunksRef = useRef<Blob[]>([]);
@@ -240,7 +241,7 @@ export default function AdminLibraryPage() {
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
-
+        setSubmitting(true);
         try {
             if (editingAudio) {
                 // UPDATE
@@ -301,6 +302,8 @@ export default function AdminLibraryPage() {
             if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
         } catch (err: any) {
             alert(err.message);
+        } finally {
+            setSubmitting(false);
         }
     };
 
@@ -378,10 +381,19 @@ export default function AdminLibraryPage() {
                                                 style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-input)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}
                                                 onChange={(e) => {
                                                     const file = e.target.files?.[0];
+                                                    if (!file) return;
+                                                    if (file.size > 50 * 1024 * 1024) {
+                                                        alert('Fichier trop lourd (max 50 Mo)');
+                                                        e.target.value = '';
+                                                        if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+                                                        setFilePreviewUrl(null);
+                                                        return;
+                                                    }
                                                     if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
-                                                    setFilePreviewUrl(file ? URL.createObjectURL(file) : null);
+                                                    setFilePreviewUrl(URL.createObjectURL(file));
                                                 }}
                                             />
+                                            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Max 50 Mo — mp3, wav, aiff, m4a, aac</span>
                                             {filePreviewUrl && (
                                                 <AudioPlayer src={filePreviewUrl} title={form.title || 'Aperçu'} inline />
                                             )}
@@ -546,9 +558,16 @@ export default function AdminLibraryPage() {
                                 </div>
                             </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn-secondary" onClick={() => { if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); setShowModal(false); }}>Annuler</button>
-                                <button type="submit" className="btn-primary">
-                                    {editingAudio ? 'Enregistrer' : 'Uploader'}
+                                <button type="button" className="btn-secondary" disabled={submitting} onClick={() => { if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); setShowModal(false); }}>Annuler</button>
+                                <button type="submit" className="btn-primary" disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '110px', justifyContent: 'center' }}>
+                                    {submitting ? (
+                                        <>
+                                            <span style={{ width: 14, height: 14, border: '2px solid rgba(255,255,255,0.3)', borderTopColor: '#fff', borderRadius: '50%', display: 'inline-block', animation: 'spin 0.7s linear infinite' }} />
+                                            Upload…
+                                        </>
+                                    ) : (
+                                        editingAudio ? 'Enregistrer' : 'Uploader'
+                                    )}
                                 </button>
                             </div>
                         </form>

@@ -12,6 +12,10 @@ async function bootstrap() {
   // CORS
   app.enableCors({ origin: '*' });
 
+  // Increase body size limit for audio uploads
+  app.use(express.json({ limit: '55mb' }));
+  app.use(express.urlencoded({ limit: '55mb', extended: true }));
+
   // Serve local uploads if GCS is not configured
   const uploadsDir = path.join(process.cwd(), 'uploads');
   if (fs.existsSync(uploadsDir)) {
