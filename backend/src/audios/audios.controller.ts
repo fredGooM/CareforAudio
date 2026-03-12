@@ -21,7 +21,7 @@ const audioFileFilter = (req: any, file: Express.Multer.File, cb: any) => {
     const allowedMimes = [
         'audio/mpeg', 'audio/mp3', 'audio/wav', 'audio/x-wav',
         'audio/wave', 'audio/aiff', 'audio/x-aiff', 'audio/webm',
-        'audio/mp4', 'audio/m4a'
+        'audio/mp4', 'audio/m4a', 'audio/x-m4a', 'audio/aac', 'audio/x-aac'
     ];
     if (allowedMimes.includes(file.mimetype)) {
         cb(null, true);

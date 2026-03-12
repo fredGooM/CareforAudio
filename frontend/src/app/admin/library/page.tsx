@@ -373,7 +373,7 @@ export default function AdminLibraryPage() {
                                             <input
                                                 ref={fileRef}
                                                 type="file"
-                                                accept=".mp3,.wav,.aiff"
+                                                accept=".mp3,.wav,.aiff,.m4a,.aac"
                                                 required={uploadMode === 'FILE'}
                                                 style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-input)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}
                                                 onChange={(e) => {
