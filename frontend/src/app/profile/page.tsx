@@ -5,7 +5,6 @@ import { ChevronRight } from 'lucide-react';
 import { useEffect, useState, FormEvent } from 'react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import UserStatesPanel from '@/components/UserStatesPanel';
 
 interface ProfileDTO {
     id: string;
@@ -22,7 +21,6 @@ interface ProfileDTO {
     predominanceInstinctif?: number;
 }
 
-type Tab = 'profil' | 'etats';
 
 export default function ProfilePage() {
     const { data: session, update } = useSession();
@@ -30,8 +28,6 @@ export default function ProfilePage() {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [actionMsg, setActionMsg] = useState('');
-    const [activeTab, setActiveTab] = useState<Tab>('profil');
-
     const [form, setForm] = useState({
         firstName: '',
         lastName: '',
@@ -92,18 +88,6 @@ export default function ProfilePage() {
 
     if (loading) return <Loader />;
 
-    const tabStyle = (tab: Tab) => ({
-        padding: '0.6rem 1.25rem',
-        borderRadius: 'var(--radius-sm)',
-        border: activeTab === tab ? '1px solid var(--primary)' : '1px solid var(--border)',
-        background: activeTab === tab ? 'rgba(239, 68, 68, 0.1)' : 'transparent',
-        color: activeTab === tab ? 'var(--primary)' : 'var(--text-muted)',
-        cursor: 'pointer',
-        fontWeight: activeTab === tab ? 600 : 400,
-        fontSize: '0.9rem',
-        transition: 'var(--transition)',
-    });
-
     return (
         <div className="page-content">
             <h1>Mon Profil</h1>
@@ -123,23 +107,7 @@ export default function ProfilePage() {
                 </div>
             </div>
 
-            {/* Tabs */}
-            <div style={{
-                display: 'flex',
-                gap: '0.5rem',
-                marginBottom: '1.5rem',
-                marginTop: '0.5rem',
-            }}>
-                <button onClick={() => setActiveTab('profil')} style={tabStyle('profil')}>
-                    Profil
-                </button>
-                <button onClick={() => setActiveTab('etats')} style={tabStyle('etats')}>
-                    États
-                </button>
-            </div>
-
-            {activeTab === 'profil' && (
-                <>
+            <>
                     <div className="profile-section">
                         <h3>Mes informations</h3>
                         <form onSubmit={handleSave} className="upload-form" style={{ marginBottom: '1.5rem' }}>
@@ -257,12 +225,8 @@ export default function ProfilePage() {
                             Se déconnecter
                         </button>
                     </div>
-                </>
-            )}
+            </>
 
-            {activeTab === 'etats' && profile && (
-                <UserStatesPanel userId={profile.id} />
-            )}
         </div>
     );
 }

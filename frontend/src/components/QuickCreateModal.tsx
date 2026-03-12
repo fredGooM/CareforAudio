@@ -23,10 +23,11 @@ export default function QuickCreateModal({
     preselectedDate,
     preselectedUserId,
 }: QuickCreateModalProps) {
+    const nowFormatted = () => format(new Date(), "yyyy-MM-dd'T'HH:mm");
     const [form, setForm] = useState({
         title: '',
         description: '',
-        date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : '',
+        date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : nowFormatted(),
         type: EventType.EVENEMENT as string,
         duration: 60,
         userId: preselectedUserId || '',
@@ -37,7 +38,7 @@ export default function QuickCreateModal({
         setForm({
             title: '',
             description: '',
-            date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : '',
+            date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : nowFormatted(),
             type: EventType.EVENEMENT,
             duration: 60,
             userId: preselectedUserId || '',
@@ -48,7 +49,7 @@ export default function QuickCreateModal({
         setForm({
             title: '',
             description: '',
-            date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : '',
+            date: preselectedDate ? format(preselectedDate, "yyyy-MM-dd'T'HH:mm") : nowFormatted(),
             type: EventType.EVENEMENT,
             duration: 60,
             userId: preselectedUserId || '',

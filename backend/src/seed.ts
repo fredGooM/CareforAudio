@@ -109,7 +109,7 @@ async function seed() {
             user.lastName = a.lastName;
             user.avatar = a.avatar;
             user.passwordHash = athletePassword;
-            user.mustChangePassword = true;
+            user.mustChangePassword = false;
             await userRepo.save(user);
         } else {
             user = await userRepo.save(userRepo.create({
@@ -118,7 +118,7 @@ async function seed() {
                 firstName: a.firstName,
                 lastName: a.lastName,
                 role: 'ATHLETE' as any,
-                mustChangePassword: true,
+                mustChangePassword: false,
                 avatar: a.avatar,
             }));
         }
@@ -143,7 +143,7 @@ async function seed() {
             user.lastName = t.lastName;
             user.avatar = t.avatar;
             user.passwordHash = teacherPassword;
-            user.mustChangePassword = true;
+            user.mustChangePassword = false;
             await userRepo.save(user);
         } else {
             user = await userRepo.save(userRepo.create({
@@ -152,7 +152,7 @@ async function seed() {
                 firstName: t.firstName,
                 lastName: t.lastName,
                 role: 'TEACHER' as any,
-                mustChangePassword: true,
+                mustChangePassword: false,
                 avatar: t.avatar,
             }));
         }

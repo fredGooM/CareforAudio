@@ -92,11 +92,12 @@ export class EventsService {
     return this.eventsRepo.save(event);
   }
 
-  async remove(id: string, teacherId: string): Promise<void> {
+  async remove(id: string, teacherId: string) {
     const event = await this.eventsRepo.findOne({ where: { id } });
     if (!event) throw new NotFoundException('Event not found');
     await this.verifyTeacherAccess(teacherId, event.userId);
 
     await this.eventsRepo.remove(event);
+    return { success: true };
   }
 }

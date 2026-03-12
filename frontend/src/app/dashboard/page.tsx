@@ -8,6 +8,7 @@ import { CalendarHeart, CalendarDays, Clock, ArrowRight, BarChart2, AlertTriangl
 import type { Dashboard, DashboardUser, DashboardAdmin, Program, CalendarEvent } from '@/types';
 import Link from 'next/link';
 import TeacherDashboard from '@/components/TeacherDashboard';
+import UserStatesPanel from '@/components/UserStatesPanel';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -370,6 +371,14 @@ export default function DashboardPage() {
                     <p className="text-muted">Aucun programme assigné pour le moment.</p>
                 )}
             </div>
+
+            {/* ── States Panel ── */}
+            {session && (session?.user as any)?.id && (
+                <div className="section">
+                    <h2>Mes États</h2>
+                    <UserStatesPanel userId={(session.user as any).id} />
+                </div>
+            )}
 
             {d.continueListening.length > 0 && (
                 <div className="section">
