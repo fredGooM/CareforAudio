@@ -103,7 +103,6 @@ export default function AudioPlayer({
                 onListen={handleListen}
                 listenInterval={1000}
                 customAdditionalControls={[]}
-                customVolumeControls={[]}
             />
         </div>
     );
