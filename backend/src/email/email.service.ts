@@ -33,35 +33,34 @@ export class EmailService {
         }
 
         try {
-            // Dynamic import for Brevo (CommonJS compat)
-            const Brevo = require('@getbrevo/brevo');
-            const client = Brevo.ApiClient.instance;
-            client.authentications['api-key'].apiKey = this.apiKey;
-
-            const transactionalApi = new Brevo.TransactionalEmailsApi();
-            const sendEmail = new Brevo.SendSmtpEmail();
-
-            sendEmail.templateId = this.templateId;
-            sendEmail.to = [
-                {
+            const payload = {
+                templateId: this.templateId,
+                to: [{ email: user.email, name: `${user.firstName || ''} ${user.lastName || ''}`.trim() }],
+                sender: { email: this.fromEmail, name: this.fromName },
+                params: {
+                    firstName: user.firstName || '',
+                    lastName: user.lastName || '',
                     email: user.email,
-                    name: `${user.firstName || ''} ${user.lastName || ''}`.trim(),
+                    provisionalPassword: 'care1234!',
+                    portalUrl: this.portalUrl,
                 },
-            ];
-            sendEmail.sender = {
-                email: this.fromEmail,
-                name: this.fromName,
-            };
-            sendEmail.params = {
-                firstName: user.firstName || '',
-                lastName: user.lastName || '',
-                email: user.email,
-                provisionalPassword: 'care1234!',
-                portalUrl: this.portalUrl,
             };
 
             this.logger.log(`Sending welcome email to ${user.email} (template ${this.templateId})`);
-            await transactionalApi.sendTransacEmail(sendEmail);
+            const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+                method: 'POST',
+                headers: {
+                    'accept': 'application/json',
+                    'api-key': this.apiKey,
+                    'content-type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            if (!res.ok) {
+                const err = await res.json().catch(() => ({}));
+                throw new Error(err?.message || `Brevo API error ${res.status}`);
+            }
             this.logger.log(`Welcome email sent to ${user.email}`);
 
             return { success: true, message: `Email envoyé à ${user.email}` };
