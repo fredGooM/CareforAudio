@@ -421,9 +421,16 @@ export default function AdminLibraryPage() {
                                 <div className="form-group">
                                     <label>Catégorie</label>
                                     <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                                        <option value="Training">Training</option>
-                                        <option value="Recovery">Recovery</option>
                                         <option value="Performance">Performance</option>
+                                        <option value="Sommeil">Sommeil</option>
+                                        <option value="Activation">Activation</option>
+                                        <option value="Compétition">Compétition</option>
+                                        <option value="Concentration">Concentration</option>
+                                        <option value="Récupération">Récupération</option>
+                                        <option value="Confiance">Confiance</option>
+                                        <option value="Gestion du stress">Gestion du stress</option>
+                                        <option value="Blessure">Blessure</option>
+                                        <option value="Motivation">Motivation</option>
                                     </select>
                                 </div>
                                 <div className="form-group">
@@ -549,9 +556,16 @@ export default function AdminLibraryPage() {
                     <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>Catégorie</div>
                     <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: filterType ? 'var(--text)' : 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '0.875rem', padding: '0.5rem 0.75rem', outline: 'none', cursor: 'pointer' }}>
                         <option value="">Toutes</option>
-                        <option value="Training">Training</option>
-                        <option value="Recovery">Recovery</option>
                         <option value="Performance">Performance</option>
+                        <option value="Sommeil">Sommeil</option>
+                        <option value="Activation">Activation</option>
+                        <option value="Compétition">Compétition</option>
+                        <option value="Concentration">Concentration</option>
+                        <option value="Récupération">Récupération</option>
+                        <option value="Confiance">Confiance</option>
+                        <option value="Gestion du stress">Gestion du stress</option>
+                        <option value="Blessure">Blessure</option>
+                        <option value="Motivation">Motivation</option>
                     </select>
                 </div>
 

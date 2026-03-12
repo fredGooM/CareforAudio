@@ -295,9 +295,16 @@ export default function AdminProgramsPage() {
                                     />
                                     <select value={pickerType} onChange={e => setPickerType(e.target.value)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
                                         <option value="">Catégorie</option>
-                                        <option value="Training">Training</option>
-                                        <option value="Recovery">Recovery</option>
                                         <option value="Performance">Performance</option>
+                                        <option value="Sommeil">Sommeil</option>
+                                        <option value="Activation">Activation</option>
+                                        <option value="Compétition">Compétition</option>
+                                        <option value="Concentration">Concentration</option>
+                                        <option value="Récupération">Récupération</option>
+                                        <option value="Confiance">Confiance</option>
+                                        <option value="Gestion du stress">Gestion du stress</option>
+                                        <option value="Blessure">Blessure</option>
+                                        <option value="Motivation">Motivation</option>
                                     </select>
                                     <select value={pickerDominance} onChange={e => setPickerDominance(e.target.value)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
                                         <option value="">Dominance</option>
