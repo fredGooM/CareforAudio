@@ -18,7 +18,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <button
                     onClick={async () => {
                         await signIn('credentials', { email: 'admin@careformance.com', password: 'admin', redirect: false });
-                        window.location.href = '/dashboard';
+                        window.location.href = '/';
                     }}
                     className="px-4 py-2 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors"
                 >
@@ -26,8 +26,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
                 <button
                     onClick={async () => {
-                        await signIn('credentials', { email: 'teacher@careformance.com', password: 'change-password', redirect: false });
-                        window.location.href = '/dashboard';
+                        await signIn('credentials', { email: 'teacher@careformance.com', password: 'care1234!', redirect: false });
+                        window.location.href = '/';
                     }}
                     className="px-4 py-2 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors"
                 >
@@ -35,8 +35,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </button>
                 <button
                     onClick={async () => {
-                        await signIn('credentials', { email: 'athlete@careformance.com', password: 'change-password', redirect: false });
-                        window.location.href = '/dashboard';
+                        await signIn('credentials', { email: 'athlete@careformance.com', password: 'care1234!', redirect: false });
+                        window.location.href = '/';
                     }}
                     className="px-4 py-2 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors"
                 >
