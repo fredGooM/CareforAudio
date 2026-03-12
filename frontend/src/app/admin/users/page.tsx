@@ -16,6 +16,7 @@ export default function AdminUsersPage() {
     const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
     const [actionMsg, setActionMsg] = useState('');
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
+    const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
 
     useEffect(() => {
@@ -256,16 +257,27 @@ export default function AdminUsersPage() {
                                             <button
                                                 className="btn-secondary"
                                                 title="Plus d'actions"
-                                                onClick={() => setOpenMenuId(openMenuId === user.id ? null : user.id)}
+                                                onClick={(e) => {
+                                                    if (openMenuId === user.id) {
+                                                        setOpenMenuId(null);
+                                                        setMenuPos(null);
+                                                    } else {
+                                                        const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                                                        setMenuPos({ top: rect.bottom + 4, right: window.innerWidth - rect.right });
+                                                        setOpenMenuId(user.id);
+                                                    }
+                                                }}
                                             >
                                                 <MoreHorizontal size={16} />
                                             </button>
-                                            {openMenuId === user.id && (
+                                            {openMenuId === user.id && menuPos && (
                                                 <div style={{
-                                                    position: 'absolute', top: 'calc(100% + 4px)', right: 0,
+                                                    position: 'fixed',
+                                                    top: menuPos.top,
+                                                    right: menuPos.right,
                                                     background: 'var(--bg-card)', border: '1px solid var(--border)',
                                                     borderRadius: 'var(--radius-sm)', boxShadow: 'var(--shadow)',
-                                                    zIndex: 50, minWidth: '170px', overflow: 'hidden',
+                                                    zIndex: 1000, minWidth: '170px', overflow: 'hidden',
                                                     animation: 'fadeIn 0.12s ease',
                                                 }}>
                                                     {[
