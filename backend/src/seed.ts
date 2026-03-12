@@ -12,7 +12,11 @@ import {
     RefreshToken,
     AppConfig,
     Program,
+    ProgramAudio,
     ProgramShare,
+    CalendarEvent,
+    UserState,
+    AudioListenRecord,
 } from './entities';
 
 dotenv.config();
@@ -27,7 +31,7 @@ const AppDataSource = new DataSource({
     entities: [
         User, Group, UserGroup, AudioTrack,
         AudioAccess, RefreshToken, UserProgress, AudioLog, AppConfig,
-        Program, ProgramShare
+        Program, ProgramAudio, ProgramShare, CalendarEvent, UserState, AudioListenRecord
     ],
     synchronize: true,
     dropSchema: true,
