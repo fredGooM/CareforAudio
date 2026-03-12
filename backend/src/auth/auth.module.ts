@@ -17,7 +17,7 @@ import { User, RefreshToken, UserGroup } from '../entities';
             inject: [ConfigService],
             useFactory: (config: ConfigService) => ({
                 secret: config.get('JWT_SECRET', 'supersecretkey'),
-                signOptions: { expiresIn: config.get('JWT_EXPIRATION', '15m') },
+                signOptions: { expiresIn: config.get('JWT_EXPIRATION', '7d') },
             }),
         }),
     ],

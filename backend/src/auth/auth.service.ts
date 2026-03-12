@@ -34,7 +34,7 @@ export class AuthService {
             { id: user.id, role: user.role },
             {
                 secret: this.configService.get('JWT_SECRET'),
-                expiresIn: this.configService.get('JWT_EXPIRATION', '15m'),
+                expiresIn: this.configService.get('JWT_EXPIRATION', '7d'),
             },
         );
         const refreshToken = this.jwtService.sign(
