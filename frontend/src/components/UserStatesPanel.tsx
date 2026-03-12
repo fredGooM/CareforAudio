@@ -189,9 +189,9 @@ export default function UserStatesPanel({ userId, readonly }: Props) {
                                         color: 'var(--text)',
                                         fontSize: '0.8rem',
                                     }}
-                                    formatter={(value: number, name: string) => [
-                                        value,
-                                        fieldLabels[name] || name,
+                                    formatter={(value: number | undefined, name: string | undefined) => [
+                                        value ?? 0,
+                                        fieldLabels[name ?? ''] || (name ?? ''),
                                     ]}
                                 />
                                 <Legend

@@ -239,7 +239,7 @@ export default function DashboardPage() {
                                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(51,65,85,0.5)" vertical={false} />
                                 <XAxis dataKey="date" tick={{ fontSize: 10, fill: 'var(--text-muted)' }} interval={4} axisLine={false} tickLine={false} />
                                 <YAxis tick={{ fontSize: 10, fill: 'var(--text-muted)' }} unit="m" axisLine={false} tickLine={false} />
-                                <Tooltip formatter={(v: number) => [`${v} min`, 'Écoute']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem' }} cursor={{ fill: 'rgba(124,92,252,0.06)' }} />
+                                <Tooltip formatter={(v: number | undefined) => [`${v ?? 0} min`, 'Écoute']} contentStyle={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: '8px', fontSize: '0.8rem' }} cursor={{ fill: 'rgba(124,92,252,0.06)' }} />
                                 <Bar dataKey="minutes" fill="var(--primary)" radius={[3, 3, 0, 0]} maxBarSize={18} minPointSize={3} />
                             </BarChart>
                         </ResponsiveContainer>

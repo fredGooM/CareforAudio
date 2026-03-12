@@ -211,7 +211,7 @@ export default function AdminProgramsPage() {
         if (pickerSearch) list = list.filter(a => a.title.toLowerCase().includes(pickerSearch.toLowerCase()));
         if (pickerType) list = list.filter(a => a.type === pickerType);
         if (pickerDominance) list = list.filter(a => a.dominance === pickerDominance);
-        if (pickerPhasing) list = list.filter(a => Array.isArray(a.phasing) && a.phasing.includes(pickerPhasing));
+        if (pickerPhasing) list = list.filter(a => Array.isArray(a.phasing) && (a.phasing as string[]).includes(pickerPhasing));
         list.sort((a, b) => {
             if (pickerSort === 'title-asc') return a.title.localeCompare(b.title);
             if (pickerSort === 'title-desc') return b.title.localeCompare(a.title);

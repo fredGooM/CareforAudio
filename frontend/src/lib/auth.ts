@@ -33,7 +33,9 @@ declare module 'next-auth' {
     }
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3939';
+// INTERNAL_API_URL = http://careforaudio-backend-prod:3939/api (backend uses /api global prefix)
+// NEXT_PUBLIC_API_URL = https://domain.com/api (nginx forwards /api/* to backend)
+const API_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3939';
 
 export const authConfig: NextAuthConfig = {
     providers: [
@@ -68,7 +70,8 @@ export const authConfig: NextAuthConfig = {
                         lastName: data.user.lastName,
                         gender: data.user.gender,
                     };
-                } catch {
+                } catch (err) {
+                    console.error('[auth] fetch error:', err);
                     return null;
                 }
             },

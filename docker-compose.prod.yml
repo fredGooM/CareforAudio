@@ -1,0 +1,53 @@
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: careforaudio-backend-prod
+    environment:
+      NODE_ENV: production
+      DATABASE_HOST: ${DATABASE_HOST}
+      DATABASE_PORT: ${DATABASE_PORT}
+      DATABASE_USER: ${DATABASE_USER}
+      DATABASE_PASSWORD: ${DATABASE_PASSWORD}
+      DATABASE_NAME: ${DATABASE_NAME}
+      JWT_SECRET: ${JWT_SECRET}
+      API_URL: ${API_URL}
+      GCS_BUCKET_NAME: ${GCS_BUCKET_NAME}
+      GOOGLE_APPLICATION_CREDENTIALS_JSON: ${GOOGLE_APPLICATION_CREDENTIALS_JSON}
+      BREVO_API_KEY: ${BREVO_API_KEY}
+      BREVO_TEMPLATE_ID: ${BREVO_TEMPLATE_ID}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL}
+    networks:
+      - careforaudio-network
+      - musqle-network
+    restart: always
+    ports:
+      - "127.0.0.1:5960:3939"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+    container_name: careforaudio-frontend-prod
+    environment:
+      NEXTAUTH_URL: ${NEXTAUTH_URL}
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL}
+      INTERNAL_API_URL: http://careforaudio-backend-prod:3939/api
+    depends_on:
+      - backend
+    networks:
+      - careforaudio-network
+    restart: always
+    ports:
+      - "127.0.0.1:5950:3838"
+
+networks:
+  careforaudio-network:
+    driver: bridge
+  musqle-network:
+    external: true
+    name: musqle_musqle-network

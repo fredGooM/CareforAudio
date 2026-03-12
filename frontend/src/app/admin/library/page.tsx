@@ -32,7 +32,7 @@ export default function AdminLibraryPage() {
         if (search) list = list.filter(a => a.title.toLowerCase().includes(search.toLowerCase()));
         if (filterType) list = list.filter(a => a.type === filterType);
         if (filterDominance) list = list.filter(a => a.dominance === filterDominance);
-        if (filterPhasing) list = list.filter(a => Array.isArray(a.phasing) && a.phasing.includes(filterPhasing));
+        if (filterPhasing) list = list.filter(a => Array.isArray(a.phasing) && (a.phasing as string[]).includes(filterPhasing));
         list.sort((a, b) => {
             if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
             if (sortBy === 'title-desc') return b.title.localeCompare(a.title);
