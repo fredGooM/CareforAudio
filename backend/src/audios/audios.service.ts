@@ -1,6 +1,7 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import * as mm from 'music-metadata';
 import {
     AudioTrack,
     AudioAccess,
@@ -205,10 +206,18 @@ export class AudiosService {
             'audios',
         );
 
+        let duration = parseInt(data.duration || '0') || 0;
+        if (!duration) {
+            try {
+                const metadata = await mm.parseBuffer(file.buffer, { mimeType: file.mimetype });
+                duration = Math.round(metadata.format.duration ?? 0);
+            } catch { }
+        }
+
         const newAudio = this.audioRepo.create({
             title: data.title,
             description: data.description,
-            duration: parseInt(data.duration || '0') || 0,
+            duration,
             published: data.published === 'true',
             type: data.type || 'Training',
             orderToListen: data.orderToListen ? parseInt(data.orderToListen) : 1,

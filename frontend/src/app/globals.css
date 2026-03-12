@@ -1041,6 +1041,17 @@ tbody tr:last-child td {
   z-index: 100;
 }
 
+.audio-player.audio-player-inline {
+  position: static;
+  left: unset;
+  right: unset;
+  bottom: unset;
+  border-top: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  z-index: unset;
+}
+
 .player-info {
   display: flex;
   align-items: center;

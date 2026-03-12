@@ -9,6 +9,7 @@ interface AudioPlayerProps {
     title: string;
     coverUrl?: string;
     duration?: number;
+    inline?: boolean;
     onHeartbeat?: (position: number, sessionDuration: number, completed?: boolean) => void;
     onComplete?: () => void;
 }
@@ -18,6 +19,7 @@ export default function AudioPlayer({
     title,
     coverUrl,
     duration: backendDuration,
+    inline,
     onHeartbeat,
     onComplete,
 }: AudioPlayerProps) {
@@ -85,7 +87,7 @@ export default function AudioPlayer({
     if (!src) return null;
 
     return (
-        <div className="audio-player">
+        <div className={`audio-player${inline ? ' audio-player-inline' : ''}`}>
             <div className="player-info" style={{ minWidth: '180px', flexShrink: 0 }}>
                 {coverUrl && (
                     <img src={coverUrl} alt={title} className="player-cover" />

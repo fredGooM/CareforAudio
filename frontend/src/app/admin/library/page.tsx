@@ -48,10 +48,12 @@ export default function AdminLibraryPage() {
     const [recordingTime, setRecordingTime] = useState(0);
     const [recordedBlob, setRecordedBlob] = useState<Blob | null>(null);
     const [recordedUrl, setRecordedUrl] = useState<string | null>(null);
+    const [filePreviewUrl, setFilePreviewUrl] = useState<string | null>(null);
 
     const mediaRecorderRef = useRef<MediaRecorder | null>(null);
     const recordingChunksRef = useRef<Blob[]>([]);
     const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+    const recordingTimeRef = useRef(0);
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const animFrameRef = useRef<number | null>(null);
@@ -92,6 +94,7 @@ export default function AdminLibraryPage() {
             ...initialForm,
             voiceType: gender === 'F' ? AudioVoiceType.FEMALE : AudioVoiceType.MALE,
         });
+        setFilePreviewUrl(null);
         setShowModal(true);
     };
 
@@ -185,7 +188,7 @@ export default function AdminLibraryPage() {
                 let blob = new Blob(recordingChunksRef.current, { type: mimeType });
                 try {
                     // @ts-ignore
-                    blob = await fixWebmDuration(blob, { duration: recordingTime * 1000 });
+                    blob = await fixWebmDuration(blob, { duration: recordingTimeRef.current * 1000 });
                 } catch (e) {
                     console.error('Failed to fix WebM duration', e);
                 }
@@ -197,9 +200,13 @@ export default function AdminLibraryPage() {
             mediaRecorder.start();
             setIsRecording(true);
             setRecordingTime(0);
+            recordingTimeRef.current = 0;
             setRecordedBlob(null);
             setRecordedUrl(null);
-            recordingTimerRef.current = setInterval(() => setRecordingTime((p) => p + 1), 1000);
+            recordingTimerRef.current = setInterval(() => {
+                recordingTimeRef.current += 1;
+                setRecordingTime(recordingTimeRef.current);
+            }, 1000);
 
             // Start canvas animation (slight delay so canvas is rendered)
             setTimeout(drawVisualizer, 50);
@@ -210,9 +217,11 @@ export default function AdminLibraryPage() {
 
     const stopRecording = () => {
         if (mediaRecorderRef.current && isRecording) {
+            if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
+            const finalTime = recordingTimeRef.current;
+            setRecordingTime(finalTime);
             mediaRecorderRef.current.stop();
             setIsRecording(false);
-            if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
         }
     };
 
@@ -287,6 +296,8 @@ export default function AdminLibraryPage() {
             setShowModal(false);
             setRecordedBlob(null);
             setRecordedUrl(null);
+            if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+            setFilePreviewUrl(null);
             if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
         } catch (err: any) {
             alert(err.message);
@@ -358,8 +369,22 @@ export default function AdminLibraryPage() {
                                     </div>
 
                                     {uploadMode === 'FILE' && (
-                                        <div style={{ marginTop: '0.5rem' }}>
-                                            <input ref={fileRef} type="file" accept=".mp3,.wav,.aiff" required={uploadMode === 'FILE'} style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-input)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }} />
+                                        <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                                            <input
+                                                ref={fileRef}
+                                                type="file"
+                                                accept=".mp3,.wav,.aiff"
+                                                required={uploadMode === 'FILE'}
+                                                style={{ width: '100%', padding: '0.5rem', background: 'var(--bg-input)', border: '1px dashed var(--border)', borderRadius: 'var(--radius-sm)' }}
+                                                onChange={(e) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+                                                    setFilePreviewUrl(file ? URL.createObjectURL(file) : null);
+                                                }}
+                                            />
+                                            {filePreviewUrl && (
+                                                <AudioPlayer src={filePreviewUrl} title={form.title || 'Aperçu'} inline />
+                                            )}
                                         </div>
                                     )}
 
@@ -385,7 +410,7 @@ export default function AdminLibraryPage() {
                                                     <Mic size={16} /> En attente d'enregistrement…
                                                 </div>
                                             ) : (
-                                                <audio src={recordedUrl!} controls style={{ width: '100%', height: '40px', outline: 'none', borderRadius: '8px' }} />
+                                                <AudioPlayer src={recordedUrl!} title={form.title || 'Enregistrement'} inline />
                                             )}
 
                                             {/* Controls */}
@@ -521,7 +546,7 @@ export default function AdminLibraryPage() {
                                 </div>
                             </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn-secondary" onClick={() => setShowModal(false)}>Annuler</button>
+                                <button type="button" className="btn-secondary" onClick={() => { if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); setShowModal(false); }}>Annuler</button>
                                 <button type="submit" className="btn-primary">
                                     {editingAudio ? 'Enregistrer' : 'Uploader'}
                                 </button>
