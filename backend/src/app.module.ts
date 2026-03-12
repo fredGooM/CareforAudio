@@ -19,7 +19,6 @@ import {
   AudioAccess,
   RefreshToken,
   UserProgress,
-  AudioLog,
   AppConfig,
   Program,
   ProgramAudio,
@@ -50,7 +49,6 @@ import {
           AudioAccess,
           RefreshToken,
           UserProgress,
-          AudioLog,
           AppConfig,
           Program,
           ProgramAudio,
@@ -74,4 +72,4 @@ import {
     UserStatesModule,
   ],
 })
-export class AppModule { }
+export class AppModule {}

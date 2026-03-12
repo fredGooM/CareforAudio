@@ -11,7 +11,6 @@ import {
 import { UserGroup } from './user-group.entity';
 import { AudioAccess } from './audio-access.entity';
 import { UserProgress } from './user-progress.entity';
-import { AudioLog } from './audio-log.entity';
 import { RefreshToken } from './refresh-token.entity';
 
 export enum Role {
@@ -43,7 +42,10 @@ export class User {
   @Column({ nullable: true })
   createdById: string;
 
-  @ManyToOne(() => User, (user) => user.createdUsers, { nullable: true, onDelete: 'SET NULL' })
+  @ManyToOne(() => User, (user) => user.createdUsers, {
+    nullable: true,
+    onDelete: 'SET NULL',
+  })
   @JoinColumn({ name: 'createdById' })
   createdBy: User;
 
@@ -91,9 +93,6 @@ export class User {
 
   @OneToMany(() => UserProgress, (up) => up.user)
   progressRecords: UserProgress[];
-
-  @OneToMany(() => AudioLog, (al) => al.user)
-  audioLogs: AudioLog[];
 
   @OneToMany(() => RefreshToken, (rt) => rt.user)
   refreshTokens: RefreshToken[];

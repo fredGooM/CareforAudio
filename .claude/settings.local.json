@@ -7,7 +7,10 @@
       "Bash(cd /c/Users/Pro/Desktop/perso/Dev/goom/CareforAudio/frontend && npm uninstall @fullcalendar/react @fullcalendar/core @fullcalendar/daygrid @fullcalendar/timegrid @fullcalendar/list @fullcalendar/interaction && npm install @schedule-x/react @schedule-x/calendar @schedule-x/theme-default @schedule-x/events-service temporal-polyfill 2>&1)",
       "Bash(npm install:*)",
       "Bash(npm uninstall:*)",
-      "Bash(xargs:*)"
+      "Bash(xargs:*)",
+      "Bash(npx prettier --write src/seed.ts)",
+      "Bash(npx prettier --write src/analytics/analytics.service.ts src/analytics/analytics.module.ts src/entities/audio-listen-record.entity.ts src/entities/user.entity.ts src/entities/audio-track.entity.ts src/entities/index.ts src/app.module.ts)",
+      "Bash(PGPASSWORD=root psql -h localhost -U root -d careforaudio -c \"DROP TABLE IF EXISTS audio_logs CASCADE;\")"
     ]
   }
 }

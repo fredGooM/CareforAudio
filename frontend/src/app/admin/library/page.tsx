@@ -317,13 +317,14 @@ export default function AdminLibraryPage() {
         setCurrentTrack(audio);
     };
 
-    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean) => {
+    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean, isSessionEnd?: boolean) => {
         if (currentTrack) {
             apiClient.post('/analytics/heartbeat', {
                 audioId: currentTrack.id,
                 position,
                 sessionDuration,
                 completed,
+                isSessionEnd,
             });
         }
     };

@@ -72,13 +72,14 @@ export default function TrainingPage() {
         return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
     };
 
-    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean) => {
+    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean, isSessionEnd?: boolean) => {
         if (!currentAudio) return;
         apiClient.post('/analytics/heartbeat', {
             audioId: currentAudio.id,
             position,
             sessionDuration,
             completed,
+            isSessionEnd,
             programId: currentProgramId ?? undefined,
         });
 

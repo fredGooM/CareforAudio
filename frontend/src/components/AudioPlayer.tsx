@@ -10,7 +10,7 @@ interface AudioPlayerProps {
     coverUrl?: string;
     duration?: number;
     inline?: boolean;
-    onHeartbeat?: (position: number, sessionDuration: number, completed?: boolean) => void;
+    onHeartbeat?: (position: number, sessionDuration: number, completed?: boolean, isSessionEnd?: boolean) => void;
     onComplete?: () => void;
 }
 
@@ -32,7 +32,7 @@ export default function AudioPlayer({
         const sessionDur = (Date.now() - sessionStartRef.current) / 1000;
         if (sessionDur >= 2 || completed) { 
             const pos = Number.isFinite(currentTime) ? currentTime : 0;
-            if (onHeartbeat) onHeartbeat(pos, sessionDur, completed);
+            if (onHeartbeat) onHeartbeat(pos, sessionDur, completed, true);
         }
         sessionStartRef.current = 0;
         lastEmitTimeRef.current = 0;
@@ -48,7 +48,7 @@ export default function AudioPlayer({
                 if (sessionDur >= 5) {
                     const pos = Number.isFinite(currentTime) ? currentTime : 0;
                     if (onHeartbeat) onHeartbeat(pos, sessionDur, false);
-                    sessionStartRef.current = Date.now();
+                    // Do NOT reset sessionStartRef — it must stay at play start for accurate total duration
                     lastEmitTimeRef.current = Math.round(currentTime);
                 }
             }

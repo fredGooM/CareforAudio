@@ -45,13 +45,14 @@ export default function CatalogPage() {
         setFavorites(result);
     };
 
-    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean) => {
+    const handleHeartbeat = (position: number, sessionDuration: number, completed?: boolean, isSessionEnd?: boolean) => {
         if (currentAudio) {
             apiClient.post('/analytics/heartbeat', {
                 audioId: currentAudio.id,
                 position,
                 sessionDuration,
                 completed,
+                isSessionEnd,
             });
         }
     };
