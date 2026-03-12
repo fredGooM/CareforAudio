@@ -70,8 +70,8 @@ export default function EventModal({ event, isOpen, onClose, isTeacher, onUpdate
     const eventDate = new Date(event.date);
 
     return (
-        <div className="modal-overlay" onClick={onClose}>
-            <div className="modal-content event-modal" onClick={e => e.stopPropagation()}>
+        <div className="modal-overlay">
+            <div className="modal-content event-modal">
                 <div className="event-modal-header">
                     <div className="event-modal-header-left">
                         <div className="event-modal-dot" />

@@ -327,8 +327,8 @@ export default function AdminLibraryPage() {
 
             {/* MODAL */}
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()}>
+                <div className="modal-overlay">
+                    <div className="modal-content">
                         <h2>{editingAudio ? 'Modifier Audio' : 'Ajouter Audio'}</h2>
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             {!editingAudio && (

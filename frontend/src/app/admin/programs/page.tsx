@@ -235,8 +235,8 @@ export default function AdminProgramsPage() {
 
             {/* CREATE / EDIT MODAL */}
             {showModal && (
-                <div className="modal-overlay" onClick={() => setShowModal(false)}>
-                    <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '600px' }}>
                         <h2>{editingProgram ? 'Modifier le programme' : 'Nouveau Programme'}</h2>
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             <div className="form-group">
@@ -418,8 +418,8 @@ export default function AdminProgramsPage() {
 
             {/* SHARE MODAL */}
             {showShareModal && sharingProgram && (
-                <div className="modal-overlay" onClick={() => setShowShareModal(false)}>
-                    <div className="modal-content" style={{ maxWidth: '450px' }} onClick={e => e.stopPropagation()}>
+                <div className="modal-overlay">
+                    <div className="modal-content" style={{ maxWidth: '450px' }}>
                         <h2>Partager : {sharingProgram.name}</h2>
 
                         <form onSubmit={handleShare} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
