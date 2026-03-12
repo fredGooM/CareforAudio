@@ -380,21 +380,6 @@ export default function DashboardPage() {
                 </div>
             )}
 
-            {d.continueListening.length > 0 && (
-                <div className="section">
-                    <h2>Continuer l&#39;écoute</h2>
-                    <div className="continue-list">
-                        {d.continueListening.map((item) => (
-                            <div key={item.audioId} className="continue-item">
-                                <span>{item.title}</span>
-                                <div className="progress-bar-container small">
-                                    <div className="progress-bar" style={{ width: `${item.progressPercent}%` }} />
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </div>
-            )}
         </div>
     );
 }
