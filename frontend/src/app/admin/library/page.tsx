@@ -5,7 +5,7 @@ import { useState, useEffect, useRef, useMemo, FormEvent } from 'react';
 import { Check, X, Play, Edit, Trash2, Mic, Square, Search, RotateCcw } from 'lucide-react';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
-import type { AudioTrack, UserProfile } from '@/types';
+import type { AudioTrack, UserProfile, Program } from '@/types';
 import { AudioDominance, AudioPhasing, AudioLanguage, AudioVoiceType } from '@/types';
 import AudioPlayer from '@/components/AudioPlayer';
 import fixWebmDuration from 'webm-duration-fix';
@@ -14,6 +14,7 @@ export default function AdminLibraryPage() {
     const { data: session } = useSession();
     const [audios, setAudios] = useState<AudioTrack[]>([]);
     const [users, setUsers] = useState<UserProfile[]>([]);
+    const [programs, setPrograms] = useState<Program[]>([]);
     const [showModal, setShowModal] = useState(false);
     const [editingAudio, setEditingAudio] = useState<AudioTrack | null>(null);
     const [loading, setLoading] = useState(true);
@@ -25,7 +26,7 @@ export default function AdminLibraryPage() {
     const [filterType, setFilterType] = useState('');
     const [filterDominance, setFilterDominance] = useState('');
     const [filterPhasing, setFilterPhasing] = useState('');
-    const [sortBy, setSortBy] = useState<'title-asc' | 'title-desc' | 'dur-asc' | 'dur-desc'>('title-asc');
+    const [sortBy, setSortBy] = useState<'date-desc' | 'date-asc' | 'title-asc' | 'title-desc' | 'dur-asc' | 'dur-desc'>('date-desc');
 
     const filteredAudios = useMemo(() => {
         let list = [...audios];
@@ -34,6 +35,8 @@ export default function AdminLibraryPage() {
         if (filterDominance) list = list.filter(a => a.dominance === filterDominance);
         if (filterPhasing) list = list.filter(a => Array.isArray(a.phasing) && (a.phasing as string[]).includes(filterPhasing));
         list.sort((a, b) => {
+            if (sortBy === 'date-desc') return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+            if (sortBy === 'date-asc') return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
             if (sortBy === 'title-asc') return a.title.localeCompare(b.title);
             if (sortBy === 'title-desc') return b.title.localeCompare(a.title);
             if (sortBy === 'dur-asc') return a.duration - b.duration;
@@ -73,6 +76,8 @@ export default function AdminLibraryPage() {
         voiceType: AudioVoiceType.MALE,
     };
     const [form, setForm] = useState(initialForm);
+    const [selectedProgramId, setSelectedProgramId] = useState('');
+    const [programRequiredListens, setProgramRequiredListens] = useState(1);
 
     useEffect(() => {
         if (!session) return;
@@ -80,9 +85,11 @@ export default function AdminLibraryPage() {
         Promise.all([
             apiClient.get<AudioTrack[]>('/audios'),
             apiClient.get<UserProfile[]>('/users'),
-        ]).then(([a, u]) => {
+            apiClient.get<Program[]>('/programs'),
+        ]).then(([a, u, p]) => {
             setAudios(a);
             setUsers(u);
+            setPrograms(p);
             setLoading(false);
         }).catch(() => setLoading(false));
     }, [session]);
@@ -95,6 +102,8 @@ export default function AdminLibraryPage() {
             ...initialForm,
             voiceType: gender === 'F' ? AudioVoiceType.FEMALE : AudioVoiceType.MALE,
         });
+        setSelectedProgramId('');
+        setProgramRequiredListens(1);
         setFilePreviewUrl(null);
         setShowModal(true);
     };
@@ -293,6 +302,24 @@ export default function AdminLibraryPage() {
 
                 const newAudio = await apiClient.post<AudioTrack>('/audios', formData);
                 setAudios([newAudio, ...audios]);
+
+                // Add to program if selected
+                if (selectedProgramId) {
+                    const prog = programs.find(p => p.id === selectedProgramId);
+                    const existing = (prog?.audios ?? []).map((a, i) => ({
+                        audioId: a.id,
+                        order: i,
+                        requiredListens: (a as any).requiredListens ?? 1,
+                    }));
+                    const nextOrder = existing.length;
+                    await apiClient.put(`/programs/${selectedProgramId}`, {
+                        audioItems: [...existing, { audioId: newAudio.id, order: nextOrder, requiredListens: programRequiredListens }],
+                    });
+                    setPrograms(prev => prev.map(p => p.id === selectedProgramId
+                        ? { ...p, audios: [...(p.audios ?? []), { ...newAudio, order: nextOrder, requiredListens: programRequiredListens }] }
+                        : p
+                    ));
+                }
             }
             setShowModal(false);
             setRecordedBlob(null);
@@ -558,6 +585,34 @@ export default function AdminLibraryPage() {
                                     }
                                 </div>
                             </div>
+                            {!editingAudio && (
+                                <div className="form-group">
+                                    <label>Ajouter à un programme <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span></label>
+                                    <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
+                                        <select
+                                            value={selectedProgramId}
+                                            onChange={e => setSelectedProgramId(e.target.value)}
+                                            style={{ flex: 1 }}
+                                        >
+                                            <option value="">— Aucun —</option>
+                                            {programs.map(p => (
+                                                <option key={p.id} value={p.id}>{p.name}</option>
+                                            ))}
+                                        </select>
+                                        {selectedProgramId && (
+                                            <div className="form-group" style={{ margin: 0, minWidth: '120px' }}>
+                                                <label style={{ fontSize: '0.78rem' }}>Écoutes requises</label>
+                                                <input
+                                                    type="number"
+                                                    min={1}
+                                                    value={programRequiredListens}
+                                                    onChange={e => setProgramRequiredListens(Math.max(1, parseInt(e.target.value) || 1))}
+                                                />
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
                             <div className="modal-actions">
                                 <button type="button" className="btn-secondary" disabled={submitting} onClick={() => { if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); setShowModal(false); }}>Annuler</button>
                                 <button type="submit" className="btn-primary" disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '110px', justifyContent: 'center' }}>
@@ -643,6 +698,8 @@ export default function AdminLibraryPage() {
                 <div style={{ flex: '0 0 auto' }}>
                     <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>Tri</div>
                     <select value={sortBy} onChange={e => setSortBy(e.target.value as any)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: 'var(--text)', fontFamily: 'var(--font)', fontSize: '0.875rem', padding: '0.5rem 0.75rem', outline: 'none', cursor: 'pointer' }}>
+                        <option value="date-desc">Date ↓ (récent)</option>
+                        <option value="date-asc">Date ↑ (ancien)</option>
                         <option value="title-asc">Titre A→Z</option>
                         <option value="title-desc">Titre Z→A</option>
                         <option value="dur-asc">Durée ↑</option>
@@ -674,6 +731,7 @@ export default function AdminLibraryPage() {
                             <th>Dominance</th>
                             <th>Phasing</th>
                             <th>Créé par</th>
+                            <th>Date</th>
                             <th>Publié</th>
                             <th>Actions</th>
                         </tr>
@@ -687,6 +745,7 @@ export default function AdminLibraryPage() {
                                 <td style={{ fontSize: '0.8rem' }}>{audio.dominance ? { MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion' }[audio.dominance] ?? audio.dominance : '—'}</td>
                                 <td style={{ fontSize: '0.8rem' }}>{Array.isArray(audio.phasing) && audio.phasing.length > 0 ? audio.phasing.map(p => ({ PRE_COMPETITION: 'Pré', DURING_COMPETITION: 'Pendant', POST_COMPETITION: 'Post' }[p] ?? p)).join(', ') : '—'}</td>
                                 <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{audio.createdBy ? `${audio.createdBy.firstName} ${audio.createdBy.lastName}` : '—'}</td>
+                                <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{new Date(audio.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
                                 <td>
                                     {audio.published ? (
                                         <Check className="text-success" size={20} />
