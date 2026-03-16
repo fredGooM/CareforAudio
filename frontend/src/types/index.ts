@@ -51,6 +51,7 @@ export interface AudioTrack {
     published: boolean;
     allowedUserIds?: string[];
     listenCount?: number;
+    createdBy?: { id: string; firstName: string; lastName: string } | null;
 }
 
 export interface Group {

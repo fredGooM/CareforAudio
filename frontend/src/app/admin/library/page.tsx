@@ -673,6 +673,7 @@ export default function AdminLibraryPage() {
                             <th>Catégorie</th>
                             <th>Dominance</th>
                             <th>Phasing</th>
+                            <th>Créé par</th>
                             <th>Publié</th>
                             <th>Actions</th>
                         </tr>
@@ -685,6 +686,7 @@ export default function AdminLibraryPage() {
                                 <td>{audio.type}</td>
                                 <td style={{ fontSize: '0.8rem' }}>{audio.dominance ? { MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion' }[audio.dominance] ?? audio.dominance : '—'}</td>
                                 <td style={{ fontSize: '0.8rem' }}>{Array.isArray(audio.phasing) && audio.phasing.length > 0 ? audio.phasing.map(p => ({ PRE_COMPETITION: 'Pré', DURING_COMPETITION: 'Pendant', POST_COMPETITION: 'Post' }[p] ?? p)).join(', ') : '—'}</td>
+                                <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{audio.createdBy ? `${audio.createdBy.firstName} ${audio.createdBy.lastName}` : '—'}</td>
                                 <td>
                                     {audio.published ? (
                                         <Check className="text-success" size={20} />

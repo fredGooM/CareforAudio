@@ -35,44 +35,48 @@ export class AudiosService {
     async findAllForUser(userId: string, role: string) {
         let audios: AudioTrack[];
 
-        const directAccess = await this.audioAccessRepo.find({
-            where: { userId },
-            select: ['audioId'],
-        });
-        const directIds = directAccess.map((a) => a.audioId);
-
-        // Get audio IDs accessible via shared programs
-        const sharedPrograms = await this.programShareRepo.find({
-            where: { userId },
-            select: ['programId'],
-        });
-        const sharedProgramIds = sharedPrograms.map(s => s.programId);
-        let programAudioIds: string[] = [];
-        if (sharedProgramIds.length > 0) {
-            const programsWithAudios = await this.programRepo.find({
-                where: { id: In(sharedProgramIds) },
-                relations: ['programAudios'],
+        if (role === 'ADMIN') {
+            audios = await this.audioRepo.find({ relations: ['allowedUsers', 'createdBy'] });
+        } else {
+            const directAccess = await this.audioAccessRepo.find({
+                where: { userId },
+                select: ['audioId'],
             });
-            programsWithAudios.forEach(p => {
-                p.programAudios?.forEach(pa => programAudioIds.push(pa.audioId));
+            const directIds = directAccess.map((a) => a.audioId);
+
+            // Get audio IDs accessible via shared programs
+            const sharedPrograms = await this.programShareRepo.find({
+                where: { userId },
+                select: ['programId'],
             });
-        }
+            const sharedProgramIds = sharedPrograms.map(s => s.programId);
+            let programAudioIds: string[] = [];
+            if (sharedProgramIds.length > 0) {
+                const programsWithAudios = await this.programRepo.find({
+                    where: { id: In(sharedProgramIds) },
+                    relations: ['programAudios'],
+                });
+                programsWithAudios.forEach(p => {
+                    p.programAudios?.forEach(pa => programAudioIds.push(pa.audioId));
+                });
+            }
 
-        const allIds = [...new Set([...directIds, ...programAudioIds])];
-        
-        const whereConditions: any[] = [{ createdById: userId }];
-        if (allIds.length > 0) {
-            whereConditions.push({ id: In(allIds) });
-        }
+            const allIds = [...new Set([...directIds, ...programAudioIds])];
 
-        audios = await this.audioRepo.find({
-            where: whereConditions,
-            relations: ['allowedUsers'],
-        });
+            const whereConditions: any[] = [{ createdById: userId }];
+            if (allIds.length > 0) {
+                whereConditions.push({ id: In(allIds) });
+            }
 
-        // For Athletes, filter out unpublished audios if they are somehow pulled
-        if (role === 'ATHLETE') {
-            audios = audios.filter(a => a.published);
+            audios = await this.audioRepo.find({
+                where: whereConditions,
+                relations: ['allowedUsers'],
+            });
+
+            // For Athletes, filter out unpublished audios
+            if (role === 'ATHLETE') {
+                audios = audios.filter(a => a.published);
+            }
         }
 
         // Fetch progress for this user to get listenCount
@@ -112,6 +116,9 @@ export class AudiosService {
                     allowedUserIds:
                         a.allowedUsers?.map((u: any) => u.userId) || [],
                     listenCount: listenMap.get(a.id) || 0,
+                    createdBy: a.createdBy
+                        ? { id: a.createdBy.id, firstName: a.createdBy.firstName, lastName: a.createdBy.lastName }
+                        : null,
                 };
             }),
         );
