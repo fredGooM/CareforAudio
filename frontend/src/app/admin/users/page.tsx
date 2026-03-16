@@ -15,6 +15,7 @@ export default function AdminUsersPage() {
     const [showCreate, setShowCreate] = useState(false);
     const [editingUser, setEditingUser] = useState<UserProfile | null>(null);
     const [actionMsg, setActionMsg] = useState('');
+    const [formError, setFormError] = useState('');
     const [openMenuId, setOpenMenuId] = useState<string | null>(null);
     const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
     const menuRef = useRef<HTMLDivElement>(null);
@@ -55,13 +56,14 @@ export default function AdminUsersPage() {
     /* ── Create ── */
     const handleCreate = async (e: FormEvent) => {
         e.preventDefault();
+        setFormError('');
         try {
             await apiClient.post('/users', form);
             await reload();
             setShowCreate(false);
             setForm(emptyForm);
         } catch (err: any) {
-            alert(err.message);
+            setFormError(err.message);
         }
     };
 
@@ -203,9 +205,10 @@ export default function AdminUsersPage() {
                             </div>
                         </>
                     )}
+                    {formError && <p style={{ color: 'var(--danger, #ef4444)', fontSize: '0.875rem', marginBottom: '0.5rem' }}>{formError}</p>}
                     <div className="form-actions">
                         <button type="submit" className="btn-primary">{isEditing ? 'Enregistrer' : 'Créer'}</button>
-                        <button type="button" className="btn-secondary" onClick={isEditing ? cancelEdit : () => setShowCreate(false)}>Annuler</button>
+                        <button type="button" className="btn-secondary" onClick={isEditing ? cancelEdit : () => { setShowCreate(false); setFormError(''); }}>Annuler</button>
                     </div>
                 </form>
             )}

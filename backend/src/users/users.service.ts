@@ -80,6 +80,9 @@ export class UsersService {
             }
         }
 
+        const existing = await this.userRepo.findOne({ where: { email: data.email } });
+        if (existing) throw new BadRequestException('Un compte avec cette adresse email existe déjà');
+
         const hash = await bcrypt.hash(data.password || 'care1234!', 10);
         const newUser = this.userRepo.create({
             email: data.email,
