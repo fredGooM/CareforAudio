@@ -152,6 +152,16 @@ export default function DashboardPage() {
     const isInactive = daysSinceLastListen === null || daysSinceLastListen >= 7;
 
     /** Format relative date label */
+    function formatDuration(seconds: number): string {
+        if (seconds < 60) return `${seconds} s`;
+        const m = Math.floor(seconds / 60);
+        const s = seconds % 60;
+        if (m < 60) return s > 0 ? `${m} min ${s} s` : `${m} min`;
+        const h = Math.floor(m / 60);
+        const rem = m % 60;
+        return rem > 0 ? `${h} h ${rem} min` : `${h} h`;
+    }
+
     function formatEventDate(dateStr: string): { day: string; time: string; relative: string } {
         const date = new Date(dateStr);
         const now = new Date();
@@ -176,18 +186,21 @@ export default function DashboardPage() {
             <h1>Mon Dashboard</h1>
             <div className="stats-grid">
                 <div className="stat-card">
-                    <div className="stat-value">{d.totalMinutes} min</div>
+                    <div className="stat-value">{formatDuration(d.totalSeconds ?? d.totalMinutes * 60)}</div>
                     <div className="stat-label">Écoute totale</div>
                 </div>
                 <div className="stat-card">
-                    <div className="stat-value">{d.last7DaysMinutes} min</div>
+                    <div className="stat-value">{formatDuration(d.last7DaysSeconds ?? d.last7DaysMinutes * 60)}</div>
                     <div className="stat-label">7 derniers jours</div>
+                </div>
+                <div className="stat-card">
+                    <div className="stat-value">{d.completedCount}</div>
+                    <div className="stat-label">Audios écoutés</div>
                 </div>
                 <div className="stat-card">
                     <div className="stat-value">{d.completionPercent}%</div>
                     <div className="stat-label">Complétion programmes</div>
                 </div>
-
             </div>
 
             {/* ── Last listen + inactivity alert ── */}

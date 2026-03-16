@@ -91,7 +91,9 @@ export interface ProgramShare {
 export interface DashboardUser {
     role: 'ATHLETE';
     totalMinutes: number;
+    totalSeconds: number;
     last7DaysMinutes: number;
+    last7DaysSeconds: number;
     completionPercent: number;
     completedCount: number;
     continueListening: { audioId: string; title: string; progressPercent: number }[];

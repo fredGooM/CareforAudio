@@ -340,16 +340,14 @@ export class AnalyticsService {
 
   private async buildUserDashboard(userId: string) {
     const allRecords = await this.listenRecordRepo.find({ where: { userId } });
-    const totalMinutes = Math.round(
-      allRecords.reduce((sum, r) => sum + (r.duration || 0), 0) / 60,
-    );
+    const totalSeconds = allRecords.reduce((sum, r) => sum + (r.duration || 0), 0);
+    const totalMinutes = Math.round(totalSeconds / 60);
 
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-    const last7DaysMinutes = Math.round(
-      allRecords
-        .filter((r) => r.listenedAt >= sevenDaysAgo)
-        .reduce((sum, r) => sum + (r.duration || 0), 0) / 60,
-    );
+    const last7DaysSeconds = allRecords
+      .filter((r) => r.listenedAt >= sevenDaysAgo)
+      .reduce((sum, r) => sum + (r.duration || 0), 0);
+    const last7DaysMinutes = Math.round(last7DaysSeconds / 60);
 
     const progressRecords = await this.progressRepo.find({
       where: { userId },
@@ -410,7 +408,9 @@ export class AnalyticsService {
     return {
       role: 'ATHLETE',
       totalMinutes,
+      totalSeconds,
       last7DaysMinutes,
+      last7DaysSeconds,
       completionPercent,
       completedCount,
       continueListening: [],
