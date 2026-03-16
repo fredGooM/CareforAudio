@@ -370,7 +370,22 @@ export default function AdminLibraryPage() {
             {/* MODAL */}
             {showModal && (
                 <div className="modal-overlay">
-                    <div className="modal-content">
+                    <div className="modal-content" style={{ position: 'relative' }}>
+                        {/* Upload overlay */}
+                        {submitting && (
+                            <div style={{
+                                position: 'absolute', inset: 0, borderRadius: 'inherit',
+                                background: 'rgba(10,10,18,0.82)', backdropFilter: 'blur(4px)',
+                                zIndex: 10, display: 'flex', flexDirection: 'column',
+                                alignItems: 'center', justifyContent: 'center', gap: '1.25rem',
+                            }}>
+                                <div style={{ width: 48, height: 48, border: '4px solid rgba(124,92,252,0.25)', borderTopColor: 'var(--primary)', borderRadius: '50%', animation: 'spin 0.8s linear infinite' }} />
+                                <div style={{ textAlign: 'center' }}>
+                                    <p style={{ margin: 0, fontWeight: 600, fontSize: '1rem' }}>Upload en cours…</p>
+                                    <p style={{ margin: '0.35rem 0 0 0', fontSize: '0.82rem', color: 'var(--text-muted)' }}>Veuillez patienter, les gros fichiers peuvent prendre quelques secondes.</p>
+                                </div>
+                            </div>
+                        )}
                         <h2>{editingAudio ? 'Modifier Audio' : 'Ajouter Audio'}</h2>
                         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
                             {!editingAudio && (
