@@ -98,6 +98,7 @@ export interface DashboardUser {
     completedCount: number;
     continueListening: { audioId: string; title: string; progressPercent: number }[];
     lastListenedAt: string | null;
+    lastListenedInfo?: { audioId: string; audioTitle: string; programName?: string; programId?: string } | null;
 }
 
 export interface DashboardAdmin {

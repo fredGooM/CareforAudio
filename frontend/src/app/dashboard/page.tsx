@@ -9,7 +9,8 @@ import type { Dashboard, DashboardUser, DashboardAdmin, Program, CalendarEvent }
 import Link from 'next/link';
 import TeacherDashboard from '@/components/TeacherDashboard';
 import UserStatesPanel from '@/components/UserStatesPanel';
-import ProgramCard from '@/components/ProgramCard';
+import ProgramCard, { type ProgramAudioItem } from '@/components/ProgramCard';
+import AudioPlayer from '@/components/AudioPlayer';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
 } from 'recharts';
@@ -23,6 +24,8 @@ export default function DashboardPage() {
     const [upcomingEvents, setUpcomingEvents] = useState<CalendarEvent[]>([]);
     const [engagement, setEngagement] = useState<EngagementDay[]>([]);
     const [loading, setLoading] = useState(true);
+    const [currentAudio, setCurrentAudio] = useState<ProgramAudioItem | null>(null);
+    const [currentProgramId, setCurrentProgramId] = useState<string | null>(null);
 
     useEffect(() => {
         if (!session) return;
@@ -205,30 +208,67 @@ export default function DashboardPage() {
             </div>
 
             {/* ── Last listen + inactivity alert ── */}
-            <div style={{
-                background: isInactive ? 'rgba(234, 179, 8, 0.08)' : 'var(--bg-card)',
-                border: `1px solid ${isInactive ? 'rgba(234, 179, 8, 0.4)' : 'var(--border)'}`,
-                borderRadius: '12px',
-                padding: '1rem 1.25rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                marginBottom: '2rem',
-            }}>
+            <div
+                onClick={() => {
+                    if (!d.lastListenedInfo?.audioId) return;
+                    const audio = programs.flatMap(p => p.audios ?? []).find(a => a.id === d.lastListenedInfo!.audioId);
+                    if (audio) { setCurrentAudio(audio); setCurrentProgramId(d.lastListenedInfo!.programId ?? null); }
+                }}
+                style={{
+                    background: isInactive ? 'rgba(234, 179, 8, 0.08)' : 'var(--bg-card)',
+                    border: `1px solid ${isInactive ? 'rgba(234, 179, 8, 0.4)' : 'var(--border)'}`,
+                    borderRadius: '12px',
+                    padding: '1rem 1.25rem',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.75rem',
+                    marginBottom: '2rem',
+                    cursor: d.lastListenedInfo?.audioId ? 'pointer' : 'default',
+                    transition: 'var(--transition)',
+                }}
+            >
                 {isInactive
                     ? <AlertTriangle size={20} style={{ flexShrink: 0, color: '#ca8a04' }} />
                     : <Clock size={20} style={{ flexShrink: 0, color: 'var(--primary)' }} />
                 }
-                <div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                     <strong style={{ fontSize: '0.95rem', color: isInactive ? '#ca8a04' : 'inherit' }}>
                         {isInactive ? 'Alerte décrochage' : 'Dernière écoute'}
                     </strong>
-                    <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-                        {lastListenedAt
-                            ? `${lastListenedAt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}${isInactive ? ` — ${daysSinceLastListen} jour${daysSinceLastListen! > 1 ? 's' : ''} sans écoute` : ''}`
-                            : 'Aucune écoute enregistrée dans vos programmes.'
-                        }
-                    </p>
+                    {lastListenedAt ? (
+                        <>
+                            {d.lastListenedInfo && (
+                                <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.9rem', fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                    {d.lastListenedInfo.audioTitle}
+                                    {d.lastListenedInfo.programName && (
+                                        <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}> — {d.lastListenedInfo.programName}</span>
+                                    )}
+                                </p>
+                            )}
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.2rem', flexWrap: 'wrap' }}>
+                                <span style={{ fontSize: '0.82rem', color: 'var(--text-muted)' }}>
+                                    {lastListenedAt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' })}
+                                    {isInactive && ` — ${daysSinceLastListen} jour${daysSinceLastListen! > 1 ? 's' : ''} sans écoute`}
+                                </span>
+                                {d.lastListenedInfo?.programId && (() => {
+                                    const prog = programs.find(p => p.id === d.lastListenedInfo!.programId);
+                                    const pct = prog?.completionPercent ?? 0;
+                                    return (
+                                        <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.8rem', fontWeight: 600, color: pct === 100 ? 'var(--success)' : 'var(--primary)' }}>
+                                            <span style={{ display: 'inline-block', width: '36px', height: '5px', borderRadius: '3px', background: 'var(--border)', overflow: 'hidden' }}>
+                                                <span style={{ display: 'block', width: `${pct}%`, height: '100%', background: pct === 100 ? 'var(--success)' : 'var(--primary)', borderRadius: '3px' }} />
+                                            </span>
+                                            {pct}%
+                                        </span>
+                                    );
+                                })()}
+                            </div>
+                        </>
+                    ) : (
+                        <p style={{ margin: '0.15rem 0 0 0', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                            Aucune écoute enregistrée dans vos programmes.
+                        </p>
+                    )}
                 </div>
             </div>
 
@@ -380,7 +420,8 @@ export default function DashboardPage() {
                             <ProgramCard
                                 key={prog.id}
                                 program={prog}
-                                playHref="/training"
+                                onPlayAudio={(audio, programId) => { setCurrentAudio(audio); setCurrentProgramId(programId); }}
+                                currentAudioId={currentAudio?.id}
                             />
                         ))}
                     </div>
@@ -395,6 +436,25 @@ export default function DashboardPage() {
                     <h2>Mes États</h2>
                     <UserStatesPanel userId={(session.user as any).id} />
                 </div>
+            )}
+
+            {currentAudio && (
+                <AudioPlayer
+                    src={currentAudio.url}
+                    title={currentAudio.title}
+                    coverUrl={currentAudio.coverUrl}
+                    duration={currentAudio.duration}
+                    onHeartbeat={(position, sessionDuration, completed, isSessionEnd) => {
+                        apiClient.post('/analytics/heartbeat', {
+                            audioId: currentAudio.id,
+                            position,
+                            sessionDuration,
+                            completed,
+                            isSessionEnd,
+                            programId: currentProgramId ?? undefined,
+                        });
+                    }}
+                />
             )}
 
         </div>

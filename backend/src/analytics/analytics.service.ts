@@ -405,6 +405,27 @@ export class AnalyticsService {
       );
     }
 
+    const lastRecord = await this.listenRecordRepo.findOne({
+      where: { userId },
+      order: { listenedAt: 'DESC' },
+    });
+
+    let lastListenedInfo: { audioId: string; audioTitle: string; programName?: string; programId?: string } | null = null;
+    if (lastRecord) {
+      const [audio, program] = await Promise.all([
+        this.audioRepo.findOne({ where: { id: lastRecord.audioId }, select: ['title'] }),
+        lastRecord.programId
+          ? this.programRepo.findOne({ where: { id: lastRecord.programId }, select: ['id', 'name'] })
+          : Promise.resolve(null),
+      ]);
+      lastListenedInfo = {
+        audioId: lastRecord.audioId,
+        audioTitle: audio?.title ?? 'Audio',
+        programName: program?.name,
+        programId: program?.id,
+      };
+    }
+
     return {
       role: 'ATHLETE',
       totalMinutes,
@@ -414,13 +435,8 @@ export class AnalyticsService {
       completionPercent,
       completedCount,
       continueListening: [],
-      lastListenedAt: await this.listenRecordRepo
-        .findOne({
-          where: { userId },
-          order: { listenedAt: 'DESC' },
-          select: ['listenedAt'],
-        })
-        .then((r) => r?.listenedAt?.toISOString() ?? null),
+      lastListenedAt: lastRecord?.listenedAt?.toISOString() ?? null,
+      lastListenedInfo,
     };
   }
 }
