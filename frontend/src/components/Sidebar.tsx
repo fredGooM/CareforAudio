@@ -4,17 +4,18 @@ import { useSession, signOut } from 'next-auth/react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { 
-    LayoutDashboard, 
-    ListMusic, 
+import {
+    LayoutDashboard,
+    ListMusic,
     Heart,
-    Library, 
-    UsersRound, 
-    CalendarCheck, 
+    Library,
+    UsersRound,
+    CalendarCheck,
     CalendarHeart,
     Calendar,
-    User, 
-    LogOut 
+    User,
+    LogOut,
+    Activity,
 } from 'lucide-react';
 
 /* ── Modern Lucide icons (24x24) ── */
@@ -29,6 +30,7 @@ const icons = {
     profile: <User size={24} />,
     logout: <LogOut size={24} />,
     calendar: <Calendar size={24} />,
+    states: <Activity size={24} />,
 };
 
 export default function Sidebar() {
@@ -42,6 +44,7 @@ export default function Sidebar() {
     const athleteLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
         { href: '/training', label: 'Programmes', icon: icons.training },
+        { href: '/states', label: 'États', icon: icons.states },
         { href: '/calendar', label: 'Calendrier', icon: icons.calendar },
         { href: '/favorites', label: 'Favoris', icon: icons.favorites },
         { href: '/profile', label: 'Profil', icon: icons.profile },

@@ -430,11 +430,16 @@ export default function DashboardPage() {
                 )}
             </div>
 
-            {/* ── States Panel ── */}
+            {/* ── States Panel (readonly — charts only) ── */}
             {session && (session?.user as any)?.id && (
                 <div className="section">
-                    <h2>Mes États</h2>
-                    <UserStatesPanel userId={(session.user as any).id} />
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                        <h2 style={{ margin: 0 }}>Mes États</h2>
+                        <Link href="/states" className="text-primary" style={{ fontSize: '0.9rem', display: 'flex', alignItems: 'center', gap: '0.25rem', textDecoration: 'none' }}>
+                            Saisir <ArrowRight size={14} />
+                        </Link>
+                    </div>
+                    <UserStatesPanel userId={(session.user as any).id} chartsOnly />
                 </div>
             )}
 

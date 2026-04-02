@@ -26,9 +26,10 @@ const CHART_COLORS = ['#ef4444', '#3b82f6', '#22c55e', '#f59e0b'];
 interface Props {
     userId: string;
     readonly?: boolean;
+    chartsOnly?: boolean;
 }
 
-export default function UserStatesPanel({ userId, readonly }: Props) {
+export default function UserStatesPanel({ userId, readonly, chartsOnly }: Props) {
     const [activeType, setActiveType] = useState<StateType>(StateType.GENERAL);
     const [entries, setEntries] = useState<UserStateEntry[]>([]);
     const [loading, setLoading] = useState(true);
@@ -47,7 +48,7 @@ export default function UserStatesPanel({ userId, readonly }: Props) {
     const fetchEntries = async () => {
         setLoading(true);
         try {
-            const url = readonly
+            const url = readonly && !chartsOnly
                 ? `/user-states/user/${userId}?type=${activeType}`
                 : `/user-states/me?type=${activeType}`;
             const data = await apiClient.get<UserStateEntry[]>(url);
@@ -119,8 +120,8 @@ export default function UserStatesPanel({ userId, readonly }: Props) {
                 ))}
             </div>
 
-            {/* Form (hidden in readonly mode) */}
-            {!readonly && (
+            {/* Form (hidden in readonly or chartsOnly mode) */}
+            {!readonly && !chartsOnly && (
                 <form onSubmit={handleSubmit} className="upload-form" style={{ marginBottom: '1.5rem' }}>
                     <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Nouvel enregistrement</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
@@ -214,7 +215,7 @@ export default function UserStatesPanel({ userId, readonly }: Props) {
                     </div>
 
                     {/* History table */}
-                    <div className="table-container">
+                    {!chartsOnly && <div className="table-container">
                         <h3 style={{ fontSize: '1rem', marginBottom: '0.75rem' }}>Historique</h3>
                         <table>
                             <thead>
@@ -242,7 +243,7 @@ export default function UserStatesPanel({ userId, readonly }: Props) {
                                 ))}
                             </tbody>
                         </table>
-                    </div>
+                    </div>}
                 </>
             )}
         </div>
