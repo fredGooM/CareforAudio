@@ -2,7 +2,7 @@
 
 import { useSession } from 'next-auth/react';
 import { useEffect, useRef, useState, FormEvent } from 'react';
-import { Edit, KeyRound, Mail, Check, X, Calendar as CalendarIcon, LayoutDashboard, MoreHorizontal } from 'lucide-react';
+import { Edit, KeyRound, Mail, Check, X, Calendar as CalendarIcon, LayoutDashboard, MoreHorizontal, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
@@ -127,6 +127,17 @@ export default function AdminUsersPage() {
     const toggleActive = async (user: UserProfile) => {
         await apiClient.put(`/users/${user.id}`, { isActive: !user.isActive });
         await reload();
+    };
+
+    const handleDelete = async (userId: string, name: string) => {
+        if (!confirm(`Supprimer définitivement ${name} ? Cette action est irréversible.`)) return;
+        try {
+            await apiClient.delete(`/users/${userId}`);
+            setUsers(users.filter(u => u.id !== userId));
+            showMsg('Utilisateur supprimé.');
+        } catch (err: any) {
+            alert(err.message);
+        }
     };
 
     const showMsg = (msg: string) => {
@@ -287,12 +298,16 @@ export default function AdminUsersPage() {
                                                         { icon: <Edit size={14} />, label: 'Modifier', onClick: () => { openEdit(user); setOpenMenuId(null); } },
                                                         { icon: <KeyRound size={14} />, label: 'Reset mot de passe', onClick: () => { handleResetPassword(user.id); setOpenMenuId(null); } },
                                                         { icon: <Mail size={14} />, label: 'Envoyer identifiants', onClick: () => { handleSendWelcome(user.id); setOpenMenuId(null); } },
+                                                        ...((session?.user as any)?.role === 'ADMIN' && user.id !== (session?.user as any)?.id ? [{
+                                                            icon: <Trash2 size={14} />, label: 'Supprimer', danger: true,
+                                                            onClick: () => { handleDelete(user.id, `${user.firstName} ${user.lastName}`); setOpenMenuId(null); }
+                                                        }] : []),
                                                     ].map((item, i, arr) => (
                                                         <button key={item.label} onClick={item.onClick} style={{
                                                             width: '100%', display: 'flex', alignItems: 'center', gap: '0.6rem',
                                                             padding: '0.6rem 0.875rem', background: 'none', border: 'none',
                                                             borderBottom: i < arr.length - 1 ? '1px solid rgba(51,65,85,0.4)' : 'none',
-                                                            color: 'var(--text)', cursor: 'pointer',
+                                                            color: (item as any).danger ? '#ef4444' : 'var(--text)', cursor: 'pointer',
                                                             fontFamily: 'var(--font)', fontSize: '0.825rem', textAlign: 'left',
                                                             transition: 'var(--transition)',
                                                         }}

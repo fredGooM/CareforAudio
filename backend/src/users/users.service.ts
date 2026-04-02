@@ -249,4 +249,23 @@ export class UsersService {
 
         return { success: true };
     }
+
+    async remove(userId: string, currentUser: any) {
+        if (currentUser.role !== 'ADMIN') {
+            throw new BadRequestException('Only admins can delete users');
+        }
+        if (userId === currentUser.id) {
+            throw new BadRequestException('You cannot delete your own account');
+        }
+        const target = await this.findById(userId);
+        if (!target) throw new BadRequestException('User not found');
+
+        // Clean up related data to avoid FK constraint violations
+        await this.userGroupRepo.delete({ userId });
+        await this.audioAccessRepo.delete({ userId });
+        await this.progressRepo.delete({ userId });
+        await this.userRepo.delete(userId);
+
+        return { success: true };
+    }
 }

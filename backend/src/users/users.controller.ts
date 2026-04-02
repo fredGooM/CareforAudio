@@ -3,6 +3,7 @@ import {
     Get,
     Post,
     Put,
+    Delete,
     Body,
     Param,
     UseGuards,
@@ -87,5 +88,11 @@ export class UsersController {
     @Post(':id/send-welcome')
     async sendWelcome(@Param('id') id: string, @Request() req: any) {
         return this.usersService.sendWelcome(id, req.user, this.emailService);
+    }
+
+    @UseGuards(JwtAuthGuard, AdminGuard)
+    @Delete(':id')
+    remove(@Param('id') id: string, @Request() req: any) {
+        return this.usersService.remove(id, req.user);
     }
 }
