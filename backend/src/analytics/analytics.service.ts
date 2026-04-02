@@ -318,7 +318,7 @@ export class AnalyticsService {
           daysSince,
         };
       })
-      .filter((item) => item.daysSince > 7)
+      .filter((item) => item.daysSince > 15)
       .sort((a, b) => b.daysSince - a.daysSince)
       .slice(0, 5);
 

@@ -126,7 +126,7 @@ export default function TeacherDashboard({ accessToken }: { accessToken: string 
     const now = new Date();
     const upcomingRdv = teacherEvents.filter(ev => RDV_TYPES.includes(ev.type as string) && new Date(ev.date) >= now).slice(0, 8);
     const selectedAthlete = overview?.athletes.find(a => a.id === selectedAthleteId);
-    const alertCount = overview?.dropoffs.filter(d => d.daysSince === null || d.daysSince > 7).length ?? 0;
+    const alertCount = overview?.dropoffs.filter(d => d.daysSince === null || d.daysSince > 15).length ?? 0;
 
     return (
         <div className="page-content">
@@ -189,8 +189,8 @@ export default function TeacherDashboard({ accessToken }: { accessToken: string 
                             ) : (
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
                                     {overview?.dropoffs.map(d => {
-                                        const crit = d.daysSince === null || d.daysSince > 14;
-                                        const warn = !crit && d.daysSince !== null && d.daysSince > 7;
+                                        const crit = d.daysSince === null || d.daysSince > 30;
+                                        const warn = !crit && d.daysSince !== null && d.daysSince > 15;
                                         return (
                                             <button key={d.userId} onClick={() => setSelectedAthleteId(d.userId)} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0.55rem 0.75rem', background: crit ? 'rgba(239,68,68,0.07)' : warn ? 'rgba(245,158,11,0.07)' : 'rgba(0,0,0,0.12)', border: `1px solid ${crit ? 'rgba(239,68,68,0.2)' : warn ? 'rgba(245,158,11,0.2)' : 'rgba(51,65,85,0.4)'}`, borderRadius: '8px', cursor: 'pointer', fontFamily: 'var(--font)', transition: 'var(--transition)', textAlign: 'left', gap: '0.5rem' }}>
                                                 <span style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text)' }}>{d.name}</span>

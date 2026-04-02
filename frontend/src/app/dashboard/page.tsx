@@ -153,7 +153,7 @@ export default function DashboardPage() {
     const daysSinceLastListen = lastListenedAt
         ? Math.floor((Date.now() - lastListenedAt.getTime()) / (1000 * 60 * 60 * 24))
         : null;
-    const isInactive = daysSinceLastListen === null || daysSinceLastListen >= 7;
+    const isInactive = daysSinceLastListen === null || daysSinceLastListen >= 15;
 
     /** Format relative date label */
     function formatDuration(seconds: number): string {
