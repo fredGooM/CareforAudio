@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Request } from '@nestjs/common';
-import { EventsService, CreateEventDto, UpdateEventDto } from './events.service';
+import { EventsService, CreateEventDto, UpdateEventDto, AthleteCreateEventDto } from './events.service';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { AdminOrTeacherGuard } from '../auth/roles.guard';
 
@@ -11,6 +11,12 @@ export class EventsController {
   @Get('me')
   async getMyEvents(@Request() req: any) {
     return this.eventsService.findAllForUser(req.user.id);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('me')
+  async createMyEvent(@Body() createDto: AthleteCreateEventDto, @Request() req: any) {
+    return this.eventsService.createForSelf(createDto, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)

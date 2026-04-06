@@ -12,6 +12,14 @@ export class CreateEventDto {
   userId: string;
 }
 
+export class AthleteCreateEventDto {
+  title: string;
+  description?: string;
+  date: Date;
+  type?: EventType;
+  duration?: number;
+}
+
 export class UpdateEventDto {
   title?: string;
   description?: string;
@@ -39,6 +47,15 @@ export class EventsService {
     if (athlete.createdById !== teacherId) {
       throw new ForbiddenException('Vous ne pouvez gérer que les calendriers de vos propres athlètes.');
     }
+  }
+
+  async createForSelf(dto: AthleteCreateEventDto, athleteId: string): Promise<CalendarEvent> {
+    const event = this.eventsRepo.create({
+      ...dto,
+      userId: athleteId,
+      createdById: athleteId,
+    });
+    return this.eventsRepo.save(event);
   }
 
   async create(createDto: CreateEventDto, createdById: string): Promise<CalendarEvent> {

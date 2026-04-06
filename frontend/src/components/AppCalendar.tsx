@@ -13,7 +13,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
  * We override them on .sx-wrapper so descendant elements resolve our
  * fitted values instead of the 1600px default.
  */
-const GRID_STEPS = 16; // 07→22 with 60-min step
+const GRID_STEPS = 24; // 00→24 with 60-min step
 
 export interface SxEvent {
     id: string;
@@ -41,7 +41,6 @@ export default function AppCalendar({ events, onEventClick, onDateClick, calenda
             locale: 'fr-FR',
             firstDayOfWeek: 1,
             isDark: true,
-            dayBoundaries: { start: '07:00', end: '22:00' },
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
             ...(calendars ? { calendars } as any : {}),
             // eslint-disable-next-line @typescript-eslint/no-explicit-any

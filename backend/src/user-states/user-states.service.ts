@@ -15,6 +15,11 @@ export class UserStatesService {
         return this.repo.save(entry);
     }
 
+    async createForUser(targetUserId: string, type: StateType, data: Record<string, number>): Promise<UserState> {
+        const entry = this.repo.create({ userId: targetUserId, type, data });
+        return this.repo.save(entry);
+    }
+
     async findByUser(userId: string, type?: StateType): Promise<UserState[]> {
         const where: any = { userId };
         if (type) where.type = type;

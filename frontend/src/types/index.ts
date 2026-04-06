@@ -144,34 +144,30 @@ export interface CalendarEvent {
 }
 
 export enum StateType {
-    GENERAL = 'GENERAL',
-    SLEEP = 'SLEEP',
-    POST_COMPETITION = 'POST_COMPETITION',
+    EN_COMPETITION = 'EN_COMPETITION',
+    AU_QUOTIDIEN = 'AU_QUOTIDIEN',
 }
 
 export const STATE_TYPE_LABELS: Record<StateType, string> = {
-    [StateType.GENERAL]: 'État général',
-    [StateType.SLEEP]: 'Sommeil',
-    [StateType.POST_COMPETITION]: 'Après compétition',
+    [StateType.EN_COMPETITION]: 'En compétition',
+    [StateType.AU_QUOTIDIEN]: 'Au quotidien',
 };
 
 export const STATE_FIELD_LABELS: Record<StateType, Record<string, string>> = {
-    [StateType.GENERAL]: {
-        repose: 'Reposé',
-        physiquementDetendu: 'Physiquement détendu',
-        confiantSerein: 'Confiant / Serein',
-        mentalementDetendu: 'Mentalement détendu',
+    [StateType.EN_COMPETITION]: {
+        plaisir: 'Plaisir',
+        confiance: 'Confiance',
+        concentration: 'Concentration',
+        precision: 'Précision',
+        gestionEmotions: 'Gestion émotions',
+        sommeil: 'Sommeil',
     },
-    [StateType.SLEEP]: {
-        endormissement: "Je m'endors facilement",
-        dormirDunTrait: "Je dors d'un trait",
-        reveilRepose: 'Je me réveille reposé',
-    },
-    [StateType.POST_COMPETITION]: {
-        plaisirConfiance: 'Plaisir / Confiance',
-        etatEmotionnel: 'État émotionnel',
-        etatPhysique: 'État physique',
-        pensees: 'Mes pensées',
+    [StateType.AU_QUOTIDIEN]: {
+        stress: 'Stress',
+        sommeil: 'Sommeil',
+        motivation: 'Motivation',
+        confiance: 'Confiance',
+        apaisement: 'Apaisement',
     },
 };
 

@@ -27,10 +27,11 @@ interface Props {
     userId: string;
     readonly?: boolean;
     chartsOnly?: boolean;
+    teacherMode?: boolean;
 }
 
-export default function UserStatesPanel({ userId, readonly, chartsOnly }: Props) {
-    const [activeType, setActiveType] = useState<StateType>(StateType.GENERAL);
+export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherMode }: Props) {
+    const [activeType, setActiveType] = useState<StateType>(StateType.EN_COMPETITION);
     const [entries, setEntries] = useState<UserStateEntry[]>([]);
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
@@ -48,7 +49,7 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly }: Props)
     const fetchEntries = async () => {
         setLoading(true);
         try {
-            const url = readonly && !chartsOnly
+            const url = (readonly || teacherMode) && !chartsOnly
                 ? `/user-states/user/${userId}?type=${activeType}`
                 : `/user-states/me?type=${activeType}`;
             const data = await apiClient.get<UserStateEntry[]>(url);
@@ -69,10 +70,10 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly }: Props)
         e.preventDefault();
         setSaving(true);
         try {
-            await apiClient.post('/user-states', {
-                type: activeType,
-                data: formData,
-            });
+            const url = teacherMode
+                ? `/user-states/for/${userId}`
+                : '/user-states';
+            await apiClient.post(url, { type: activeType, data: formData });
             await fetchEntries();
             resetForm();
         } catch (err) {
@@ -121,7 +122,7 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly }: Props)
             </div>
 
             {/* Form (hidden in readonly or chartsOnly mode) */}
-            {!readonly && !chartsOnly && (
+            {(!readonly || teacherMode) && !chartsOnly && (
                 <form onSubmit={handleSubmit} className="upload-form" style={{ marginBottom: '1.5rem' }}>
                     <h3 style={{ fontSize: '1rem', marginBottom: '1rem' }}>Nouvel enregistrement</h3>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>

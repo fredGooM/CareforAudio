@@ -175,7 +175,7 @@ export default function AthleteView({ userId, athleteName, onBack }: Props) {
 
             {/* Row 4 — États */}
             <Widget title="États & indicateurs" icon={<BarChart2 size={15} />}>
-                <UserStatesPanel userId={userId} readonly />
+                <UserStatesPanel userId={userId} teacherMode />
             </Widget>
         </div>
     );

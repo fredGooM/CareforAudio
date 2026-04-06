@@ -9,9 +9,8 @@ import {
 import { User } from './user.entity';
 
 export enum StateType {
-    GENERAL = 'GENERAL',
-    SLEEP = 'SLEEP',
-    POST_COMPETITION = 'POST_COMPETITION',
+    EN_COMPETITION = 'EN_COMPETITION',
+    AU_QUOTIDIEN = 'AU_QUOTIDIEN',
 }
 
 @Entity('user_states')
@@ -26,7 +25,7 @@ export class UserState {
     @JoinColumn({ name: 'userId' })
     user: User;
 
-    @Column({ type: 'enum', enum: StateType })
+    @Column({ type: 'varchar', length: 50 })
     type: StateType;
 
     @Column({ type: 'jsonb' })

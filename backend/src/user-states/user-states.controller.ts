@@ -50,4 +50,19 @@ export class UserStatesController {
     ) {
         return this.svc.findByUser(userId, type);
     }
+
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @Post('for/:userId')
+    createForUser(
+        @Param('userId') userId: string,
+        @Body() body: { type: StateType; data: Record<string, number> },
+    ) {
+        if (!body.type || !body.data) {
+            throw new BadRequestException('type and data are required');
+        }
+        if (!Object.values(StateType).includes(body.type)) {
+            throw new BadRequestException('Invalid state type');
+        }
+        return this.svc.createForUser(userId, body.type, body.data);
+    }
 }

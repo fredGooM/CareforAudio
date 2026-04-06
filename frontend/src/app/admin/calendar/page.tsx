@@ -12,9 +12,10 @@ import QuickCreateModal from '@/components/QuickCreateModal';
 import { Plus } from 'lucide-react';
 
 function toZDT(d: Date): Temporal.ZonedDateTime {
-    return Temporal.Instant
-        .fromEpochMilliseconds(d.getTime())
-        .toZonedDateTimeISO(Temporal.Now.timeZoneId());
+    return Temporal.PlainDateTime.from({
+        year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(),
+        hour: d.getHours(), minute: d.getMinutes(),
+    }).toZonedDateTime('UTC');
 }
 
 /** Curated palette – works well on dark backgrounds */

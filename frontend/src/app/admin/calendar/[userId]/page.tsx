@@ -14,9 +14,10 @@ import EventModal from '@/components/EventModal';
 import QuickCreateModal from '@/components/QuickCreateModal';
 
 function toZDT(d: Date): Temporal.ZonedDateTime {
-    return Temporal.Instant
-        .fromEpochMilliseconds(d.getTime())
-        .toZonedDateTimeISO(Temporal.Now.timeZoneId());
+    return Temporal.PlainDateTime.from({
+        year: d.getFullYear(), month: d.getMonth() + 1, day: d.getDate(),
+        hour: d.getHours(), minute: d.getMinutes(),
+    }).toZonedDateTime('UTC');
 }
 
 export default function AdminUserCalendarPage({ params }: { params: Promise<{ userId: string }> }) {
