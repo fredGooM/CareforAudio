@@ -10,6 +10,7 @@ import AppCalendar, { type SxEvent } from '@/components/AppCalendar';
 import EventModal from '@/components/EventModal';
 import QuickCreateModal from '@/components/QuickCreateModal';
 import { Plus } from 'lucide-react';
+import AthleteSelector from '@/components/AthleteSelector';
 
 function toZDT(d: Date): Temporal.ZonedDateTime {
     return Temporal.PlainDateTime.from({
@@ -34,7 +35,6 @@ const ATHLETE_COLORS: { main: string; container: string; onContainer: string }[]
 
 export default function AdminGlobalCalendarPage() {
     const { data: session } = useSession();
-    const [events, setEvents] = useState<SxEvent[]>([]);
     const [athletes, setAthletes] = useState<UserProfile[]>([]);
     const [loading, setLoading] = useState(true);
     const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
@@ -42,15 +42,30 @@ export default function AdminGlobalCalendarPage() {
     const [createModalOpen, setCreateModalOpen] = useState(false);
     const [preselectedDate, setPreselectedDate] = useState<Date | null>(null);
     const [rawEvents, setRawEvents] = useState<CalendarEvent[]>([]);
+    const [selectedAthleteId, setSelectedAthleteId] = useState('');
 
-    /** Build a stable userId → colorIndex map */
-    const athleteColorMap = useMemo(() => {
-        const map: Record<string, number> = {};
-        athletes.forEach((a, i) => {
-            map[a.id] = i % ATHLETE_COLORS.length;
+    const athleteOptions = useMemo(() =>
+        athletes.map(a => ({ id: a.id, name: `${a.firstName} ${a.lastName}` }))
+    , [athletes]);
+
+    const displayedEvents = useMemo(() => {
+        const source = selectedAthleteId
+            ? rawEvents.filter(ev => ev.userId === selectedAthleteId)
+            : rawEvents;
+        return source.map(ev => {
+            const start = new Date(ev.date);
+            const end = new Date(start.getTime() + (ev.duration ?? 60) * 60 * 1000);
+            const athleteName = ev.user ? `${ev.user.firstName} ${ev.user.lastName}` : '';
+            return {
+                id: ev.id,
+                title: athleteName ? `👤 ${athleteName} — ${ev.title}` : ev.title,
+                start: toZDT(start),
+                end: toZDT(end),
+                calendarId: ev.userId ? `athlete-${ev.userId}` : undefined,
+                originalEvent: ev,
+            };
         });
-        return map;
-    }, [athletes]);
+    }, [rawEvents, selectedAthleteId]);
 
     /** Schedule-X calendars config: one "calendar" per athlete for color coding */
     const calendars = useMemo(() => {
@@ -76,28 +91,8 @@ export default function AdminGlobalCalendarPage() {
                 apiClient.get<CalendarEvent[]>('/events/teacher'),
                 apiClient.get<UserProfile[]>('/users'),
             ]);
-            const athleteList = usersData.filter(u => u.role === 'ATHLETE');
-            setAthletes(athleteList);
+            setAthletes(usersData.filter(u => u.role === 'ATHLETE'));
             setRawEvents(evData);
-
-            // Build color map right now (can't wait for useMemo on next render)
-            const colorMap: Record<string, number> = {};
-            athleteList.forEach((a, i) => { colorMap[a.id] = i % ATHLETE_COLORS.length; });
-
-            setEvents(evData.map(ev => {
-                const start = new Date(ev.date);
-                const durationMs = (ev.duration ?? 60) * 60 * 1000;
-                const end = new Date(start.getTime() + durationMs);
-                const athleteName = ev.user ? `${ev.user.firstName} ${ev.user.lastName}` : '';
-                return {
-                    id: ev.id,
-                    title: athleteName ? `👤 ${athleteName} — ${ev.title}` : ev.title,
-                    start: toZDT(start),
-                    end: toZDT(end),
-                    calendarId: ev.userId ? `athlete-${ev.userId}` : undefined,
-                    originalEvent: ev,
-                };
-            }));
         } catch (err) {
             console.error(err);
         } finally {
@@ -140,14 +135,21 @@ export default function AdminGlobalCalendarPage() {
         <div className="page-content">
             <div className="page-header">
                 <h1>Calendrier Global</h1>
-                <button className="btn-primary" onClick={() => { setPreselectedDate(null); setCreateModalOpen(true); }}>
-                    <Plus size={18} style={{ marginRight: '0.5rem' }} /> Ajouter événement
-                </button>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                    <AthleteSelector
+                        athletes={athleteOptions}
+                        selectedId={selectedAthleteId}
+                        onSelect={setSelectedAthleteId}
+                    />
+                    <button className="btn-primary" onClick={() => { setPreselectedDate(null); setCreateModalOpen(true); }}>
+                        <Plus size={18} style={{ marginRight: '0.5rem' }} /> Ajouter événement
+                    </button>
+                </div>
             </div>
 
             <div className="calendar-container">
                 <AppCalendar
-                    events={events}
+                    events={displayedEvents}
                     onEventClick={handleEventClick}
                     onDateClick={handleDateClick}
                     calendars={calendars}

@@ -53,6 +53,7 @@ export default function Sidebar() {
     const adminOrTeacherLinks = [
         { href: '/dashboard', label: 'Dashboard', icon: icons.dashboard },
         { href: '/admin/calendar', label: 'Calendrier', icon: icons.calendar },
+        { href: '/admin/states', label: 'États', icon: icons.states },
         { href: '/admin/library', label: 'Biblio', icon: icons.library },
         { href: '/admin/users', label: 'Users', icon: icons.users },
         { href: '/admin/programs', label: 'Programmes', icon: icons.program },

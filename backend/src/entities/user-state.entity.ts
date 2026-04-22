@@ -25,7 +25,7 @@ export class UserState {
     @JoinColumn({ name: 'userId' })
     user: User;
 
-    @Column({ type: 'varchar', length: 50 })
+    @Column({ type: 'varchar', length: 50, default: StateType.AU_QUOTIDIEN })
     type: StateType;
 
     @Column({ type: 'jsonb' })
