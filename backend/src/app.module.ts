@@ -24,7 +24,8 @@ import {
   ProgramAudio,
   ProgramShare,
   CalendarEvent,
-  UserState,
+  UserStateFieldConfig,
+  UserStateHistory,
   AudioListenRecord,
 } from './entities';
 
@@ -54,7 +55,8 @@ import {
           ProgramAudio,
           ProgramShare,
           CalendarEvent,
-          UserState,
+          UserStateFieldConfig,
+          UserStateHistory,
           AudioListenRecord,
         ],
         synchronize: true, // Dev only — use migrations in production

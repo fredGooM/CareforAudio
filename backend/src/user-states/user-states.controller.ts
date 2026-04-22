@@ -2,9 +2,9 @@ import {
     Controller,
     Get,
     Post,
+    Put,
     Body,
     Param,
-    Query,
     UseGuards,
     Request,
     BadRequestException,
@@ -18,51 +18,63 @@ import { StateType } from '../entities';
 export class UserStatesController {
     constructor(private readonly svc: UserStatesService) {}
 
+    /** Get field configs for an athlete (auto-inits defaults if missing) */
     @UseGuards(JwtAuthGuard)
-    @Post()
-    create(
-        @Request() req: any,
-        @Body() body: { type: StateType; data: Record<string, number> },
-    ) {
-        if (!body.type || !body.data) {
-            throw new BadRequestException('type and data are required');
-        }
-        if (!Object.values(StateType).includes(body.type)) {
-            throw new BadRequestException('Invalid state type');
-        }
-        return this.svc.create(req.user.id, body.type, body.data);
+    @Get('configs/:athleteId')
+    getConfigs(@Param('athleteId') athleteId: string) {
+        return this.svc.getConfigs(athleteId);
     }
 
+    /** Teacher sets custom fields for an athlete + type */
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @Put('configs/:athleteId/:stateType')
+    setConfigs(
+        @Param('athleteId') athleteId: string,
+        @Param('stateType') stateType: StateType,
+        @Body() body: { fields: { fieldKey: string; label: string }[] },
+    ) {
+        if (!Object.values(StateType).includes(stateType)) {
+            throw new BadRequestException('Invalid state type');
+        }
+        if (!body.fields?.length) {
+            throw new BadRequestException('At least one field is required');
+        }
+        return this.svc.setConfigs(athleteId, stateType, body.fields);
+    }
+
+    /** Athlete submits their state values */
+    @UseGuards(JwtAuthGuard)
+    @Post('submit')
+    submit(
+        @Request() req: any,
+        @Body() body: { entries: { fieldConfigId: string; value: number }[] },
+    ) {
+        if (!body.entries?.length) throw new BadRequestException('entries required');
+        return this.svc.submitValues(req.user.id, body.entries);
+    }
+
+    /** Teacher submits state values for an athlete */
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @Post('submit-for/:athleteId')
+    submitFor(
+        @Param('athleteId') athleteId: string,
+        @Body() body: { entries: { fieldConfigId: string; value: number }[] },
+    ) {
+        if (!body.entries?.length) throw new BadRequestException('entries required');
+        return this.svc.submitValues(athleteId, body.entries);
+    }
+
+    /** Get history for current athlete */
     @UseGuards(JwtAuthGuard)
     @Get('me')
-    getMyStates(
-        @Request() req: any,
-        @Query('type') type?: StateType,
-    ) {
-        return this.svc.findByUser(req.user.id, type);
+    getMyHistory(@Request() req: any) {
+        return this.svc.getHistory(req.user.id);
     }
 
+    /** Teacher gets history for an athlete */
     @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
-    @Get('user/:userId')
-    getUserStates(
-        @Param('userId') userId: string,
-        @Query('type') type?: StateType,
-    ) {
-        return this.svc.findByUser(userId, type);
-    }
-
-    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
-    @Post('for/:userId')
-    createForUser(
-        @Param('userId') userId: string,
-        @Body() body: { type: StateType; data: Record<string, number> },
-    ) {
-        if (!body.type || !body.data) {
-            throw new BadRequestException('type and data are required');
-        }
-        if (!Object.values(StateType).includes(body.type)) {
-            throw new BadRequestException('Invalid state type');
-        }
-        return this.svc.createForUser(userId, body.type, body.data);
+    @Get('user/:athleteId')
+    getUserHistory(@Param('athleteId') athleteId: string) {
+        return this.svc.getHistory(athleteId);
     }
 }

@@ -153,28 +153,20 @@ export const STATE_TYPE_LABELS: Record<StateType, string> = {
     [StateType.AU_QUOTIDIEN]: 'Au quotidien',
 };
 
-export const STATE_FIELD_LABELS: Record<StateType, Record<string, string>> = {
-    [StateType.EN_COMPETITION]: {
-        plaisir: 'Plaisir',
-        confiance: 'Confiance',
-        concentration: 'Concentration',
-        precision: 'Précision',
-        gestionEmotions: 'Gestion émotions',
-        sommeil: 'Sommeil',
-    },
-    [StateType.AU_QUOTIDIEN]: {
-        stress: 'Stress',
-        sommeil: 'Sommeil',
-        motivation: 'Motivation',
-        confiance: 'Confiance',
-        apaisement: 'Apaisement',
-    },
-};
-
-export interface UserStateEntry {
+export interface StateFieldConfig {
     id: string;
-    userId: string;
-    type: StateType;
-    data: Record<string, number>;
-    createdAt: string;
+    athleteId: string;
+    stateType: StateType;
+    fieldKey: string;
+    label: string;
+    position: number;
+}
+
+export interface StateHistoryEntry {
+    id: string;
+    athleteId: string;
+    fieldConfigId: string;
+    fieldConfig: StateFieldConfig;
+    value: number;
+    recordedAt: string;
 }

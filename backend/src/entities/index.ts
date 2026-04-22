@@ -16,5 +16,7 @@ export { Program } from './program.entity';
 export { ProgramAudio } from './program-audio.entity';
 export { ProgramShare } from './program-share.entity';
 export { CalendarEvent, EventType } from './event.entity';
-export { UserState, StateType } from './user-state.entity';
+export { StateType } from './user-state-field-config.entity';
+export { UserStateFieldConfig } from './user-state-field-config.entity';
+export { UserStateHistory } from './user-state-history.entity';
 export { AudioListenRecord } from './audio-listen-record.entity';
