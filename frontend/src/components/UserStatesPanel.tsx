@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, FormEvent } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import {
@@ -37,12 +37,17 @@ function toFieldKey(label: string) {
 
 function groupIntoSessions(entries: StateHistoryEntry[]) {
     const groups = new Map<string, Record<string, number>>();
+    // entries are DESC (newest first) — use "if not set" so newest value wins on collision
     for (const e of entries) {
-        const key = format(new Date(e.recordedAt), 'dd/MM HH:mm', { locale: fr });
+        const key = format(new Date(e.recordedAt), 'dd/MM HH:mm:ss');
         if (!groups.has(key)) groups.set(key, {});
-        groups.get(key)![e.fieldConfig.fieldKey] = e.value;
+        const grp = groups.get(key)!;
+        if (!(e.fieldConfig.fieldKey in grp)) grp[e.fieldConfig.fieldKey] = e.value;
     }
-    return Array.from(groups.entries()).map(([date, values]) => ({ date, ...values })).reverse();
+    // Map preserves DESC insertion order — reverse for chronological display, strip seconds for label
+    return Array.from(groups.entries())
+        .reverse()
+        .map(([key, values]) => ({ date: key.slice(0, -3), ...values }));
 }
 
 function getLatestValues(entries: StateHistoryEntry[], fields: StateFieldConfig[]) {
@@ -182,16 +187,20 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
         setFormValues(defaults);
     }, [activeType]);
 
-    const handleSubmit = async (e: FormEvent) => {
+    const handleSubmit = async (e: { preventDefault(): void }) => {
         e.preventDefault();
         setSaving(true);
         const entries = activeFields.map(f => ({ fieldConfigId: f.id, value: formValues[f.id] ?? 5 }));
         const url = teacherMode ? `/user-states/submit-for/${userId}` : '/user-states/submit';
+        const histUrl = teacherRef.current || readonlyRef.current
+            ? `/user-states/user/${userIdRef.current}`
+            : '/user-states/me';
         try {
             await apiClient.post(url, { entries });
             setSaved(true);
-            setTimeout(() => setSaved(false), 2500);
-            await loadData();
+            setTimeout(() => setSaved(false), 2000);
+            const hist = await apiClient.get<StateHistoryEntry[]>(histUrl);
+            setHistory(hist);
         } catch (err) {
             console.error('[states] submit error:', err);
         } finally {

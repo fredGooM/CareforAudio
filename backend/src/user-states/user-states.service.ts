@@ -62,10 +62,24 @@ export class UserStatesService {
         stateType: StateType,
         fields: { fieldKey: string; label: string }[],
     ): Promise<UserStateFieldConfig[]> {
-        await this.configRepo.delete({ athleteId, stateType });
-        const entities = fields.map((f, i) =>
-            this.configRepo.create({ athleteId, stateType, fieldKey: f.fieldKey, label: f.label, position: i }),
-        );
+        const existing = await this.configRepo.find({ where: { athleteId, stateType } });
+        const existingByKey = new Map(existing.map(c => [c.fieldKey, c]));
+        const incomingKeys = new Set(fields.map(f => f.fieldKey));
+
+        // Delete only removed fields (cascades history only for those)
+        const toDelete = existing.filter(c => !incomingKeys.has(c.fieldKey));
+        if (toDelete.length) await this.configRepo.remove(toDelete);
+
+        // Upsert remaining + new
+        const entities = fields.map((f, i) => {
+            const current = existingByKey.get(f.fieldKey);
+            if (current) {
+                current.label = f.label;
+                current.position = i;
+                return current;
+            }
+            return this.configRepo.create({ athleteId, stateType, fieldKey: f.fieldKey, label: f.label, position: i });
+        });
         return this.configRepo.save(entities);
     }
 
