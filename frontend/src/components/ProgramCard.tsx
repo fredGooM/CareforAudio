@@ -3,12 +3,15 @@
 import { useState } from 'react';
 import { ChevronDown, ChevronUp, PlayCircle, Heart, RefreshCw } from 'lucide-react';
 import Link from 'next/link';
+import { DOMINANCE_LABELS, PHASING_LABELS } from '@/lib/audio-labels';
 
 export interface ProgramAudioItem {
     id: string;
     title: string;
     duration: number;
     type: string;
+    dominance?: string;
+    phasing?: string[];
     listenCount?: number;
     requiredListens?: number;
     order?: number;
@@ -162,8 +165,23 @@ export default function ProgramCard({
                                             <div style={{ flex: 1, minWidth: 0 }}>
                                                 <h3 style={{ fontSize: '0.95rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{audio.title}</h3>
                                                 <p style={{ margin: 0, fontSize: '0.8rem', color: 'var(--text-muted)', fontVariantNumeric: 'tabular-nums' }}>
-                                                    {formatDuration(audio.duration)} • {audio.type}
+                                                    {formatDuration(audio.duration)}
                                                 </p>
+                                                <div style={{ display: 'flex', gap: '0.3rem', flexWrap: 'wrap', marginTop: '0.3rem' }}>
+                                                    {audio.type && audio.type !== 'Non spécifié' && (
+                                                        <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '0.1rem 0.45rem', borderRadius: '20px', background: 'rgba(100,116,139,0.15)', color: 'var(--text-muted)' }}>{audio.type}</span>
+                                                    )}
+                                                    {audio.dominance && audio.dominance !== 'UNSPECIFIED' && (
+                                                        <span style={{ fontSize: '0.68rem', fontWeight: 600, padding: '0.1rem 0.45rem', borderRadius: '20px', background: 'rgba(124,92,252,0.15)', color: 'var(--primary-light)' }}>
+                                                            {(DOMINANCE_LABELS as Record<string, string>)[audio.dominance] ?? audio.dominance}
+                                                        </span>
+                                                    )}
+                                                    {Array.isArray(audio.phasing) && audio.phasing.filter(p => p !== 'UNSPECIFIED').map(p => (
+                                                        <span key={p} style={{ fontSize: '0.68rem', fontWeight: 600, padding: '0.1rem 0.45rem', borderRadius: '20px', background: 'rgba(16,185,129,0.12)', color: 'var(--success)' }}>
+                                                            {(PHASING_LABELS as Record<string, string>)[p] ?? p}
+                                                        </span>
+                                                    ))}
+                                                </div>
                                             </div>
                                         </div>
 

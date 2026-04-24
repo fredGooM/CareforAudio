@@ -7,6 +7,7 @@ import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import type { AudioTrack, UserProfile, Program } from '@/types';
 import { AudioDominance, AudioPhasing, AudioLanguage, AudioVoiceType } from '@/types';
+import { AUDIO_CATEGORIES, DOMINANCE_LABELS, PHASING_LABELS } from '@/lib/audio-labels';
 import AudioPlayer from '@/components/AudioPlayer';
 import fixWebmDuration from 'webm-duration-fix';
 
@@ -123,6 +124,8 @@ export default function AdminLibraryPage() {
             language: audio.language || AudioLanguage.FRENCH,
             voiceType: audio.voiceType || AudioVoiceType.MALE,
         });
+        setSelectedProgramId('');
+        setProgramRequiredListens(1);
         setShowModal(true);
     };
 
@@ -252,6 +255,7 @@ export default function AdminLibraryPage() {
         e.preventDefault();
         setSubmitting(true);
         try {
+            let savedAudioId: string;
             if (editingAudio) {
                 // UPDATE
                 await apiClient.put(`/audios/${editingAudio.id}`, {
@@ -266,14 +270,13 @@ export default function AdminLibraryPage() {
                     language: form.language,
                     voiceType: form.voiceType,
                 });
-
-                // Update local list
                 setAudios(audios.map(a => a.id === editingAudio.id ? {
                     ...a,
                     ...form,
                     published: form.published === 'true',
                     orderToListen: parseInt(form.orderToListen)
                 } : a));
+                savedAudioId = editingAudio.id;
             } else {
                 // CREATE
                 const formData = new FormData();
@@ -302,24 +305,28 @@ export default function AdminLibraryPage() {
 
                 const newAudio = await apiClient.post<AudioTrack>('/audios', formData);
                 setAudios([newAudio, ...audios]);
+                savedAudioId = newAudio.id;
+            }
 
-                // Add to program if selected
-                if (selectedProgramId) {
-                    const prog = programs.find(p => p.id === selectedProgramId);
-                    const existing = (prog?.audios ?? []).map((a, i) => ({
+            // Add to program if selected (works for both create and edit)
+            if (selectedProgramId) {
+                const prog = programs.find(p => p.id === selectedProgramId);
+                const existing = (prog?.audios ?? [])
+                    .filter(a => a.id !== savedAudioId)
+                    .map((a, i) => ({
                         audioId: a.id,
                         order: i,
                         requiredListens: (a as any).requiredListens ?? 1,
                     }));
-                    const nextOrder = existing.length;
-                    await apiClient.put(`/programs/${selectedProgramId}`, {
-                        audioItems: [...existing, { audioId: newAudio.id, order: nextOrder, requiredListens: programRequiredListens }],
-                    });
-                    setPrograms(prev => prev.map(p => p.id === selectedProgramId
-                        ? { ...p, audios: [...(p.audios ?? []), { ...newAudio, order: nextOrder, requiredListens: programRequiredListens }] }
-                        : p
-                    ));
-                }
+                const nextOrder = existing.length;
+                await apiClient.put(`/programs/${selectedProgramId}`, {
+                    audioItems: [...existing, { audioId: savedAudioId, order: nextOrder, requiredListens: programRequiredListens }],
+                });
+                setPrograms(prev => prev.map(p => {
+                    if (p.id !== selectedProgramId) return p;
+                    const filtered = (p.audios ?? []).filter(a => a.id !== savedAudioId);
+                    return { ...p, audios: [...filtered, { ...audios.find(a => a.id === savedAudioId)!, order: nextOrder, requiredListens: programRequiredListens }] };
+                }));
             }
             setShowModal(false);
             setRecordedBlob(null);
@@ -501,17 +508,9 @@ export default function AdminLibraryPage() {
                                 <div className="form-group">
                                     <label>Catégorie</label>
                                     <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
-                                        <option value="Non spécifié">Non spécifié</option>
-                                        <option value="Performance">Performance</option>
-                                        <option value="Sommeil">Sommeil</option>
-                                        <option value="Activation">Activation</option>
-                                        <option value="Compétition">Compétition</option>
-                                        <option value="Concentration">Concentration</option>
-                                        <option value="Récupération">Récupération</option>
-                                        <option value="Confiance">Confiance</option>
-                                        <option value="Gestion du stress">Gestion du stress</option>
-                                        <option value="Blessure">Blessure</option>
-                                        <option value="Motivation">Motivation</option>
+                                        {AUDIO_CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
                                     </select>
                                 </div>
                                 <div className="form-group">
@@ -576,35 +575,32 @@ export default function AdminLibraryPage() {
                                     </select>
                                 </div>
                             </div>
-                            <div className="form-group">
-                                <label>Utilisateurs autorisés</label>
-                                <div className="checkbox-group" style={{ maxHeight: '150px', overflowY: 'auto', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
-                                    {users
-                                        .filter(u => {
-                                            if ((session?.user as any)?.role === 'ADMIN') return u.role === 'TEACHER';
-                                            if ((session?.user as any)?.role === 'TEACHER') return u.role === 'ATHLETE' && u.createdById === (session?.user as any)?.id;
-                                            return false;
-                                        })
-                                        .map((u) => (
-                                            <label key={u.id} className="checkbox-label" style={{ width: '100%', padding: '0.2rem 0' }}>
-                                                <input
-                                                    type="checkbox"
-                                                    checked={form.allowedUserIds.includes(u.id)}
-                                                    onChange={(e) => {
-                                                        const ids = e.target.checked
-                                                            ? [...form.allowedUserIds, u.id]
-                                                            : form.allowedUserIds.filter((id) => id !== u.id);
-                                                        setForm({ ...form, allowedUserIds: ids });
-                                                    }}
-                                                />
-                                                {u.firstName} {u.lastName} <span className="text-muted text-sm">({u.role})</span>
-                                            </label>
-                                        ))
-                                    }
-                                </div>
-                            </div>
-                            {!editingAudio && (
+                            {(session?.user as any)?.role === 'ADMIN' && (
                                 <div className="form-group">
+                                    <label>Utilisateurs autorisés</label>
+                                    <div className="checkbox-group" style={{ maxHeight: '150px', overflowY: 'auto', padding: '0.6rem', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', background: 'var(--bg-input)' }}>
+                                        {users
+                                            .filter(u => u.role === 'TEACHER')
+                                            .map((u) => (
+                                                <label key={u.id} className="checkbox-label" style={{ width: '100%', padding: '0.2rem 0' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={form.allowedUserIds.includes(u.id)}
+                                                        onChange={(e) => {
+                                                            const ids = e.target.checked
+                                                                ? [...form.allowedUserIds, u.id]
+                                                                : form.allowedUserIds.filter((id) => id !== u.id);
+                                                            setForm({ ...form, allowedUserIds: ids });
+                                                        }}
+                                                    />
+                                                    {u.firstName} {u.lastName} <span className="text-muted text-sm">({u.role})</span>
+                                                </label>
+                                            ))
+                                        }
+                                    </div>
+                                </div>
+                            )}
+                            <div className="form-group">
                                     <label>Ajouter à un programme <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span></label>
                                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
                                         <select
@@ -630,7 +626,6 @@ export default function AdminLibraryPage() {
                                         )}
                                     </div>
                                 </div>
-                            )}
                             <div className="modal-actions">
                                 <button type="button" className="btn-secondary" disabled={submitting} onClick={() => { if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); setShowModal(false); }}>Annuler</button>
                                 <button type="submit" className="btn-primary" disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '110px', justifyContent: 'center' }}>
@@ -674,17 +669,9 @@ export default function AdminLibraryPage() {
                     <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>Catégorie</div>
                     <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: filterType ? 'var(--text)' : 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '0.875rem', padding: '0.5rem 0.75rem', outline: 'none', cursor: 'pointer' }}>
                         <option value="">Toutes</option>
-                        <option value="Non spécifié">Non spécifié</option>
-                        <option value="Performance">Performance</option>
-                        <option value="Sommeil">Sommeil</option>
-                        <option value="Activation">Activation</option>
-                        <option value="Compétition">Compétition</option>
-                        <option value="Concentration">Concentration</option>
-                        <option value="Récupération">Récupération</option>
-                        <option value="Confiance">Confiance</option>
-                        <option value="Gestion du stress">Gestion du stress</option>
-                        <option value="Blessure">Blessure</option>
-                        <option value="Motivation">Motivation</option>
+                        {AUDIO_CATEGORIES.map(cat => (
+                            <option key={cat} value={cat}>{cat}</option>
+                        ))}
                     </select>
                 </div>
 
@@ -763,8 +750,8 @@ export default function AdminLibraryPage() {
                                 <td>{audio.title}</td>
                                 <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{formatDuration(audio.duration)}</td>
                                 <td>{audio.type}</td>
-                                <td style={{ fontSize: '0.8rem' }}>{audio.dominance ? ({ MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion', UNSPECIFIED: 'Non spécifié' } as Record<string, string>)[audio.dominance] ?? audio.dominance : '—'}</td>
-                                <td style={{ fontSize: '0.8rem' }}>{Array.isArray(audio.phasing) && audio.phasing.length > 0 ? audio.phasing.map(p => ({ PRE_COMPETITION: 'Pré', DURING_COMPETITION: 'Pendant', POST_COMPETITION: 'Post', UNSPECIFIED: 'Non spécifié' } as Record<string, string>)[p] ?? p).join(', ') : '—'}</td>
+                                <td style={{ fontSize: '0.8rem' }}>{audio.dominance ? (DOMINANCE_LABELS as Record<string, string>)[audio.dominance] ?? audio.dominance : '—'}</td>
+                                <td style={{ fontSize: '0.8rem' }}>{Array.isArray(audio.phasing) && audio.phasing.length > 0 ? audio.phasing.map(p => (PHASING_LABELS as Record<string, string>)[p] ?? p).join(', ') : '—'}</td>
                                 <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{audio.createdBy ? `${audio.createdBy.firstName} ${audio.createdBy.lastName}` : '—'}</td>
                                 <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{new Date(audio.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
                                 <td>

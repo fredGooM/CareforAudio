@@ -7,6 +7,7 @@ import apiClient from '@/lib/api-client';
 import Loader from '@/components/Loader';
 import type { Program, AudioTrack, UserProfile, ProgramShare } from '@/types';
 import { AudioDominance, AudioPhasing } from '@/types';
+import { AUDIO_CATEGORIES, DOMINANCE_LABELS, PHASING_LABELS } from '@/lib/audio-labels';
 
 interface AudioItemForm {
     audioId: string;
@@ -295,28 +296,21 @@ export default function AdminProgramsPage() {
                                     />
                                     <select value={pickerType} onChange={e => setPickerType(e.target.value)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
                                         <option value="">Catégorie</option>
-                                        <option value="Performance">Performance</option>
-                                        <option value="Sommeil">Sommeil</option>
-                                        <option value="Activation">Activation</option>
-                                        <option value="Compétition">Compétition</option>
-                                        <option value="Concentration">Concentration</option>
-                                        <option value="Récupération">Récupération</option>
-                                        <option value="Confiance">Confiance</option>
-                                        <option value="Gestion du stress">Gestion du stress</option>
-                                        <option value="Blessure">Blessure</option>
-                                        <option value="Motivation">Motivation</option>
+                                        {AUDIO_CATEGORIES.map(cat => (
+                                            <option key={cat} value={cat}>{cat}</option>
+                                        ))}
                                     </select>
                                     <select value={pickerDominance} onChange={e => setPickerDominance(e.target.value)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
                                         <option value="">Dominance</option>
-                                        <option value={AudioDominance.MIND}>Pensée</option>
-                                        <option value={AudioDominance.BODY}>Corps</option>
-                                        <option value={AudioDominance.EMOTION}>Émotion</option>
+                                        {(Object.entries(DOMINANCE_LABELS) as [AudioDominance, string][]).map(([val, lbl]) => (
+                                            <option key={val} value={val}>{lbl}</option>
+                                        ))}
                                     </select>
                                     <select value={pickerPhasing} onChange={e => setPickerPhasing(e.target.value)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
                                         <option value="">Phasing</option>
-                                        <option value={AudioPhasing.PRE_COMPETITION}>Pré-compétition</option>
-                                        <option value={AudioPhasing.DURING_COMPETITION}>Pendant</option>
-                                        <option value={AudioPhasing.POST_COMPETITION}>Post</option>
+                                        {(Object.entries(PHASING_LABELS) as [AudioPhasing, string][]).map(([val, lbl]) => (
+                                            <option key={val} value={val}>{lbl}</option>
+                                        ))}
                                     </select>
                                     <select value={pickerSort} onChange={e => setPickerSort(e.target.value as any)} style={{ fontSize: '0.82rem', flex: '0 0 auto' }}>
                                         <option value="title-asc">A→Z</option>
@@ -345,7 +339,7 @@ export default function AdminProgramsPage() {
                                                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                                                         {getAudioDuration(a.id)}
                                                         {a.type && ` · ${a.type}`}
-                                                        {a.dominance && ` · ${({ MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion', UNSPECIFIED: 'Non spécifié' } as Record<string, string>)[a.dominance] ?? a.dominance}`}
+                                                        {a.dominance && ` · ${(DOMINANCE_LABELS as Record<string, string>)[a.dominance] ?? a.dominance}`}
                                                     </div>
                                                 </div>
                                             </div>
