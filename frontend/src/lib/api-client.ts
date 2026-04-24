@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3939';
+const API_URL = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3939'}/api`;
 
 class ApiClient {
     private accessToken: string | null = null;

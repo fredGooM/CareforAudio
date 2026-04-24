@@ -345,7 +345,7 @@ export default function AdminProgramsPage() {
                                                     <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>
                                                         {getAudioDuration(a.id)}
                                                         {a.type && ` · ${a.type}`}
-                                                        {a.dominance && ` · ${{ MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion' }[a.dominance] ?? a.dominance}`}
+                                                        {a.dominance && ` · ${({ MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion', UNSPECIFIED: 'Non spécifié' } as Record<string, string>)[a.dominance] ?? a.dominance}`}
                                                     </div>
                                                 </div>
                                             </div>

@@ -67,10 +67,10 @@ export default function AdminLibraryPage() {
         title: '',
         description: '',
         published: 'true',
-        type: 'Training',
+        type: 'Non spécifié',
         orderToListen: '1',
         allowedUserIds: [] as string[],
-        dominance: AudioDominance.MIND,
+        dominance: AudioDominance.UNSPECIFIED,
         phasing: [] as AudioPhasing[],
         language: AudioLanguage.FRENCH,
         voiceType: AudioVoiceType.MALE,
@@ -501,6 +501,7 @@ export default function AdminLibraryPage() {
                                 <div className="form-group">
                                     <label>Catégorie</label>
                                     <select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}>
+                                        <option value="Non spécifié">Non spécifié</option>
                                         <option value="Performance">Performance</option>
                                         <option value="Sommeil">Sommeil</option>
                                         <option value="Activation">Activation</option>
@@ -526,6 +527,7 @@ export default function AdminLibraryPage() {
                                 <div className="form-group">
                                     <label>Dominance</label>
                                     <select value={form.dominance} onChange={(e) => setForm({ ...form, dominance: e.target.value as AudioDominance })}>
+                                        <option value={AudioDominance.UNSPECIFIED}>Non spécifié</option>
                                         <option value={AudioDominance.MIND}>Pensée</option>
                                         <option value={AudioDominance.BODY}>Corps</option>
                                         <option value={AudioDominance.EMOTION}>Émotion</option>
@@ -535,6 +537,7 @@ export default function AdminLibraryPage() {
                                     <label>Phasing</label>
                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', paddingTop: '0.25rem' }}>
                                         {([
+                                            [AudioPhasing.UNSPECIFIED, 'Non spécifié'],
                                             [AudioPhasing.PRE_COMPETITION, 'Précompétition'],
                                             [AudioPhasing.DURING_COMPETITION, 'Pendant compétition'],
                                             [AudioPhasing.POST_COMPETITION, 'Post compétition'],
@@ -671,6 +674,7 @@ export default function AdminLibraryPage() {
                     <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>Catégorie</div>
                     <select value={filterType} onChange={e => setFilterType(e.target.value)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: filterType ? 'var(--text)' : 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '0.875rem', padding: '0.5rem 0.75rem', outline: 'none', cursor: 'pointer' }}>
                         <option value="">Toutes</option>
+                        <option value="Non spécifié">Non spécifié</option>
                         <option value="Performance">Performance</option>
                         <option value="Sommeil">Sommeil</option>
                         <option value="Activation">Activation</option>
@@ -689,6 +693,7 @@ export default function AdminLibraryPage() {
                     <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>Dominance</div>
                     <select value={filterDominance} onChange={e => setFilterDominance(e.target.value)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: filterDominance ? 'var(--text)' : 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '0.875rem', padding: '0.5rem 0.75rem', outline: 'none', cursor: 'pointer' }}>
                         <option value="">Toutes</option>
+                        <option value={AudioDominance.UNSPECIFIED}>Non spécifié</option>
                         <option value={AudioDominance.MIND}>Pensée</option>
                         <option value={AudioDominance.BODY}>Corps</option>
                         <option value={AudioDominance.EMOTION}>Émotion</option>
@@ -700,6 +705,7 @@ export default function AdminLibraryPage() {
                     <div style={{ fontSize: '0.72rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', marginBottom: '0.35rem' }}>Phasing</div>
                     <select value={filterPhasing} onChange={e => setFilterPhasing(e.target.value)} style={{ background: 'var(--bg-input)', border: '1px solid var(--border)', borderRadius: 'var(--radius-sm)', color: filterPhasing ? 'var(--text)' : 'var(--text-muted)', fontFamily: 'var(--font)', fontSize: '0.875rem', padding: '0.5rem 0.75rem', outline: 'none', cursor: 'pointer' }}>
                         <option value="">Tous</option>
+                        <option value={AudioPhasing.UNSPECIFIED}>Non spécifié</option>
                         <option value={AudioPhasing.PRE_COMPETITION}>Précompétition</option>
                         <option value={AudioPhasing.DURING_COMPETITION}>Pendant</option>
                         <option value={AudioPhasing.POST_COMPETITION}>Post compétition</option>
@@ -757,8 +763,8 @@ export default function AdminLibraryPage() {
                                 <td>{audio.title}</td>
                                 <td style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{formatDuration(audio.duration)}</td>
                                 <td>{audio.type}</td>
-                                <td style={{ fontSize: '0.8rem' }}>{audio.dominance ? { MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion' }[audio.dominance] ?? audio.dominance : '—'}</td>
-                                <td style={{ fontSize: '0.8rem' }}>{Array.isArray(audio.phasing) && audio.phasing.length > 0 ? audio.phasing.map(p => ({ PRE_COMPETITION: 'Pré', DURING_COMPETITION: 'Pendant', POST_COMPETITION: 'Post' }[p] ?? p)).join(', ') : '—'}</td>
+                                <td style={{ fontSize: '0.8rem' }}>{audio.dominance ? ({ MIND: 'Pensée', BODY: 'Corps', EMOTION: 'Émotion', UNSPECIFIED: 'Non spécifié' } as Record<string, string>)[audio.dominance] ?? audio.dominance : '—'}</td>
+                                <td style={{ fontSize: '0.8rem' }}>{Array.isArray(audio.phasing) && audio.phasing.length > 0 ? audio.phasing.map(p => ({ PRE_COMPETITION: 'Pré', DURING_COMPETITION: 'Pendant', POST_COMPETITION: 'Post', UNSPECIFIED: 'Non spécifié' } as Record<string, string>)[p] ?? p).join(', ') : '—'}</td>
                                 <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap' }}>{audio.createdBy ? `${audio.createdBy.firstName} ${audio.createdBy.lastName}` : '—'}</td>
                                 <td style={{ fontSize: '0.8rem', whiteSpace: 'nowrap', color: 'var(--text-muted)' }}>{new Date(audio.createdAt).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: '2-digit' })}</td>
                                 <td>

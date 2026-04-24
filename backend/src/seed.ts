@@ -14,7 +14,8 @@ import {
   ProgramAudio,
   ProgramShare,
   CalendarEvent,
-  UserState,
+  UserStateFieldConfig,
+  UserStateHistory,
   AudioListenRecord,
 } from './entities';
 
@@ -40,7 +41,8 @@ const AppDataSource = new DataSource({
     ProgramAudio,
     ProgramShare,
     CalendarEvent,
-    UserState,
+    UserStateFieldConfig,
+    UserStateHistory,
     AudioListenRecord,
   ],
   synchronize: true,
@@ -137,7 +139,7 @@ async function seed() {
   }
 
   // Athlete users
-  const athletePassword = await bcrypt.hash('care1234!', 10);
+  const athletePassword = await bcrypt.hash('admin', 10);
   const userIds: string[] = [];
   const testAthleteEmail = 'athlete@careformance.com';
   for (const a of athleteSeeds) {
@@ -178,7 +180,7 @@ async function seed() {
   }
 
   // Teacher users
-  const teacherPassword = await bcrypt.hash('care1234!', 10);
+  const teacherPassword = await bcrypt.hash('admin', 10);
   for (const t of teacherSeeds) {
     let user = await userRepo.findOne({ where: { email: t.email } });
     if (user) {

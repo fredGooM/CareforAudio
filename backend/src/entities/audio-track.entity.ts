@@ -15,12 +15,14 @@ export enum AudioDominance {
   MIND = 'MIND',
   BODY = 'BODY',
   EMOTION = 'EMOTION',
+  UNSPECIFIED = 'UNSPECIFIED',
 }
 
 export enum AudioPhasing {
   PRE_COMPETITION = 'PRE_COMPETITION',
   DURING_COMPETITION = 'DURING_COMPETITION',
   POST_COMPETITION = 'POST_COMPETITION',
+  UNSPECIFIED = 'UNSPECIFIED',
 }
 
 export enum AudioVoiceType {
