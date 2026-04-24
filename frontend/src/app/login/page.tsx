@@ -1,8 +1,14 @@
 'use client';
 
 import { signIn } from 'next-auth/react';
-import { useRouter } from 'next/navigation';
-import { useState, FormEvent } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { useState, FormEvent, useEffect } from 'react';
+
+const QUICK_LOGINS: Record<string, { email: string; password: string }> = {
+    admin:   { email: 'admin@careformance.com',   password: 'admin' },
+    teacher: { email: 'teacher@careformance.com', password: 'admin' },
+    athlete: { email: 'athlete@careformance.com', password: 'admin' },
+};
 
 export default function LoginPage() {
     const [email, setEmail] = useState('');
@@ -10,6 +16,17 @@ export default function LoginPage() {
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const searchParams = useSearchParams();
+
+    useEffect(() => {
+        if (process.env.NODE_ENV !== 'development') return;
+        const ql = searchParams.get('quicklogin');
+        if (!ql || !QUICK_LOGINS[ql]) return;
+        const { email, password } = QUICK_LOGINS[ql];
+        signIn('credentials', { email, password, redirect: false }).then(result => {
+            if (!result?.error) { router.push('/'); router.refresh(); }
+        });
+    }, []);
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();

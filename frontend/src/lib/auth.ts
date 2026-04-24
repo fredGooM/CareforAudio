@@ -33,9 +33,10 @@ declare module 'next-auth' {
     }
 }
 
-// INTERNAL_API_URL = http://careforaudio-backend-prod:3939/api (backend uses /api global prefix)
-// NEXT_PUBLIC_API_URL = https://domain.com/api (nginx forwards /api/* to backend)
-const API_URL = process.env.INTERNAL_API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3939';
+// INTERNAL_API_URL already includes /api (docker internal, e.g. http://backend:3939/api)
+// NEXT_PUBLIC_API_URL does NOT include /api (e.g. http://localhost:3939), same as api-client.ts
+const API_URL = process.env.INTERNAL_API_URL
+    || `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3939'}/api`;
 
 export const authConfig: NextAuthConfig = {
     providers: [
@@ -48,6 +49,8 @@ export const authConfig: NextAuthConfig = {
             async authorize(credentials) {
                 if (!credentials?.email || !credentials?.password) return null;
                 try {
+                    console.log('[auth] API_URL is:', API_URL);
+                    console.log('[auth] Fetching:', `${API_URL}/auth/login`);
                     const res = await fetch(`${API_URL}/auth/login`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
@@ -56,7 +59,12 @@ export const authConfig: NextAuthConfig = {
                             password: credentials.password,
                         }),
                     });
-                    if (!res.ok) return null;
+                    console.log('[auth] Login response status:', res.status);
+                    if (!res.ok) {
+                        const errBody = await res.text();
+                        console.error('[auth] Login failed response:', errBody);
+                        return null;
+                    }
                     const data = await res.json();
                     return {
                         id: data.user.id,

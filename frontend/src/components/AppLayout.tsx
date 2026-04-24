@@ -1,6 +1,6 @@
 'use client';
 
-import { useSession, signIn } from 'next-auth/react';
+import { useSession, signOut } from 'next-auth/react';
 import { usePathname } from 'next/navigation';
 import Sidebar from '@/components/Sidebar';
 
@@ -16,29 +16,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <h3 className="text-sm font-medium text-gray-800 mb-3 text-center">Développement Rapide</h3>
             <div className="flex flex-col gap-2">
                 <button
-                    onClick={async () => {
-                        await signIn('credentials', { email: 'admin@careformance.com', password: 'admin', redirect: false });
-                        window.location.href = '/';
-                    }}
+                    onClick={() => signOut({ callbackUrl: '/login?quicklogin=admin' })}
                     className="px-4 py-2 bg-red-100 text-red-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors"
                 >
                     🚀 Admin
                 </button>
                 <button
-                    onClick={async () => {
-                        await signIn('credentials', { email: 'teacher@careformance.com', password: 'care1234!', redirect: false });
-                        window.location.href = '/';
-                    }}
+                    onClick={() => signOut({ callbackUrl: '/login?quicklogin=teacher' })}
                     className="px-4 py-2 bg-blue-100 text-blue-700 rounded-md text-xs font-medium hover:bg-blue-200 transition-colors"
                 >
                     👨‍🏫 Teacher
                 </button>
                 <button
-                    onClick={async () => {
-                        await signIn('credentials', { email: 'athlete@careformance.com', password: 'care1234!', redirect: false });
-                        window.location.href = '/';
-                    }}
-                    className="px-4 py-2 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-green-200 transition-colors"
+                    onClick={() => signOut({ callbackUrl: '/login?quicklogin=athlete' })}
+                    className="px-4 py-2 bg-green-100 text-green-700 rounded-md text-xs font-medium hover:bg-red-200 transition-colors"
                 >
                     🏃 Athlete
                 </button>
