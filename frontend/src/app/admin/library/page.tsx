@@ -210,7 +210,7 @@ export default function AdminLibraryPage() {
                 stream.getTracks().forEach((t) => t.stop());
             };
 
-            mediaRecorder.start();
+            mediaRecorder.start(10000); // chunk every 10s to avoid browser memory limit on long recordings
             setIsRecording(true);
             setRecordingTime(0);
             recordingTimeRef.current = 0;
