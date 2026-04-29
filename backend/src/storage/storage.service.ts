@@ -84,6 +84,36 @@ export class StorageService {
         };
     }
 
+    async uploadFromFile(filePath: string, objectName: string, mimeType: string): Promise<UploadResult> {
+        const stats = await fs.promises.stat(filePath);
+
+        if (this.isLocalStorage || !this.bucket) {
+            const localPath = path.join(this.localUploadDir, objectName);
+            await fs.promises.mkdir(path.dirname(localPath), { recursive: true });
+            await fs.promises.copyFile(filePath, localPath);
+            return { objectName, gcsUri: localPath, mimeType, size: stats.size };
+        }
+
+        const file = this.bucket.file(objectName);
+        await new Promise<void>((resolve, reject) => {
+            fs.createReadStream(filePath)
+                .pipe(file.createWriteStream({
+                    contentType: mimeType,
+                    resumable: true,
+                    metadata: { cacheControl: 'private, max-age=0, no-transform' },
+                }))
+                .on('finish', resolve)
+                .on('error', reject);
+        });
+
+        return {
+            objectName,
+            gcsUri: `gs://${this.bucket.name}/${objectName}`,
+            mimeType,
+            size: stats.size,
+        };
+    }
+
     async delete(objectName: string): Promise<void> {
         if (this.isLocalStorage || !this.bucket) {
             const localPath = path.join(this.localUploadDir, objectName);

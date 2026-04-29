@@ -1,6 +1,18 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import * as fs from 'fs';
+import * as path from 'path';
+import * as os from 'os';
+import * as crypto from 'crypto';
+
+interface UploadSession {
+    objectName: string;
+    mimeType: string;
+    tempFilePath: string;
+    bytesWritten: number;
+    userId: string;
+}
 // music-metadata is ESM-only (v8+): use dynamic import at call site
 import {
     AudioTrack,
@@ -318,6 +330,93 @@ export class AudiosService {
 
         return { success: true };
     }
+
+    // ── Chunked upload session ──────────────────────────────────────────────
+
+    private sessions = new Map<string, UploadSession>();
+
+    async startUploadSession(userId: string, mimeType: string): Promise<{ sessionId: string; objectName: string }> {
+        const sessionId = crypto.randomUUID();
+        const ext = mimeType.includes('mp4') || mimeType.includes('m4a') ? 'm4a' : 'webm';
+        const objectName = `audios/${crypto.randomUUID()}.${ext}`;
+        const tempFilePath = path.join(os.tmpdir(), `careforaudio-${sessionId}.${ext}`);
+        this.sessions.set(sessionId, { objectName, mimeType, tempFilePath, bytesWritten: 0, userId });
+        return { sessionId, objectName };
+    }
+
+    async appendChunk(sessionId: string, buffer: Buffer): Promise<{ bytesWritten: number }> {
+        const session = this.sessions.get(sessionId);
+        if (!session) throw new NotFoundException('Upload session not found');
+        await fs.promises.appendFile(session.tempFilePath, buffer);
+        session.bytesWritten += buffer.length;
+        return { bytesWritten: session.bytesWritten };
+    }
+
+    async finalizeUpload(
+        sessionId: string,
+        data: {
+            title: string; description?: string; published?: string; type?: string;
+            orderToListen?: string; allowedUserIds?: string; dominance?: AudioDominance;
+            phasing?: string; language?: AudioLanguage; voiceType?: AudioVoiceType; duration?: string;
+        },
+        user: any,
+    ) {
+        const session = this.sessions.get(sessionId);
+        if (!session) throw new NotFoundException('Upload session not found');
+        if (session.userId !== user.id) throw new BadRequestException('Unauthorized');
+
+        try {
+            const uploadResult = await this.storageService.uploadFromFile(
+                session.tempFilePath, session.objectName, session.mimeType,
+            );
+
+            const newAudio = this.audioRepo.create({
+                title: data.title,
+                description: data.description,
+                duration: parseInt(data.duration || '0') || 0,
+                published: data.published === 'true',
+                type: data.type || 'Training',
+                orderToListen: data.orderToListen ? parseInt(data.orderToListen) : 1,
+                storageKey: uploadResult.objectName,
+                mimeType: session.mimeType,
+                size: uploadResult.size,
+                dominance: data.dominance,
+                phasing: data.phasing ? (() => { try { return JSON.parse(data.phasing!); } catch { return []; } })() : null,
+                language: data.language || AudioLanguage.FRENCH,
+                voiceType: data.voiceType || AudioVoiceType.MALE,
+                coverUrl: `https://picsum.photos/400/400?random=${Date.now()}`,
+                createdById: user.id,
+            });
+
+            const saved = await this.audioRepo.save(newAudio);
+
+            if (data.allowedUserIds) {
+                try {
+                    const userIds = JSON.parse(data.allowedUserIds);
+                    if (Array.isArray(userIds)) {
+                        await this.audioAccessRepo.save(userIds.map((uid: string) => ({ userId: uid, audioId: saved.id })));
+                    }
+                } catch { }
+            }
+
+            const signedUrl = await this.storageService.getSignedUrl(uploadResult.objectName, 3600);
+            return { ...saved, url: signedUrl };
+        } finally {
+            await fs.promises.unlink(session.tempFilePath).catch(() => { });
+            this.sessions.delete(sessionId);
+        }
+    }
+
+    async cancelUploadSession(sessionId: string, userId: string): Promise<{ success: boolean }> {
+        const session = this.sessions.get(sessionId);
+        if (session && session.userId === userId) {
+            await fs.promises.unlink(session.tempFilePath).catch(() => { });
+            this.sessions.delete(sessionId);
+        }
+        return { success: true };
+    }
+
+    // ───────────────────────────────────────────────────────────────────────
 
     async remove(id: string, user: any) {
         const audio = await this.audioRepo.findOne({ where: { id } });

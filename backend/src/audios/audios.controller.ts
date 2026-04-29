@@ -10,6 +10,7 @@ import {
     UseInterceptors,
     UploadedFile,
     Request,
+    BadRequestException,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -52,11 +53,37 @@ export class AudiosController {
         FileInterceptor('file', {
             storage: memoryStorage(),
             fileFilter: audioFileFilter,
-            limits: { fileSize: 50 * 1024 * 1024 },
+            limits: { fileSize: 500 * 1024 * 1024 },
         }),
     )
     create(@Body() body: any, @UploadedFile() file: Express.Multer.File, @Request() req: any) {
         return this.audiosService.create(body, file, req.user);
+    }
+
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @Post('upload-session')
+    startUploadSession(@Body() body: { mimeType?: string }, @Request() req: any) {
+        return this.audiosService.startUploadSession(req.user.id, body.mimeType || 'audio/webm');
+    }
+
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @Post('upload-chunk/:sessionId')
+    @UseInterceptors(FileInterceptor('chunk', { storage: memoryStorage(), limits: { fileSize: 20 * 1024 * 1024 } }))
+    appendChunk(@Param('sessionId') sessionId: string, @UploadedFile() file: Express.Multer.File) {
+        if (!file) throw new BadRequestException('No chunk provided');
+        return this.audiosService.appendChunk(sessionId, file.buffer);
+    }
+
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @Post('upload-finalize/:sessionId')
+    finalizeUpload(@Param('sessionId') sessionId: string, @Body() body: any, @Request() req: any) {
+        return this.audiosService.finalizeUpload(sessionId, body, req.user);
+    }
+
+    @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)
+    @Delete('upload-session/:sessionId')
+    cancelUploadSession(@Param('sessionId') sessionId: string, @Request() req: any) {
+        return this.audiosService.cancelUploadSession(sessionId, req.user.id);
     }
 
     @UseGuards(JwtAuthGuard, AdminOrTeacherGuard)

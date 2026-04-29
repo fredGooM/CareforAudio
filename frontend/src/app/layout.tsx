@@ -7,6 +7,9 @@ import './globals.css';
 export const metadata: Metadata = {
   title: 'Careformance Audio',
   description: 'Plateforme audio de préparation mentale sportive',
+  icons: {
+    icon: [{ url: '/logo.svg', type: 'image/svg+xml' }],
+  },
 };
 
 export default function RootLayout({

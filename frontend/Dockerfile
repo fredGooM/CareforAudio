@@ -4,7 +4,7 @@ WORKDIR /app
 
 COPY package*.json ./
 COPY tsconfig.json ./
-COPY next.config.mjs ./
+COPY next.config.ts ./
 
 RUN npm ci --no-audit --no-fund --prefer-offline 2>/dev/null || npm ci --no-audit --no-fund
 
@@ -27,7 +27,7 @@ RUN npm ci --omit=dev --no-audit --no-fund
 
 COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
-COPY --from=builder /app/next.config.mjs ./
+COPY --from=builder /app/next.config.ts ./
 
 EXPOSE 3000
 

@@ -23,8 +23,36 @@ export default function AudioPlayer({
     onHeartbeat,
     onComplete,
 }: AudioPlayerProps) {
+    const playerRef = useRef<any>(null);
     const sessionStartRef = useRef(0);
     const lastEmitTimeRef = useRef(0);
+
+    useEffect(() => {
+        const audio: HTMLAudioElement | undefined = playerRef.current?.audio?.current;
+        if (!audio) return;
+
+        let fixPending = false;
+
+        const fixDuration = () => {
+            if (audio.duration === Infinity || isNaN(audio.duration)) {
+                fixPending = true;
+                audio.currentTime = 1e101;
+            }
+        };
+        const seekBack = () => {
+            if (fixPending) {
+                fixPending = false;
+                audio.currentTime = 0;
+            }
+        };
+
+        audio.addEventListener('loadedmetadata', fixDuration);
+        audio.addEventListener('seeked', seekBack);
+        return () => {
+            audio.removeEventListener('loadedmetadata', fixDuration);
+            audio.removeEventListener('seeked', seekBack);
+        };
+    }, [src]);
 
     const flushSession = (completed: boolean = false, currentTime: number = 0) => {
         if (sessionStartRef.current === 0) return;
@@ -96,6 +124,7 @@ export default function AudioPlayer({
             </div>
 
             <H5AudioPlayer
+                ref={playerRef}
                 src={src}
                 onPlay={handlePlay}
                 onPause={handlePause}

@@ -32,10 +32,13 @@ class ApiClient {
 
         if (!res.ok) {
             if (res.status === 401 && typeof window !== 'undefined') {
-                // Auto-logout on 401
                 import('next-auth/react').then(({ signOut }) => {
                     signOut({ callbackUrl: '/login' });
                 });
+            }
+
+            if (res.status === 413) {
+                throw new Error('Fichier trop volumineux. Contactez l\'administrateur pour augmenter la limite d\'upload.');
             }
 
             const errorBody = await res.json().catch(() => ({}));

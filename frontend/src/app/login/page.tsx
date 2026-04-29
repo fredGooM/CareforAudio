@@ -3,6 +3,8 @@
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 const QUICK_LOGINS: Record<string, { email: string; password: string }> = {
     admin:   { email: 'admin@careformance.com',   password: 'admin' },
@@ -13,6 +15,7 @@ const QUICK_LOGINS: Record<string, { email: string; password: string }> = {
 export default function LoginPage() {
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [showPassword, setShowPassword] = useState(false);
     const [error, setError] = useState('');
     const [loading, setLoading] = useState(false);
     const router = useRouter();
@@ -53,7 +56,7 @@ export default function LoginPage() {
         <div className="login-container">
             <div className="login-card">
                 <div className="login-header">
-                    <img src="/logo.svg" alt="CareforAudio Logo" width="60" height="60" style={{ marginBottom: '1rem', borderRadius: '12px', display: 'inline-block' }} />
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><Logo size={60} /></div>
                     <h1>Careformance Audio</h1>
                     <p>Connectez-vous à votre espace</p>
                 </div>
@@ -75,14 +78,20 @@ export default function LoginPage() {
 
                     <div className="form-group">
                         <label htmlFor="password">Mot de passe</label>
-                        <input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="••••••••"
-                            required
-                        />
+                        <div style={{ position: 'relative' }}>
+                            <input
+                                id="password"
+                                type={showPassword ? 'text' : 'password'}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                placeholder="••••••••"
+                                required
+                                style={{ paddingRight: '2.5rem', width: '100%', boxSizing: 'border-box' }}
+                            />
+                            <button type="button" tabIndex={-1} onClick={() => setShowPassword(v => !v)} style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, color: 'var(--text-muted)', display: 'flex', alignItems: 'center' }}>
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                     </div>
 
                     <button type="submit" disabled={loading} className="login-button">

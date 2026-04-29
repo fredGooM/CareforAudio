@@ -9,7 +9,6 @@ import type { AudioTrack, UserProfile, Program } from '@/types';
 import { AudioDominance, AudioPhasing, AudioLanguage, AudioVoiceType } from '@/types';
 import { AUDIO_CATEGORIES, DOMINANCE_LABELS, PHASING_LABELS } from '@/lib/audio-labels';
 import AudioPlayer from '@/components/AudioPlayer';
-import fixWebmDuration from 'webm-duration-fix';
 
 export default function AdminLibraryPage() {
     const { data: session } = useSession();
@@ -62,6 +61,8 @@ export default function AdminLibraryPage() {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const animFrameRef = useRef<number | null>(null);
+    const uploadSessionIdRef = useRef<string | null>(null);
+    const chunkUploadErrorRef = useRef<boolean>(false);
 
     // Initial form state
     const initialForm = {
@@ -174,10 +175,20 @@ export default function AdminLibraryPage() {
 
     const startRecording = async () => {
         try {
+            // Cancel any previous session
+            if (uploadSessionIdRef.current) {
+                apiClient.delete(`/audios/upload-session/${uploadSessionIdRef.current}`).catch(() => { });
+                uploadSessionIdRef.current = null;
+            }
+
+            apiClient.setToken((session as any)?.accessToken || null);
+            const { sessionId } = await apiClient.post<{ sessionId: string }>('/audios/upload-session', { mimeType: 'audio/webm' });
+            uploadSessionIdRef.current = sessionId;
+            chunkUploadErrorRef.current = false;
+
             const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
             const mediaRecorder = new MediaRecorder(stream);
             mediaRecorderRef.current = mediaRecorder;
-            recordingChunksRef.current = [];
 
             // Wire up Web Audio analyser
             const audioCtx = new AudioContext();
@@ -188,40 +199,42 @@ export default function AdminLibraryPage() {
             source.connect(analyser);
             analyserRef.current = analyser;
 
+            recordingChunksRef.current = [];
+
             mediaRecorder.ondataavailable = (e) => {
-                if (e.data.size > 0) recordingChunksRef.current.push(e.data);
+                if (e.data.size > 0) {
+                    recordingChunksRef.current.push(e.data); // local preview
+                    if (uploadSessionIdRef.current && !chunkUploadErrorRef.current) {
+                        const chunkFormData = new FormData();
+                        chunkFormData.append('chunk', new Blob([e.data], { type: 'audio/webm' }), 'chunk.webm');
+                        apiClient.post(`/audios/upload-chunk/${uploadSessionIdRef.current}`, chunkFormData)
+                            .catch(() => { chunkUploadErrorRef.current = true; });
+                    }
+                }
             };
 
-            mediaRecorder.onstop = async () => {
+            mediaRecorder.onstop = () => {
                 if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
                 analyserRef.current = null;
                 audioCtx.close();
-
-                const mimeType = mediaRecorder.mimeType || 'audio/webm';
-                let blob = new Blob(recordingChunksRef.current, { type: mimeType });
-                try {
-                    // @ts-ignore
-                    blob = await fixWebmDuration(blob, { duration: recordingTimeRef.current * 1000 });
-                } catch (e) {
-                    console.error('Failed to fix WebM duration', e);
-                }
+                stream.getTracks().forEach((t) => t.stop());
+                const blob = new Blob(recordingChunksRef.current, { type: 'audio/webm' });
                 setRecordedBlob(blob);
                 setRecordedUrl(URL.createObjectURL(blob));
-                stream.getTracks().forEach((t) => t.stop());
             };
 
-            mediaRecorder.start(10000); // chunk every 10s to avoid browser memory limit on long recordings
+            mediaRecorder.start(30000); // 30s chunks
             setIsRecording(true);
             setRecordingTime(0);
             recordingTimeRef.current = 0;
             setRecordedBlob(null);
             setRecordedUrl(null);
+
             recordingTimerRef.current = setInterval(() => {
                 recordingTimeRef.current += 1;
                 setRecordingTime(recordingTimeRef.current);
             }, 1000);
 
-            // Start canvas animation (slight delay so canvas is rendered)
             setTimeout(drawVisualizer, 50);
         } catch (err: any) {
             alert('Erreur accès micro : ' + err.message);
@@ -279,33 +292,40 @@ export default function AdminLibraryPage() {
                 savedAudioId = editingAudio.id;
             } else {
                 // CREATE
-                const formData = new FormData();
-                formData.append('title', form.title);
-                formData.append('description', form.description);
-                formData.append('published', form.published);
-                formData.append('type', form.type);
-                formData.append('orderToListen', form.orderToListen);
-                formData.append('allowedUserIds', JSON.stringify(form.allowedUserIds));
-                formData.append('dominance', form.dominance);
-                formData.append('phasing', JSON.stringify(form.phasing));
-                formData.append('language', form.language);
-                formData.append('voiceType', form.voiceType);
-
                 if (uploadMode === 'FILE') {
                     const file = fileRef.current?.files?.[0];
                     if (!file) return alert('Veuillez sélectionner un fichier audio');
+                    const formData = new FormData();
+                    formData.append('title', form.title);
+                    formData.append('description', form.description);
+                    formData.append('published', form.published);
+                    formData.append('type', form.type);
+                    formData.append('orderToListen', form.orderToListen);
+                    formData.append('allowedUserIds', JSON.stringify(form.allowedUserIds));
+                    formData.append('dominance', form.dominance);
+                    formData.append('phasing', JSON.stringify(form.phasing));
+                    formData.append('language', form.language);
+                    formData.append('voiceType', form.voiceType);
                     formData.append('file', file);
+                    const newAudio = await apiClient.post<AudioTrack>('/audios', formData);
+                    setAudios([newAudio, ...audios]);
+                    savedAudioId = newAudio.id;
                 } else {
-                    if (!recordedBlob) return alert('Veuillez enregistrer un audio');
-                    const ext = recordedBlob.type.includes('mp4') || recordedBlob.type.includes('m4a') ? 'm4a' : 'webm';
-                    const file = new File([recordedBlob], `recording.${ext}`, { type: recordedBlob.type });
-                    formData.append('file', file);
-                    formData.append('duration', recordingTime.toString());
+                    if (!uploadSessionIdRef.current) return alert('Veuillez enregistrer un audio');
+                    if (chunkUploadErrorRef.current) return alert('Une erreur est survenue pendant l\'enregistrement. Veuillez recommencer.');
+                    apiClient.setToken((session as any)?.accessToken || null);
+                    const newAudio = await apiClient.post<AudioTrack>(`/audios/upload-finalize/${uploadSessionIdRef.current}`, {
+                        title: form.title, description: form.description, published: form.published,
+                        type: form.type, orderToListen: form.orderToListen,
+                        allowedUserIds: JSON.stringify(form.allowedUserIds),
+                        dominance: form.dominance, phasing: JSON.stringify(form.phasing),
+                        language: form.language, voiceType: form.voiceType,
+                        duration: recordingTime.toString(),
+                    });
+                    uploadSessionIdRef.current = null;
+                    setAudios([newAudio, ...audios]);
+                    savedAudioId = newAudio.id;
                 }
-
-                const newAudio = await apiClient.post<AudioTrack>('/audios', formData);
-                setAudios([newAudio, ...audios]);
-                savedAudioId = newAudio.id;
             }
 
             // Add to program if selected (works for both create and edit)
@@ -330,7 +350,7 @@ export default function AdminLibraryPage() {
             }
             setShowModal(false);
             setRecordedBlob(null);
-            setRecordedUrl(null);
+
             if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
             setFilePreviewUrl(null);
             if (recordingTimerRef.current) clearInterval(recordingTimerRef.current);
@@ -488,9 +508,6 @@ export default function AdminLibraryPage() {
                                                         Arrêter
                                                     </button>
                                                 )}
-                                                {recordedBlob && !isRecording && (
-                                                    <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Durée : {formatTime(recordingTime)}</span>
-                                                )}
                                             </div>
                                         </div>
                                     )}
@@ -601,6 +618,19 @@ export default function AdminLibraryPage() {
                                 </div>
                             )}
                             <div className="form-group">
+                                    {editingAudio && (() => {
+                                        const audioPrograms = programs.filter(p => p.audios?.some(a => a.id === editingAudio.id));
+                                        if (audioPrograms.length === 0) return null;
+                                        return (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.75rem' }}>
+                                                {audioPrograms.map(p => (
+                                                    <span key={p.id} style={{ fontSize: '0.78rem', fontWeight: 500, padding: '0.2rem 0.65rem', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                                                        {p.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
                                     <label>Ajouter à un programme <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span></label>
                                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
                                         <select
@@ -609,9 +639,12 @@ export default function AdminLibraryPage() {
                                             style={{ flex: 1 }}
                                         >
                                             <option value="">— Aucun —</option>
-                                            {programs.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
+                                            {programs
+                                                .filter(p => !editingAudio || !p.audios?.some(a => a.id === editingAudio.id))
+                                                .map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                ))
+                                            }
                                         </select>
                                         {selectedProgramId && (
                                             <div className="form-group" style={{ margin: 0, minWidth: '120px' }}>
@@ -627,7 +660,16 @@ export default function AdminLibraryPage() {
                                     </div>
                                 </div>
                             <div className="modal-actions">
-                                <button type="button" className="btn-secondary" disabled={submitting} onClick={() => { if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl); setFilePreviewUrl(null); setShowModal(false); }}>Annuler</button>
+                                <button type="button" className="btn-secondary" disabled={submitting} onClick={() => {
+                                    if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+                                    setFilePreviewUrl(null);
+                                    if (uploadSessionIdRef.current) {
+                                        apiClient.delete(`/audios/upload-session/${uploadSessionIdRef.current}`).catch(() => { });
+                                        uploadSessionIdRef.current = null;
+                                    }
+                                    setRecordedBlob(null);
+                                    setShowModal(false);
+                                }}>Annuler</button>
                                 <button type="submit" className="btn-primary" disabled={submitting} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', minWidth: '110px', justifyContent: 'center' }}>
                                     {submitting ? (
                                         <>
