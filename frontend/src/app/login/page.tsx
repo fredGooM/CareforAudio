@@ -3,6 +3,7 @@
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
+import Logo from '@/components/Logo';
 
 const QUICK_LOGINS: Record<string, { email: string; password: string }> = {
     admin:   { email: 'admin@careformance.com',   password: 'admin' },
@@ -53,7 +54,7 @@ export default function LoginPage() {
         <div className="login-container">
             <div className="login-card">
                 <div className="login-header">
-                    <img src="/logo.svg" alt="CareforAudio Logo" width="60" height="60" style={{ marginBottom: '1rem', borderRadius: '12px', display: 'inline-block' }} />
+                    <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}><Logo size={60} /></div>
                     <h1>Careformance Audio</h1>
                     <p>Connectez-vous à votre espace</p>
                 </div>

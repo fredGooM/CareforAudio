@@ -10,7 +10,10 @@
       "Bash(xargs:*)",
       "Bash(npx prettier --write src/seed.ts)",
       "Bash(npx prettier --write src/analytics/analytics.service.ts src/analytics/analytics.module.ts src/entities/audio-listen-record.entity.ts src/entities/user.entity.ts src/entities/audio-track.entity.ts src/entities/index.ts src/app.module.ts)",
-      "Bash(PGPASSWORD=root psql -h localhost -U root -d careforaudio -c \"DROP TABLE IF EXISTS audio_logs CASCADE;\")"
+      "Bash(PGPASSWORD=root psql -h localhost -U root -d careforaudio -c \"DROP TABLE IF EXISTS audio_logs CASCADE;\")",
+      "Bash(sed -n '1368,1374p' \"c:/Users/Pro/Desktop/perso/Dev/goom/CareforAudio/frontend/src/app/globals.css\")",
+      "Bash(sed -n '1439,1444p' \"c:/Users/Pro/Desktop/perso/Dev/goom/CareforAudio/frontend/src/app/globals.css\")",
+      "Bash(sed -n '1536,1541p' \"c:/Users/Pro/Desktop/perso/Dev/goom/CareforAudio/frontend/src/app/globals.css\")"
     ]
   }
 }

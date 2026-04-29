@@ -18,7 +18,7 @@ export class UsersService {
 
     async findAll(currentUser: any) {
         let qs = this.userRepo.createQueryBuilder('user');
-        if (currentUser.role === 'TEACHER' || currentUser.role === 'ADMIN') {
+        if (currentUser.role === 'TEACHER') {
             qs = qs.where('user.createdById = :createdById', { createdById: currentUser.id });
         }
         const users = await qs.getMany();

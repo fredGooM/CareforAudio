@@ -601,6 +601,19 @@ export default function AdminLibraryPage() {
                                 </div>
                             )}
                             <div className="form-group">
+                                    {editingAudio && (() => {
+                                        const audioPrograms = programs.filter(p => p.audios?.some(a => a.id === editingAudio.id));
+                                        if (audioPrograms.length === 0) return null;
+                                        return (
+                                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.75rem' }}>
+                                                {audioPrograms.map(p => (
+                                                    <span key={p.id} style={{ fontSize: '0.78rem', fontWeight: 500, padding: '0.2rem 0.65rem', borderRadius: '6px', background: 'var(--bg-input)', color: 'var(--text-muted)', border: '1px solid var(--border)' }}>
+                                                        {p.name}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        );
+                                    })()}
                                     <label>Ajouter à un programme <span style={{ fontWeight: 400, color: 'var(--text-muted)' }}>(optionnel)</span></label>
                                     <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'flex-end' }}>
                                         <select
@@ -609,9 +622,12 @@ export default function AdminLibraryPage() {
                                             style={{ flex: 1 }}
                                         >
                                             <option value="">— Aucun —</option>
-                                            {programs.map(p => (
-                                                <option key={p.id} value={p.id}>{p.name}</option>
-                                            ))}
+                                            {programs
+                                                .filter(p => !editingAudio || !p.audios?.some(a => a.id === editingAudio.id))
+                                                .map(p => (
+                                                    <option key={p.id} value={p.id}>{p.name}</option>
+                                                ))
+                                            }
                                         </select>
                                         {selectedProgramId && (
                                             <div className="form-group" style={{ margin: 0, minWidth: '120px' }}>

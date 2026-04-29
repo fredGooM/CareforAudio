@@ -298,10 +298,13 @@ export default function AdminUsersPage() {
                                                         { icon: <Edit size={14} />, label: 'Modifier', onClick: () => { openEdit(user); setOpenMenuId(null); } },
                                                         { icon: <KeyRound size={14} />, label: 'Reset mot de passe', onClick: () => { handleResetPassword(user.id); setOpenMenuId(null); } },
                                                         { icon: <Mail size={14} />, label: 'Envoyer identifiants', onClick: () => { handleSendWelcome(user.id); setOpenMenuId(null); } },
-                                                        ...((session?.user as any)?.role === 'ADMIN' && user.id !== (session?.user as any)?.id ? [{
-                                                            icon: <Trash2 size={14} />, label: 'Supprimer', danger: true,
-                                                            onClick: () => { handleDelete(user.id, `${user.firstName} ${user.lastName}`); setOpenMenuId(null); }
-                                                        }] : []),
+                                                        ...(user.id !== (session?.user as any)?.id &&
+                                                            ((session?.user as any)?.role === 'ADMIN' ||
+                                                             ((session?.user as any)?.role === 'TEACHER' && user.createdById === (session?.user as any)?.id))
+                                                            ? [{
+                                                                icon: <Trash2 size={14} />, label: 'Supprimer', danger: true,
+                                                                onClick: () => { handleDelete(user.id, `${user.firstName} ${user.lastName}`); setOpenMenuId(null); }
+                                                            }] : []),
                                                     ].map((item, i, arr) => (
                                                         <button key={item.label} onClick={item.onClick} style={{
                                                             width: '100%', display: 'flex', alignItems: 'center', gap: '0.6rem',
