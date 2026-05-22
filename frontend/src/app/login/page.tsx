@@ -4,6 +4,7 @@ import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
 import Logo from '@/components/Logo';
+import { Eye, EyeOff } from 'lucide-react';
 
 const QUICK_LOGINS: Record<string, { email: string; password: string }> = {
     admin:   { email: 'admin@careformance.com',   password: 'admin' },
