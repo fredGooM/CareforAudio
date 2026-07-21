@@ -220,7 +220,7 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
 
             {/* ── Tabs ── */}
-            <div style={{ display: 'flex', gap: '0.5rem', padding: '0.25rem', background: 'rgba(0,0,0,0.2)', borderRadius: '12px', width: 'fit-content' }}>
+            <div className="states-tabs">
                 {Object.values(StateType).map(t => (
                     <div key={t} style={{
                         display: 'flex', alignItems: 'center', borderRadius: '9px',
@@ -228,11 +228,11 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
                         boxShadow: activeType === t ? '0 1px 4px rgba(0,0,0,0.3)' : 'none',
                         transition: 'var(--transition)',
                     }}>
-                        <button onClick={() => setActiveType(t)} style={{
-                            padding: teacherMode ? '0.5rem 0.5rem 0.5rem 1.1rem' : '0.5rem 1.1rem',
-                            border: 'none', background: 'transparent', fontFamily: 'var(--font)',
+                        <button onClick={() => setActiveType(t)} className="states-tab-btn" style={{
+                            paddingLeft: teacherMode ? '1.1rem' : undefined,
+                            paddingRight: teacherMode ? '0.5rem' : undefined,
                             color: activeType === t ? 'var(--text)' : 'var(--text-muted)',
-                            cursor: 'pointer', fontWeight: activeType === t ? 600 : 400, fontSize: '0.875rem',
+                            fontWeight: activeType === t ? 600 : 400,
                         }}>
                             {STATE_TYPE_LABELS[t]}
                         </button>
@@ -240,12 +240,8 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
                             <button
                                 onClick={e => { e.stopPropagation(); setEditingType(t); }}
                                 title="Modifier les indicateurs"
-                                style={{
-                                    padding: '0.5rem 0.75rem', border: 'none', background: 'transparent',
-                                    color: activeType === t ? 'var(--text-dim)' : 'transparent',
-                                    cursor: 'pointer', display: 'flex', alignItems: 'center',
-                                    transition: 'color 0.2s', borderRadius: '0 9px 9px 0',
-                                }}
+                                className="states-tab-edit-btn"
+                                style={{ color: activeType === t ? 'var(--text-dim)' : 'transparent' }}
                                 onMouseEnter={e => (e.currentTarget.style.color = 'var(--primary-light)')}
                                 onMouseLeave={e => (e.currentTarget.style.color = activeType === t ? 'var(--text-dim)' : 'transparent')}
                             >
@@ -257,64 +253,41 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
             </div>
             {/* ── Form + Snapshot row ── */}
             {showForm && (
-                <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
-                    <form onSubmit={handleSubmit} style={{ flex: '0 1 700px', minWidth: 0 }}>
+                <div className="states-row">
+                    <form onSubmit={handleSubmit} className="states-form-col">
                         <div style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', overflow: 'hidden' }}>
                             {activeFields.map((field, i) => {
                                 const v = formValues[field.id] ?? 5;
+                                const color = valueColor(v);
+                                const fillPct = ((v - 1) / 9) * 100;
                                 return (
-                                    <div key={field.id} style={{
-                                        display: 'flex', alignItems: 'center', gap: '1rem',
-                                        padding: '0.75rem 1.25rem',
+                                    <div key={field.id} className="states-field-row" style={{
                                         borderBottom: i < activeFields.length - 1 ? '1px solid rgba(51,65,85,0.35)' : 'none',
                                     }}>
-                                        <span style={{ width: '130px', fontSize: '0.875rem', fontWeight: 500, color: 'var(--text)', flexShrink: 0 }}>
-                                            {field.label}
-                                        </span>
-                                        <div style={{ display: 'flex', gap: '0.5rem' }}>
-                                            {Array.from({ length: 10 }, (_, k) => k + 1).map(n => {
-                                                const selected = v === n;
-                                                const color = valueColor(n);
-                                                return (
-                                                    <button
-                                                        key={n}
-                                                        type="button"
-                                                        onClick={() => setFormValues(prev => ({ ...prev, [field.id]: n }))}
-                                                        style={{
-                                                            width: '36px', height: '36px', borderRadius: '50%',
-                                                            border: selected ? `2px solid ${color}` : '1.5px solid rgba(51,65,85,0.5)',
-                                                            background: selected ? valueBg(n) : 'transparent',
-                                                            boxShadow: selected ? `0 0 10px ${color}40, 0 0 4px ${color}30` : 'none',
-                                                            color: selected ? color : 'var(--text-dim)',
-                                                            fontWeight: selected ? 700 : 400,
-                                                            fontSize: '0.82rem', cursor: 'pointer',
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            transition: 'all 0.2s ease',
-                                                            fontFamily: 'var(--font)',
-                                                            flexShrink: 0,
-                                                            transform: selected ? 'scale(1.15)' : 'scale(1)',
-                                                        }}
-                                                        onMouseEnter={e => { if (!selected) { e.currentTarget.style.transform = 'scale(1.12)'; e.currentTarget.style.borderColor = 'var(--text-dim)'; e.currentTarget.style.color = 'var(--text-muted)'; } }}
-                                                        onMouseLeave={e => { if (!selected) { e.currentTarget.style.transform = 'scale(1)'; e.currentTarget.style.borderColor = 'rgba(51,65,85,0.5)'; e.currentTarget.style.color = 'var(--text-dim)'; } }}
-                                                    >
-                                                        {n}
-                                                    </button>
-                                                );
-                                            })}
+                                        <div className="states-field-top">
+                                            <span className="states-field-label">{field.label}</span>
+                                            <span className="states-field-value" style={{ color }}>{v}</span>
                                         </div>
+                                        <input
+                                            type="range"
+                                            min={1}
+                                            max={10}
+                                            step={1}
+                                            value={v}
+                                            onChange={e => setFormValues(prev => ({ ...prev, [field.id]: Number(e.target.value) }))}
+                                            className="state-slider"
+                                            aria-label={field.label}
+                                            style={{ background: `linear-gradient(to right, ${color} ${fillPct}%, rgba(51,65,85,0.5) ${fillPct}%)` }}
+                                        />
                                     </div>
                                 );
                             })}
-                            <div style={{ padding: '0.75rem 1.25rem', borderTop: '1px solid rgba(51,65,85,0.35)', display: 'flex', justifyContent: 'flex-end' }}>
-                                <button type="submit" disabled={saving || saved} style={{
-                                    display: 'inline-flex', alignItems: 'center', gap: '0.4rem',
-                                    padding: '0.5rem 1.5rem', border: 'none', borderRadius: 'var(--radius-sm)',
+                            <div className="states-submit-row">
+                                <button type="submit" disabled={saving || saved} className="states-submit-btn" style={{
                                     background: saved
                                         ? 'linear-gradient(135deg,#22c55e,#16a34a)'
                                         : 'linear-gradient(135deg,var(--primary),var(--primary-dark))',
-                                    color: '#fff', fontWeight: 600, fontSize: '0.875rem',
                                     cursor: saving || saved ? 'default' : 'pointer',
-                                    transition: 'all 0.3s ease', fontFamily: 'var(--font)',
                                 }}>
                                     {saved ? <><CheckCircle size={15} /> Enregistré</> : saving ? 'Enregistrement...' : 'Enregistrer'}
                                 </button>
@@ -323,7 +296,7 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
                     </form>
 
                     {hasHistory && (
-                        <div style={{ flex: '1 1 0', minWidth: '220px', background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '1.25rem', alignSelf: 'stretch', display: 'flex', flexDirection: 'column' }}>
+                        <div className="states-snapshot-col">
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
                                 <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', margin: 0 }}>Dernier enregistrement</p>
                                 {activeHistory[0] && (
@@ -332,13 +305,13 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
                                     </span>
                                 )}
                             </div>
-                            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))', gap: '0.75rem', flex: 1 }}>
+                            <div className="states-snapshot-grid">
                                 {activeFields.map(field => {
                                     const v = latestValues[field.id];
                                     if (v === undefined) return null;
                                     const color = valueColor(v);
                                     return (
-                                        <div key={field.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '0.875rem 0.5rem', background: valueBg(v), border: `1px solid ${color}25`, borderRadius: '10px' }}>
+                                        <div key={field.id} className="states-snapshot-item" style={{ background: valueBg(v), border: `1px solid ${color}25` }}>
                                             <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `conic-gradient(${color} ${(v / 10) * 360}deg, rgba(51,65,85,0.5) 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                                 <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.95rem', color }}>
                                                     {v}
@@ -365,13 +338,13 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
                             </span>
                         )}
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(110px, 1fr))', gap: '0.75rem' }}>
+                    <div className="states-snapshot-grid">
                         {activeFields.map(field => {
                             const v = latestValues[field.id];
                             if (v === undefined) return null;
                             const color = valueColor(v);
                             return (
-                                <div key={field.id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.5rem', padding: '0.875rem 0.5rem', background: valueBg(v), border: `1px solid ${color}25`, borderRadius: '10px' }}>
+                                <div key={field.id} className="states-snapshot-item" style={{ background: valueBg(v), border: `1px solid ${color}25` }}>
                                     <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: `conic-gradient(${color} ${(v / 10) * 360}deg, rgba(51,65,85,0.5) 0deg)`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                                         <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--bg-card)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.95rem', color }}>
                                             {v}
@@ -395,7 +368,7 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
 
             {/* ── Charts ── */}
             {hasHistory && !chartsOnly && chartData.length > 0 && (
-                <div style={{ display: 'grid', gridTemplateColumns: activeFields.length >= 3 ? '1fr 2fr' : '1fr', gap: '1rem' }}>
+                <div className={`states-charts-grid${activeFields.length >= 3 ? ' has-radar' : ''}`}>
                     {activeFields.length >= 3 && (
                         <div style={{ background: 'var(--bg-card)', borderRadius: 'var(--radius)', border: '1px solid var(--border)', padding: '1.25rem' }}>
                             <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', margin: '0 0 0.75rem' }}>Profil actuel</p>
@@ -432,7 +405,7 @@ export default function UserStatesPanel({ userId, readonly, chartsOnly, teacherM
                     <div style={{ padding: '0.875rem 1.25rem', borderBottom: '1px solid var(--border)' }}>
                         <p style={{ fontSize: '0.75rem', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.5px', color: 'var(--text-muted)', margin: 0 }}>Historique</p>
                     </div>
-                    <div style={{ overflowX: 'auto' }}>
+                    <div className="states-history-wrap">
                         <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                             <thead>
                                 <tr>

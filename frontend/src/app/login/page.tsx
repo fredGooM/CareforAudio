@@ -3,6 +3,7 @@
 import { signIn } from 'next-auth/react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { useState, FormEvent, useEffect } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
 import Logo from '@/components/Logo';
 
 const QUICK_LOGINS: Record<string, { email: string; password: string }> = {

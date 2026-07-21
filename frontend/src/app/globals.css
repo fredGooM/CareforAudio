@@ -1426,6 +1426,140 @@ tbody tr:last-child td {
   letter-spacing: 0.3px;
 }
 
+/* ===== User States Panel ===== */
+
+.states-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.25rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  width: fit-content;
+  max-width: 100%;
+}
+
+.states-tab-btn {
+  padding: 0.5rem 1.1rem;
+  border: none;
+  background: transparent;
+  font-family: var(--font);
+  cursor: pointer;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.states-tab-edit-btn {
+  padding: 0.5rem 0.75rem;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  transition: color 0.2s;
+  border-radius: 0 9px 9px 0;
+}
+
+.states-row {
+  display: flex;
+  gap: 1.5rem;
+  align-items: flex-start;
+}
+
+.states-form-col {
+  flex: 0 1 700px;
+  min-width: 0;
+}
+
+.states-snapshot-col {
+  flex: 1 1 0;
+  min-width: 220px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  padding: 1.25rem;
+  align-self: stretch;
+  display: flex;
+  flex-direction: column;
+}
+
+.states-field-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.875rem 1.25rem;
+}
+
+.states-field-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+}
+
+.states-field-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.states-field-value {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.states-submit-row {
+  padding: 0.75rem 1.25rem;
+  border-top: 1px solid rgba(51, 65, 85, 0.35);
+  display: flex;
+  justify-content: flex-end;
+}
+
+.states-submit-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1.5rem;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.875rem;
+  transition: all 0.3s ease;
+  font-family: var(--font);
+}
+
+.states-snapshot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.states-snapshot-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.875rem 0.5rem;
+  border-radius: 10px;
+}
+
+.states-charts-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.states-charts-grid.has-radar {
+  grid-template-columns: 1fr 2fr;
+}
+
+.states-history-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
 /* ===== Responsive ===== */
 
 @media (max-width: 768px) {
@@ -1774,6 +1908,87 @@ tbody tr:last-child td {
     padding: 3rem 1rem;
     font-size: 1rem;
   }
+
+  /* ── User States Panel Mobile ── */
+  .states-tabs {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .states-tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .states-tab-btn {
+    padding: 0.5rem 0.85rem;
+    font-size: 0.82rem;
+  }
+
+  .states-row {
+    flex-direction: column;
+  }
+
+  .states-form-col {
+    flex: 1 1 auto;
+    width: 100%;
+  }
+
+  .states-snapshot-col {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .states-field-row {
+    padding: 0.75rem 1rem;
+  }
+
+  .states-submit-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .states-charts-grid.has-radar {
+    grid-template-columns: 1fr;
+  }
+
+  /* History table — keep headers, scroll horizontally instead of card layout */
+  .states-history-wrap table {
+    display: table;
+  }
+
+  .states-history-wrap thead {
+    display: table-header-group;
+  }
+
+  .states-history-wrap tbody {
+    display: table-row-group;
+    gap: 0;
+  }
+
+  .states-history-wrap tbody tr {
+    display: table-row;
+    background: none;
+    border-radius: 0;
+    border: none;
+    padding: 0;
+  }
+
+  .states-history-wrap tbody td,
+  .states-history-wrap tbody td:first-child,
+  .states-history-wrap tbody td:not(:first-child):not(:last-child),
+  .states-history-wrap tbody td:last-child {
+    display: table-cell;
+    width: auto;
+    background: none;
+    border: none;
+    border-radius: 0;
+    padding: 0.75rem 1rem;
+    margin: 0;
+    font-weight: 400;
+    font-size: 0.8rem;
+  }
 }
 
 /* ===== State Sliders ===== */
@@ -1781,19 +1996,40 @@ tbody tr:last-child td {
 .state-slider {
   -webkit-appearance: none;
   appearance: none;
-  flex: 1;
-  height: 5px;
-  border-radius: 3px;
+  display: block;
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
   cursor: pointer;
   outline: none;
   border: none;
   background: transparent; /* overridden inline via JS */
+  touch-action: pan-y;
+}
+
+.state-slider::-webkit-slider-runnable-track {
+  height: 8px;
+  border-radius: 4px;
+  background: transparent;
+}
+
+.state-slider::-moz-range-track {
+  height: 8px;
+  border-radius: 4px;
+  background: rgba(51, 65, 85, 0.5);
+}
+
+.state-slider::-moz-range-progress {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--primary);
 }
 
 .state-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
+  margin-top: -8px;
   border-radius: 50%;
   background: #fff;
   border: 2px solid rgba(255, 255, 255, 0.25);
@@ -1803,17 +2039,17 @@ tbody tr:last-child td {
 }
 
 .state-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
 .state-slider::-webkit-slider-thumb:active {
-  transform: scale(1.1);
+  transform: scale(1.25);
 }
 
 .state-slider::-moz-range-thumb {
-  width: 16px;
-  height: 16px;
+  width: 24px;
+  height: 24px;
   border-radius: 50%;
   background: #fff;
   border: 2px solid rgba(255, 255, 255, 0.25);
@@ -1823,7 +2059,7 @@ tbody tr:last-child td {
 }
 
 .state-slider::-moz-range-thumb:hover {
-  transform: scale(1.2);
+  transform: scale(1.15);
 }
 
 .state-slider:focus-visible {
