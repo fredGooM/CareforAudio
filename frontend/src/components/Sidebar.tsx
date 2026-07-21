@@ -61,6 +61,7 @@ export default function Sidebar() {
     ];
 
     const links = (role === 'ADMIN' || role === 'TEACHER') ? adminOrTeacherLinks : athleteLinks;
+    const tabLinks = links.filter(link => link.href !== '/profile');
 
     const displayRole = role === 'ADMIN' ? 'Admin' : role === 'TEACHER' ? 'Professeur' : 'Athlète';
 
@@ -98,9 +99,20 @@ export default function Sidebar() {
                 </div>
             </aside>
 
+            {/* Mobile top header */}
+            <header className="mobile-header mobile-only">
+                <div className="mobile-header-brand">
+                    <img src="/logo.svg" alt="CareforAudio Logo" width="28" height="28" style={{ borderRadius: '6px' }} />
+                    <span>Careformance</span>
+                </div>
+                <Link href="/profile" className={`mobile-header-profile${isActive('/profile') ? ' active' : ''}`}>
+                    {icons.profile}
+                </Link>
+            </header>
+
             {/* Mobile bottom tab bar */}
             <nav className="mobile-tab-bar mobile-only">
-                {links.map((link) => (
+                {tabLinks.map((link) => (
                     <Link
                         key={link.href}
                         href={link.href}
