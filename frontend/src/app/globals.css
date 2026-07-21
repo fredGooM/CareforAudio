@@ -1378,17 +1378,20 @@ tbody tr:last-child td {
 
 .mobile-tab-bar {
   position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
+  left: 12px;
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
   align-items: stretch;
   justify-content: space-around;
-  background: rgba(13, 19, 33, 0.97);
-  backdrop-filter: blur(20px);
-  border-top: 1px solid var(--border);
+  gap: 0.25rem;
+  background: rgba(17, 23, 39, 0.82);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  box-shadow: 0 10px 32px rgba(0, 0, 0, 0.45), 0 1px 0 rgba(255, 255, 255, 0.05) inset;
   z-index: 200;
-  padding: 0.25rem 0;
-  padding-bottom: env(safe-area-inset-bottom, 0.25rem);
+  padding: 0.4rem;
 }
 
 .tab-item {
@@ -1398,32 +1401,51 @@ tbody tr:last-child td {
   align-items: center;
   justify-content: center;
   gap: 0.2rem;
-  padding: 0.6rem 0.25rem;
+  padding: 0.45rem 0.25rem;
   text-decoration: none;
   color: var(--text-dim);
   background: none;
   border: none;
+  border-radius: 15px;
   font-family: var(--font);
   cursor: pointer;
-  transition: var(--transition);
+  transition: background 0.25s ease, color 0.25s ease, transform 0.15s ease;
   -webkit-tap-highlight-color: transparent;
-  min-height: 56px;
+  min-height: 52px;
 }
 
 .tab-item.active {
-  color: var(--primary-light);
+  color: #fff;
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  box-shadow: 0 4px 14px rgba(239, 68, 68, 0.45);
+  transform: translateY(-2px);
+}
+
+.tab-item:active {
+  transform: scale(0.94);
 }
 
 .tab-icon {
-  font-size: 1.5rem;
+  font-size: 1.4rem;
   line-height: 1;
+  display: flex;
+  transition: transform 0.2s ease;
+}
+
+.tab-item.active .tab-icon {
+  transform: scale(1.08);
 }
 
 .tab-label {
-  font-size: 0.65rem;
+  font-size: 0.6rem;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.3px;
+  opacity: 0.9;
+}
+
+.tab-item.active .tab-label {
+  opacity: 1;
 }
 
 /* ===== Mobile Top Header ===== */
@@ -1639,8 +1661,8 @@ tbody tr:last-child td {
   .main-content {
     padding: 1rem 0.75rem;
     padding-top: calc(56px + env(safe-area-inset-top, 0px) + 1rem);
-    padding-bottom: 80px;
-    /* space for bottom tab bar */
+    padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px));
+    /* space for floating bottom tab bar */
   }
 
   /* Page content */
@@ -1732,10 +1754,10 @@ tbody tr:last-child td {
     font-size: 0.75rem;
   }
 
-  /* Audio player — above tab bar */
+  /* Audio player — above floating tab bar */
   .audio-player {
     left: 0;
-    bottom: calc(56px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(86px + env(safe-area-inset-bottom, 0px));
     padding: 0.75rem 1rem;
     display: grid;
     grid-template-areas: 
